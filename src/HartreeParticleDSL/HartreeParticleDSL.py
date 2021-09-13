@@ -2,7 +2,8 @@ import HartreeParticleDSL.backends.C_AOS.C_AOS as C_AOS
 import HartreeParticleDSL.backends.C_AOS.visitors as c_visitors
 import HartreeParticleDSL.IO_modules.base_IO_module.IO_module as io_modules
 import HartreeParticleDSL.IO_modules.random_IO.random_IO as random_io
-from HartreeParticleDSL.HartreeParticleDSLExceptions import SingletonInstanceError
+from HartreeParticleDSL.HartreeParticleDSLExceptions import SingletonInstanceError, \
+                                                            RepeatedNameError
 
 class _HartreeParticleDSL():
     '''
@@ -333,8 +334,7 @@ class Particle():
         :type c_type: str
         '''
         if variable_name in self.particle_type:
-            print(f"The variable name {variable_name} is already in the particle type")
-            assert False
+            raise RepeatedNameError(f"The variable name {variable_name} is already in the particle type")
         is_array = False
         if "[" in c_type:
             is_array = True
@@ -369,10 +369,11 @@ class Config():
         :param c_type: The c_type associated with the variable type. At current
                        this is a string but may change in future.
         :type c_type: str
+
+        :raises RepeatedNameError: If variable_name is already in the Config
         '''
         if variable_name in self.config_type:
-            print(f"The variable name {variable_name} is already in the particle type")
-            assert False
+            raise RepeatedNameError(f"The variable name {variable_name} is already in the config type")
         is_array = False
         if "[" in c_type:
             is_array = True
