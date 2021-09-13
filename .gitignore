@@ -1,0 +1,17 @@
+*.pyc
+*~
+*.a
+*.o
+*.mod
+*.MOD
+.cache
+.coverage
+fparser.log
+htmlcov
+dist
+src/*.egg-info
+.mypy_cache
+.ipynb_checkpoints
+*.sublime-project
+*.sublime-workspace
+.idea

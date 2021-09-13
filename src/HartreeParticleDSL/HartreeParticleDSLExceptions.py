@@ -1,0 +1,2 @@
+class SingletonInstanceError(Exception):
+    pass
