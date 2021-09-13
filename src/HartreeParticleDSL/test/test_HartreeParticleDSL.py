@@ -38,6 +38,8 @@ def test_config_reset():
 def test_particle_init():
     '''Test particle initialisation'''
     part = HartreeParticleDSL.Particle()
+    part.add_element("value", "double")
+    part.reset_particle()
     assert part.particle_type['core_part'] == {'type' : 'struct core_part_type', 'is_array' : False }
     assert part.particle_type['neighbour_part'] == {'type' : 'struct neighbour_part_type', 'is_array' : False}
 
