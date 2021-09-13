@@ -2,6 +2,7 @@ from HartreeParticleDSL.backends.base_backend.backend import Backend
 import HartreeParticleDSL.backends.C_AOS.visitors as c_visitors
 import HartreeParticleDSL.kernel_types.kernels as kernels
 from HartreeParticleDSL.backends.C_AOS.C_AOS_IO_Mixin import C_AOS_IO_Mixin
+from HartreeParticleDSL.IO_modules.IO_Exceptions import *
 
 class C_AOS(Backend):
     '''
@@ -122,11 +123,15 @@ class C_AOS(Backend):
             f.write(config_output)
             f.write(part_output)
             f.write("#endif")
-        input_module_header = self._input_module.gen_code_c(part_type)
+        input_module_header = ""
+        if self._input_module is not None:
+            input_module_header = self._input_module.gen_code_c(part_type)
         if input_module_header is not "":
             # Do something later
             pass
-        output_module_header = self._output_module.gen_code_c(part_type)
+        output_module_header = ""
+        if self._output_module is not None:
+            output_module_header = self._output_module.gen_code_c(part_type)
         if output_module_header is not "":
             # Do something later
             pass
