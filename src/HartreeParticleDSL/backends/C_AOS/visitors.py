@@ -98,8 +98,10 @@ class c_visitor(ast.NodeVisitor):
         print(node.n, end = "")
 
     def visit_Constant(self, node):
-        print(type(node.value))
-        print(node.value, end = "")
+        if type(node.value) is str:
+            print(f"\"{node.value}\"", end="")
+        else:
+            print(node.value, end = "")
 
     def visit_Assign(self, node):
         assert len(node.targets) == 1
