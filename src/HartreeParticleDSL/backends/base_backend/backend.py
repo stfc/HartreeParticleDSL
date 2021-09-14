@@ -1,6 +1,6 @@
+from abc import ABCMeta
 
-
-class Backend():
+class Backend(metaclass=ABCMeta):
     def __init__(self):
         pass
 
