@@ -12,7 +12,10 @@ def test_c_visitor_visit_Str(capsys):
     def a():
         b = "string"
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    print(c)
+    print(ast.dump(c))
+    captured = capsys.readouterr()
+    print(captured.out)
+    print("")
     v.visit(c)
     captured = capsys.readouterr()
     assert "\"string\"" in captured.out
