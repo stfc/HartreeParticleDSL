@@ -52,6 +52,7 @@ def test_generateincludes():
     assert "<math.h>" in strin
     assert "\"part.h\"" in strin
     assert "<stdlib.h>" in strin
+    backend = C_AOS()
     backend.set_io_modules(None, mod)
     strin = backend.generate_includes()
     assert "<stdio.h>" in strin
