@@ -93,8 +93,12 @@ class c_visitor(ast.NodeVisitor):
             print("->", end="")
             self.visit(node.attr)
 
+    # For pre-python 3.8
     def visit_Num(self, node):
         print(node.n, end = "")
+
+    def visit_Constant(self, node):
+        print(node.value, end = "")
 
     def visit_Assign(self, node):
         assert len(node.targets) == 1
