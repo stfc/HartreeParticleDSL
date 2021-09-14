@@ -2,7 +2,6 @@ from abc import ABCMeta, abstractmethod
 
 class C_AOS_IO_Mixin(metaclass=ABCMeta):
 
-    @abstractmethod
     def gen_code_c(self, part_type):
         '''
         Generates and returns the C code required for this IO module.
@@ -18,7 +17,6 @@ class C_AOS_IO_Mixin(metaclass=ABCMeta):
                                   "gen_code_c")
 
 
-    @abstractmethod
     def call_input_c(self, part_count, filename):
         '''
         Returns the C call required to use this IO module for input.
@@ -33,7 +31,6 @@ class C_AOS_IO_Mixin(metaclass=ABCMeta):
                                   "implement required function "
                                   "call_input_c")
 
-    @abstractmethod
     def call_output_c(self, part_count, filename):
         '''
         Returns the C call required to use this IO module for output.
@@ -48,7 +45,6 @@ class C_AOS_IO_Mixin(metaclass=ABCMeta):
                                   "implement required function "
                                   "call_output_c")
     
-    @abstractmethod
     def get_includes_c(self):
         '''
         Returns the C includes required to use this IO module for C_AOS.
