@@ -47,7 +47,13 @@ def test_generateincludes():
     mod = Random_Particles()
     backend.set_io_modules(mod, None)
     strin = backend.generate_includes()
-    print(strin)
+    assert "<stdio.h>" in strin
+    assert "random_io.h" in strin
+    assert "<math.h>" in strin
+    assert "\"part.h\"" in strin
+    assert "<stdlib.h>" in strin
+    backend.set_io_modules(None, mod)
+    strin = backend.generate_includes()
     assert "<stdio.h>" in strin
     assert "random_io.h" in strin
     assert "<math.h>" in strin
@@ -59,6 +65,8 @@ def test_gen_headers():
     backend = C_AOS()
     part = Particle()
     config = Config()
+    mod = Random_Particles()
+    backend.set_io_modules(mod, mod)
     backend.gen_headers(config, part)
     f_str = ""
     with open('part.h', 'r') as f:
