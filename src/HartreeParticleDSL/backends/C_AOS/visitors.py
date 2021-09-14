@@ -98,6 +98,7 @@ class c_visitor(ast.NodeVisitor):
         print(node.n, end = "")
 
     def visit_Constant(self, node):
+        print(type(node.value))
         print(node.value, end = "")
 
     def visit_Assign(self, node):
