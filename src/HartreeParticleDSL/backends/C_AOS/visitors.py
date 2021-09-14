@@ -173,9 +173,7 @@ class c_visitor(ast.NodeVisitor):
             self.visit(a)
 
     def visit_Index(self, node):
-#        print("[", end="")
         self.visit(node.value)
-#        print("]", end="")
 
     def visit_Subscript(self, node):
         self.visit(node.value)
