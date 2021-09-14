@@ -139,3 +139,86 @@ def test_print_main(capsys):
     correct = correct + "    a = ( a + 1 );\n"
     correct = correct + "}\n"
     assert correct in captured.out
+
+def test_gen_invoke_perpart(capsys):
+    '''Test the gen_invoke function of C_AOS for perpart kernel'''
+    backend = C_AOS()
+    backend.gen_invoke("kern2", 0, 1, kernels.perpart_kernel_wrapper)
+    captured = capsys.readouterr()
+    correct = "\n /* INVOKE generated for kern2 */\n"
+    correct = correct + "for( int part1 = 0; part1 < config->space.nparts; part1++){\n"
+    correct = correct + " kern2(&parts[part1], config);\n"
+    correct = correct + "}\n"
+    correct = correct + "/* End of INVOKE generated for kern2 */\n\n"
+    assert correct in captured.out
+
+def test_gen_invoke_pairwise(capsys):
+    '''Test the gen_invoke function of C_AOS for pairwise kernel'''
+    backend = C_AOS()
+    backend.gen_invoke("kern", 0, 1, kernels.pairwise_kernel_wrapper)
+    captured = capsys.readouterr()
+    correct = "\n /* INVOKE generated for kern */\n"
+    correct = correct + "for( int part1 = 0; part1 < config->space.nparts; part1++){\n"
+    correct = correct + " for( int part2 = 0; part2 < config->space.nparts; part2++){\n"
+    correct = correct + "  if(part1 == part2) continue;\n"
+    correct = correct + "  double r2 = 0.0;\n"
+    correct = correct + "  for(int k = 0; k < 3; k++){\n"
+    correct = correct + "   r2 += (parts[part1].core_part.position[k] - parts[part2].core_part.position[k]) * (parts[part1].core_part.position[k] - parts[part2].core_part.position[k]);\n"
+    correct = correct + "  }\n"
+    correct = correct + "  if(r2 < config->cutoff*config->cutoff){\n"
+    correct = correct + "   kern(&parts[part1], &parts[part2], r2, config);\n"
+    correct = correct + "  }\n"
+    correct = correct + " }\n"
+    correct = correct + "}\n"
+    correct = correct + "/* End of INVOKE generated for kern */"
+    assert correct in captured.out
+
+def test_gen_invoke_fail(capsys):
+    '''Test the gen_invoke function outputs nothing for unsupported kernel types'''
+    pass
+
+def test_initialisation_code(capsys):
+    '''Test the initialisation_code function of C_AOS'''
+    mod = Random_Particles()
+    backend = C_AOS()
+    backend.set_io_modules(mod, mod)
+    val = backend.initialisation_code(1000, None)
+    assert val == "random_io(1000, config);"
+
+def test_gen_particle():
+    '''Test the gen_particle function of C_AOS'''
+    backend = C_AOS()
+    part = Particle()
+    part.add_element("thing", "double[4]")
+    rval = backend.gen_particle(part)
+    correct = "struct core_part_type{\n"
+    correct = correct + "    double position[3];\n"
+    correct = correct + "    double velocity[3];\n"
+    correct = correct + "};\n\n"
+    correct = correct + "struct neighbour_part_type{\n"
+    correct = correct + "};\n\n"
+    correct = correct + "struct part{\n"
+    correct = correct + "    struct core_part_type core_part;\n"
+    correct = correct + "    struct neighbour_part_type neighbour_part;\n"
+    correct = correct + "    double thing[4];\n"
+    correct = correct + "};\n\n"
+    assert correct == rval
+
+def test_gen_config():
+    '''Test the gen_config function of C_AOS'''
+    backend = C_AOS()
+    conf = Config()
+    conf.add_element("thing", "double[4]")
+    rval = backend.gen_config(conf)
+    correct = "struct space_type{\n"
+    correct = correct + "    double box_dims[3];\n"
+    correct = correct + "    int nparts;\n"
+    correct = correct + "};\n\n"
+    correct = correct + "struct neighbour_config_type{\n"
+    correct = correct + "};\n\n"
+    correct = correct + "struct config_type{\n"
+    correct = correct + "    struct space_type space;\n"
+    correct = correct + "    struct neighbour_config_type neighbour_config;\n"
+    correct = correct + "    double thing[4];\n"
+    correct = correct + "};\n\n"
+    assert correct == rval

@@ -166,43 +166,43 @@ class C_AOS(Backend):
         if kernel_type == kernels.perpart_kernel_wrapper:
             print(" "*current_indent, end="")
             print("for( int part1 = 0; part1 < config->space.nparts; part1++){")
-            current_indent = current_indent + 4
+            current_indent = current_indent + indent
             print(" "*current_indent, end="")
             print(f"{kernel_name}(&parts[part1], config);")
-            current_indent = current_indent - 4
+            current_indent = current_indent - indent
             print(" "*current_indent, end="")
             print("}")
         elif kernel_type == kernels.pairwise_kernel_wrapper:
             print(" "*current_indent, end="")
             print("for( int part1 = 0; part1 < config->space.nparts; part1++){")
-            current_indent = current_indent + 4
+            current_indent = current_indent + indent
             print(" "*current_indent, end="")
             print("for( int part2 = 0; part2 < config->space.nparts; part2++){")
-            current_indent = current_indent + 4
+            current_indent = current_indent + indent
             print(" "*current_indent, end="")
             print("if(part1 == part2) continue;")
             print(" "*current_indent, end="")
             print("double r2 = 0.0;")
             print(" "*current_indent, end="")
             print("for(int k = 0; k < 3; k++){")
-            current_indent = current_indent + 4
+            current_indent = current_indent + indent
             print(" "*current_indent, end="")
-            print(" r2 += (parts[part1].core_part.position[k] - parts[part2].core_part.position[k]) * (parts[part1].core_part.position[k] - parts[part2].core_part.position[k]);")
-            current_indent = current_indent - 4
+            print("r2 += (parts[part1].core_part.position[k] - parts[part2].core_part.position[k]) * (parts[part1].core_part.position[k] - parts[part2].core_part.position[k]);")
+            current_indent = current_indent - indent
             print(" "*current_indent, end="")
             print("}")
             print(" "*current_indent, end="")
             print("if(r2 < config->cutoff*config->cutoff){")
-            current_indent = current_indent + 4
+            current_indent = current_indent + indent
             print(" "*current_indent, end="")
             print(f"{kernel_name}(&parts[part1], &parts[part2], r2, config);")
-            current_indent = current_indent - 4
+            current_indent = current_indent - indent
             print(" "*current_indent, end="")
             print("}")
-            current_indent = current_indent - 4
+            current_indent = current_indent - indent
             print(" "*current_indent, end="")
             print("}")
-            current_indent = current_indent - 4
+            current_indent = current_indent - indent
             print(" "*current_indent, end="")
             print("}")
         print(f"{space*current_indent}/* End of INVOKE generated for {kernel_name} */\n")
