@@ -170,14 +170,16 @@ class c_visitor(ast.NodeVisitor):
             self.visit(a)
 
     def visit_Index(self, node):
-        print("[", end="")
+#        print("[", end="")
         self.visit(node.value)
-        print("]", end="")
+#        print("]", end="")
 
     def visit_Subscript(self, node):
         self.visit(node.value)
         # node.slice must be an ast.Index right now
+        print("[", end="")
         self.visit(node.slice)
+        print("]", end="")
 
     def visit_For(self, node):
         if len(node.orelse) != 0:
