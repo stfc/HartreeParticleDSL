@@ -1,4 +1,6 @@
 import ast
+from HartreeParticleDSL.HartreeParticleDSLExceptions import IllegalLoopError, UnsupportedCodeError, \
+                                                            IllegalArgumentCountError
 
 class c_visitor(ast.NodeVisitor):
 
@@ -64,6 +66,7 @@ class c_visitor(ast.NodeVisitor):
         self.visit(node.ops[0])
         self.visit(node.comparators[0])
         print(" ) ", end="")
+
     def visit_BinOp(self, node):
         print("( ", end = "")
         self.visit(node.left)
@@ -151,10 +154,10 @@ class c_visitor(ast.NodeVisitor):
 
     def visit_Call(self, node):
         self.visit(node.func)
-        print("(", end="")
+        print("( ", end="")
         for child in node.args:
             self.visit(child)
-        print(")", end="")
+        print(" )", end="")
         for child in node.keywords:
             self.visit(child)
 
@@ -169,12 +172,18 @@ class c_visitor(ast.NodeVisitor):
 
     def visit_Subscript(self, node):
         self.visit(node.value)
+        # node.slice must be an ast.Index right now
         self.visit(node.slice)
 
     def visit_For(self, node):
+        if len(node.orelse) != 0:
+            raise IllegalLoopError("Else clauses on Loops are not supported in C_AOS")
         assert len(node.orelse) == 0
-        assert type(node.iter) == ast.Call
-        assert node.iter.func.id == "range"
+        if type(node.iter) != ast.Call:
+            raise IllegalLoopError("Only range loops are supported in C_AOS")
+        if type(node.iter) == ast.Call:
+            if node.iter.func.id != "range":
+                raise IllegalLoopError("Only range loops are supported in C_AOS")
         startval = 0
         endval = node.iter.args[0]
         increment = 1
@@ -185,6 +194,12 @@ class c_visitor(ast.NodeVisitor):
             startval = node.iter.args[0]
             endval = node.iter.args[1]
             increment = node.iter.args[2]
+            if type(increment) is ast.UnaryOp:
+                if type(increment.op) is ast.USub:
+                    increment = -1 *  increment.operand.n
+            else:
+                increment = increment.n
+            
         self.addIndent()
         print("for( int ", end="")
         self.visit(node.target)
@@ -228,17 +243,15 @@ class c_visitor(ast.NodeVisitor):
     def visit_Expr(self, node):
         for a in ast.iter_child_nodes(node):
             self.visit(a)
+        print(";")
 
     def generic_visit(self, node):
-        print(f"Found unexpected node {node}")
-        print(f"The node has fields {node._fields}")
-        assert False
-        for a in ast.iter_child_nodes(node):
-            self.visit(a)
+        raise UnsupportedCodeError(f"Found unsupported node of type {type(node)}")
 
 class c_pairwise_visitor(c_visitor):
     def visit_arguments(self, node):
-        assert len(node.args) == 4
+        if len(node.args) != 4:
+            raise IllegalArgumentCountError("Pairwise function must have 4 arguments for C_AOS backend")
         print("struct part *", end = "")
         self.visit(node.args[0])
         print(", struct part *", end = "")
@@ -309,7 +322,8 @@ class c_main_visitor(c_visitor):
 
 class c_perpart_visitor(c_visitor):
     def visit_arguments(self, node):
-        assert len(node.args) == 2
+        if len(node.args) != 2:
+            raise IllegalArgumentCountError("Per part function must have 2 arguments for C_AOS backend")
         print("struct part *", end="")
         self.visit(node.args[0])
         print(", struct config_type *", end="")

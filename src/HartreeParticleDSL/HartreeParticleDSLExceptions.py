@@ -3,3 +3,12 @@ class SingletonInstanceError(Exception):
 
 class RepeatedNameError(Exception):
     pass
+
+class IllegalLoopError(Exception):
+    pass
+
+class UnsupportedCodeError(Exception):
+    pass
+
+class IllegalArgumentCountError(Exception):
+    pass
