@@ -10,6 +10,7 @@ class c_visitor(ast.NodeVisitor):
     def __init__(self, indent=4):
         self._currentIndent = 0
         self._indent = indent
+        super().__init__()
 
     def incrementIndent(self):
         self._currentIndent = self._currentIndent + self._indent
@@ -250,7 +251,8 @@ class c_visitor(ast.NodeVisitor):
     def visit_Expr(self, node):
         for a in ast.iter_child_nodes(node):
             self.visit(a)
-        print(";")
+            if type(a) is ast.Call:
+                print(";")
 
     def generic_visit(self, node):
         raise UnsupportedCodeError(f"Found unsupported node of type {type(node)}")
@@ -269,52 +271,58 @@ class c_pairwise_visitor(c_visitor):
         self.visit(node.args[3])
 
 class c_main_visitor(c_visitor):
+    def __init__(self, parent, indent=4):
+        self._parent = parent
+        super().__init__(indent=indent)
+
+    def visit_Expr(self, node):
+        for a in ast.iter_child_nodes(node):
+            self.visit(a)
 
     def visit_Call(self, node):
         from HartreeParticleDSL.HartreeParticleDSL import initialise, gen_invoke, println
-        ##Function calls must have a Name
-        if not isinstance(node.func, ast.Name):
-            print(f"The node has fields {node._fields}")
-            print(type(node.func))
-            print(f"func fields {node.func._fields}")
-        assert isinstance(node.func, ast.Name)
-        function_name = node.func.id
-        if function_name == "initialise":
-            particle_count = 0
-            filename = ""
-            for child in node.keywords:
-                if child.arg == "particle_count":
-                    particle_count = child.value.n
-                elif child.arg == "filename":
-                    filename = child.value.s
-            string = initialise(particle_count=particle_count, filename=filename)
-            self.addIndent()
-            print(f"struct config_type* config = malloc(sizeof(struct config_type));")
-            self.addIndent()
-            print(f"struct part* parts = {string}")
-        elif function_name == "cleanup":
-            self.addIndent()
-            print("free(config);");
-            self.addIndent()
-            print("free(parts);")
+        from HartreeParticleDSL.backends.C_AOS.C_AOS import C_AOS
+        # Recursively build up the function name if it is of style mod1.mod2.func
+        function_name = ""
+        if isinstance(node.func, ast.Name):
+            function_name = node.func.id
+        elif isinstance(node.func, ast.Attribute):
+            temp_node = node.func
+            while isinstance(temp_node, ast.Attribute):
+                function_name = temp_node.attr + "." + function_name
+                temp_node = temp_node.value
+            function_name = temp_node.id + "." + function_name
+            #Remove the . at the end
+            function_name = function_name[:-1]
+        func_string = f"{function_name}("
+        arguments = []
+        # TODO #2L: Temporary version until visitors return strings instead of printing
+        for child in node.args:
+            if type(child) is ast.Str:
+                arguments.append(f" \"{child.s}\"")
+            elif type(child) is ast.Name:
+                arguments.append(f" {child.id}")
+            else:
+                arguments.append(f" \"{child.value}\"")
+        for child in node.keywords:
+            string = f" {child.arg}="
+            if type(child.value) is ast.Str:
+                string = string + f"\"{child.value.s}\""
+            elif type(child.value) is ast.Num:
+                string = string + f"{child.value.n}"
+            else:
+                string = string + f"{child.value}"
+            arguments.append(string)
+        arguments.append(f" current_indent={self._currentIndent}")
+        arguments.append(f" indent={self._indent}")
+        func_string = func_string + ",".join(arguments)
+        func_string = func_string + ")"
+        if function_name != "invoke":
+            x = self._parent.call_language_function(func_string)
+            print(x)
         elif function_name == "invoke":
             for child in node.args:
                 gen_invoke(child.id, self._currentIndent, self._indent)
-        elif function_name == "println":
-            s = ast.Expression()
-            s.body = node
-            code = compile(s, '<string>', 'eval')
-            string = eval(code)
-            self.addIndent()
-            print(string, end="")
-        else:
-            self.visit(node.func)
-            print("(", end="")
-            for child in node.args:
-                self.visit(child)
-            print(")", end="")
-            for child in node.keywords:
-                self.visit(child)
 
     def visit_FunctionDef(self, node):
         assert node.name is "main"

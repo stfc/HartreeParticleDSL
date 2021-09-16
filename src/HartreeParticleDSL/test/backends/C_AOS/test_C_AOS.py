@@ -30,7 +30,7 @@ def test_set_io_modules():
 def test_println():
     '''Tests the println function of C_AOS module'''
     backend = C_AOS()
-    statement = backend.println("%f string 123", "total")
+    statement = backend.println("%f string 123", "total", current_indent=0)
     assert statement == "printf(\"%f string 123\\n\", total);\n"
 
 def test_addinclude():
