@@ -13,7 +13,7 @@ class C_AOS(Backend):
     def __init__(self):
         self._pairwise_visitor = c_visitors.c_pairwise_visitor()
         self._per_part_visitor = c_visitors.c_perpart_visitor()
-        self._main_visitor = c_visitors.c_main_visitor()
+        self._main_visitor = c_visitors.c_main_visitor(self)
         self._includes = []
         self._includes.append("<math.h>")
         self._includes.append("<stdio.h>")
@@ -46,7 +46,7 @@ class C_AOS(Backend):
         self._input_module = input_module
         self._output_module = output_module
 
-    def println(self, string, *args):
+    def println(self, string, *args, **kwargs):
         '''
         Function to output the println string for the C_AOS module.
         Called via the visitors when reaching a println statement in user
@@ -58,11 +58,13 @@ class C_AOS(Backend):
 
         :param string: The formatted string to use with printf.
         :type string: str
+        :param int current_indent: The current indentation level
         :param *args: A list of strings containing the C values required
                       for output.
         :type args: str
         '''
-        output = f"printf(\"{string}\\n\""
+        current_indent = kwargs['current_indent']
+        output = " "*current_indent + f"printf(\"{string}\\n\""
         for arg in args:
             output = output + f", {arg}"
         output = output + ");\n"
@@ -262,3 +264,23 @@ class C_AOS(Backend):
             output = output + f"    {c_type} {varnam};\n"
         output = output + "};\n\n"
         return output
+
+    def cleanup(self, current_indent, *args, **kwargs):
+        rval = ""
+        rval = " "*current_indent + "free(config);\n"
+        rval = rval + " "*current_indent + "free(parts);\n"
+        return rval
+
+    def initialise(self,particle_count, filename, current_indent, **kwargs):
+        rval = " "*current_indent + "struct config_type* config = malloc(sizeof(struct config_type));\n"
+        rval = rval + " "*current_indent + f"struct part* parts = {self._input_module.call_input_c(particle_count, filename)}\n"
+        return rval
+
+    def call_language_function(self,func_call, *args):
+        string = ""
+        try:
+            code = compile("self." +func_call, '<string>', 'eval')
+            string = eval(code)
+        except Exception as err:
+            string = func_call
+        return string

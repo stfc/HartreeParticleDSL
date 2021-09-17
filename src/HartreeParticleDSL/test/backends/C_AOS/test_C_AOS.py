@@ -30,7 +30,7 @@ def test_set_io_modules():
 def test_println():
     '''Tests the println function of C_AOS module'''
     backend = C_AOS()
-    statement = backend.println("%f string 123", "total")
+    statement = backend.println("%f string 123", "total", current_indent=0)
     assert statement == "printf(\"%f string 123\\n\", total);\n"
 
 def test_addinclude():
@@ -231,3 +231,30 @@ def test_gen_config():
     correct = correct + "    double thing[4];\n"
     correct = correct + "};\n\n"
     assert correct == rval
+
+def test_cleanup():
+    '''Test the cleanup function of C_AOS'''
+    backend = C_AOS()
+    correct = "  free(config);\n  free(parts);\n"
+    rval = backend.cleanup(current_indent=2)
+    assert correct == rval
+
+def test_initialise():
+    '''Test the initialise function of C_AOS'''
+    mod = Random_Particles()
+    backend = C_AOS()
+    backend.set_io_modules(mod, mod)
+
+    correct = " struct config_type* config = malloc(sizeof(struct config_type));\n"
+    correct = correct + " struct part* parts = {0}\n".format(backend._input_module.call_input_c(100, "abc.def"))
+    rval = backend.initialise(particle_count=100, filename="abc.def", current_indent=1)
+
+def test_call_language_function():
+    '''Test the test_call_language function of C_AOS'''
+    backend = C_AOS()
+    func1 = "a_c_call(*part, 20)"
+    rval1 = backend.call_language_function(func1)
+    assert rval1 == func1
+    func2 = "cleanup(current_indent=2, indent=1)"
+    rval2 = backend.call_language_function(func2)
+    assert rval2 == "  free(config);\n  free(parts);\n"
