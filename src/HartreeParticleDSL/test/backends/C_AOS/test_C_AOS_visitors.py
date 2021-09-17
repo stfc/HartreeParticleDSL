@@ -1,4 +1,5 @@
 from HartreeParticleDSL.backends.C_AOS.visitors import *
+from HartreeParticleDSL.backends.C_AOS.C_AOS import *
 import ast
 import inspect
 import textwrap
@@ -375,6 +376,34 @@ def test_c_pairwise_visitor_visit_arguments(capsys):
     assert "struct part *part1, struct part *part2, double r2, struct config_type *config" in captured.out
 
 # No tests yet for c_main_visitor, definitely needs a rethink anyway.
+def test_c_main_visitor_visit_Expr(capsys):
+    '''Test the visit_Expr function in c_main_visitor'''
+    backend = C_AOS()
+    v = c_main_visitor(backend)
+    def main():
+        b = b + 1
+    c = ast.parse(textwrap.dedent(inspect.getsource(main)))
+    v.visit(c)
+    captured = capsys.readouterr()
+    assert "b = ( b + 1 );" in captured.out
+
+def kern4(part1, part2, r2, config):
+    part1.a = part1.a + 2.0
+
+def test_c_main_visit_Call(capsys):
+    '''Test the visit_Call function in c_main_visitor'''
+    backend = C_AOS()
+    kernel = kernels.pairwise_interaction(kern4)
+    v = c_main_visitor(backend)
+    def main():
+        invoke(kern4)
+        cleanup()
+    c = ast.parse(textwrap.dedent(inspect.getsource(main)))
+    v.visit(c)
+    captured = capsys.readouterr()
+    assert "/* INVOKE generated for kern4 */" in captured.out
+    assert "/* End of INVOKE generated for kern4 */" in captured.out
+    assert "    free(config);\n    free(parts);" in captured.out
 
 
 def test_c_perpart_visitor_visit_arguments(capsys):
