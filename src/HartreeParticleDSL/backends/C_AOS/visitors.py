@@ -107,7 +107,7 @@ class c_visitor(ast.NodeVisitor):
         if type(node.value) is str:
             rval = rval + f"\"{node.value}\""
         else:
-            rval = rval + node.value
+            rval = rval + f"{node.value}"
         return rval
 
     def visit_Assign(self, node):
