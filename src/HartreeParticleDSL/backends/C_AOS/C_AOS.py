@@ -1,3 +1,4 @@
+import re
 from HartreeParticleDSL.backends.base_backend.backend import Backend
 import HartreeParticleDSL.backends.C_AOS.visitors as c_visitors
 import HartreeParticleDSL.kernel_types.kernels as kernels
@@ -21,8 +22,8 @@ class C_AOS(Backend):
                  c_bool : "_Bool"}
 
     def __init__(self):
-        self._pairwise_visitor = c_visitors.c_pairwise_visitor()
-        self._per_part_visitor = c_visitors.c_perpart_visitor()
+        self._pairwise_visitor = c_visitors.c_pairwise_visitor(self)
+        self._per_part_visitor = c_visitors.c_perpart_visitor(self)
         self._main_visitor = c_visitors.c_main_visitor(self)
         self._includes = []
         self._includes.append("<math.h>")
@@ -287,12 +288,15 @@ class C_AOS(Backend):
         rval = rval + " "*current_indent + f"struct part* parts = {self._input_module.call_input_c(particle_count, filename)}\n"
         return rval
 
-    def create_variable(self, c_type, name, **kwargs):
+    def create_variable(self, c_type, name, initial_value=None, **kwargs):
         current_indent = kwargs.get("current_indent", 0)
         if C_AOS._type_map.get(c_type) is None:
             raise UnsupportedTypeError("C_AOS does not support type {0}"
                                         " in created variables".format(c_type))
-        rval = " " * current_indent + C_AOS._type_map.get(c_type) + " " + name + ";"
+        end = ";\n"
+        if initial_value is not None:
+            end = f" = {self._pairwise_visitor.visit(initial_value)};\n"
+        rval = " " * current_indent + C_AOS._type_map.get(c_type) + " " + name + end
         return rval
 
     def call_language_function(self,func_call, *args):
@@ -301,8 +305,13 @@ class C_AOS(Backend):
             code = compile("self." +func_call, '<string>', 'eval')
             string = eval(code)
         except Exception as err:
-            import traceback
-            traceback.print_exc()
-            print(err)
             string = func_call
+            current_index = re.search("current_indent=[0-9]*", string)
+            current_indent = 0
+            if current_index is not None:
+                current_indent = int(current_index[0][15:])
+            string = " "*current_indent + string
+            string = re.sub(", current_indent=[0-9]*, indent=[0-9]*", "", string)
+            string = re.sub(" current_indent=[0-9]*, indent=[0-9]*", "", string)
+            string = string + ";\n"
         return string

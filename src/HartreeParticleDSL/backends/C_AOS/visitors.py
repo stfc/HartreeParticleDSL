@@ -7,8 +7,9 @@ class c_visitor(ast.NodeVisitor):
     _currentIndent = 0
     _else_if = False
 
-    def __init__(self, indent=4):
+    def __init__(self, parent, indent=4):
         self._currentIndent = 0
+        self._parent = parent
         self._indent = indent
         super().__init__()
 
@@ -53,7 +54,7 @@ class c_visitor(ast.NodeVisitor):
         return " > "
 
     def visit_USub(self, node):
-        return " -"
+        return "-"
 
     def visit_UnaryOp(self, node):
         rval = self.visit(node.op) + self.visit(node.operand)
@@ -115,7 +116,7 @@ class c_visitor(ast.NodeVisitor):
         rval = self.addIndent()
         rval = rval + self.visit(node.targets[0])
         rval = rval + " = "
-        rval = rval + self.visit(node.value)
+        rval = rval + self.visit(node.value).lstrip()
         rval = rval + ";\n"
         return rval
 
@@ -172,16 +173,38 @@ class c_visitor(ast.NodeVisitor):
         return rval
 
     def visit_Call(self, node):
-        rval = self.visit(node.func)
-        rval = rval + "( "
+        from HartreeParticleDSL.HartreeParticleDSL import initialise, gen_invoke, println
+        from HartreeParticleDSL.backends.C_AOS.C_AOS import C_AOS
+        # Recursively build up the function name if it is of style mod1.mod2.func
+        function_name = ""
+        if isinstance(node.func, ast.Name):
+            function_name = node.func.id
+        elif isinstance(node.func, ast.Attribute):
+            temp_node = node.func
+            while isinstance(temp_node, ast.Attribute):
+                function_name = temp_node.attr + "." + function_name
+                temp_node = temp_node.value
+            function_name = temp_node.id + "." + function_name
+            #Remove the . at the end
+            function_name = function_name[:-1]
+        func_string = f"{function_name}( "
         arguments = []
+        # TODO #2L: Temporary version until visitors return strings instead of printing
         for child in node.args:
             arguments.append(self.visit(child))
-        arg_str = ", ".join(arguments)
-        rval = rval + arg_str
-        rval = rval + " )"
         for child in node.keywords:
-            rval = rval + self.visit(child)
+            string = f"{child.arg}={self.visit(child.value)}"
+            arguments.append(string)
+        arguments.append(f"current_indent={self._currentIndent}")
+        arguments.append(f"indent={self._indent}")
+        func_string = func_string + ", ".join(arguments)
+        func_string = func_string + " )"
+        rval = ""
+        if function_name != "invoke":
+            rval = self._parent.call_language_function(func_string)
+        elif function_name == "invoke":
+            for child in node.args:
+                rval = gen_invoke(child.id, self._currentIndent, self._indent)
         return rval
 
     def visit_Module(self, node):
@@ -273,8 +296,8 @@ class c_visitor(ast.NodeVisitor):
         rval = ""
         for a in ast.iter_child_nodes(node):
             rval = rval + self.visit(a)
-            if type(a) is ast.Call:
-                rval = rval + ";\n"
+#            if type(a) is ast.Call:
+#                rval = rval + ";\n"
         return rval
 
     def generic_visit(self, node):
@@ -297,58 +320,12 @@ class c_pairwise_visitor(c_visitor):
 class c_main_visitor(c_visitor):
     def __init__(self, parent, indent=4):
         self._parent = parent
-        super().__init__(indent=indent)
+        super().__init__(parent, indent=indent)
 
     def visit_Expr(self, node):
         rval = ""
         for a in ast.iter_child_nodes(node):
             rval = rval + self.visit(a)
-        return rval
-
-    def visit_Call(self, node):
-        from HartreeParticleDSL.HartreeParticleDSL import initialise, gen_invoke, println
-        from HartreeParticleDSL.backends.C_AOS.C_AOS import C_AOS
-        # Recursively build up the function name if it is of style mod1.mod2.func
-        function_name = ""
-        if isinstance(node.func, ast.Name):
-            function_name = node.func.id
-        elif isinstance(node.func, ast.Attribute):
-            temp_node = node.func
-            while isinstance(temp_node, ast.Attribute):
-                function_name = temp_node.attr + "." + function_name
-                temp_node = temp_node.value
-            function_name = temp_node.id + "." + function_name
-            #Remove the . at the end
-            function_name = function_name[:-1]
-        func_string = f"{function_name}("
-        arguments = []
-        # TODO #2L: Temporary version until visitors return strings instead of printing
-        for child in node.args:
-            if type(child) is ast.Str:
-                arguments.append(f" \"{child.s}\"")
-            elif type(child) is ast.Name:
-                arguments.append(f" {child.id}")
-            else:
-                arguments.append(f" \"{child.value}\"")
-        for child in node.keywords:
-            string = f" {child.arg}="
-            if type(child.value) is ast.Str:
-                string = string + f"\"{child.value.s}\""
-            elif type(child.value) is ast.Num:
-                string = string + f"{child.value.n}"
-            else:
-                string = string + f"{child.value}"
-            arguments.append(string)
-        arguments.append(f" current_indent={self._currentIndent}")
-        arguments.append(f" indent={self._indent}")
-        func_string = func_string + ",".join(arguments)
-        func_string = func_string + ")"
-        rval = ""
-        if function_name != "invoke":
-            rval = self._parent.call_language_function(func_string)
-        elif function_name == "invoke":
-            for child in node.args:
-                rval = gen_invoke(child.id, self._currentIndent, self._indent)
         return rval
 
     def visit_FunctionDef(self, node):
