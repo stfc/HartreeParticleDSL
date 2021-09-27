@@ -88,11 +88,6 @@ class c_visitor(ast.NodeVisitor):
             rval = rval + f".{node.attr}"
         elif type(node.value) is ast.Subscript:
             rval = rval + self.visit(node.value)
-        elif node.value.id.startswith("var_"):
-            rval = rval + node.value.id.replace("var_", "")
-            rval = rval + " "
-            rval = rval + self.visit(node.attr)
-            pass
         else:
             rval = rval + self.visit(node.value)
             rval = rval + "->"
