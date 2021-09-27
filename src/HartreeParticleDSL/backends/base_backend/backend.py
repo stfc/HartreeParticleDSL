@@ -37,3 +37,5 @@ class Backend(metaclass=ABCMeta):
     def initialisation_code(self, particle_count, filename):
         pass
 
+    def create_variable(self, c_type, name, **kwargs):
+        pass

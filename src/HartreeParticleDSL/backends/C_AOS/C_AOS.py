@@ -3,6 +3,8 @@ import HartreeParticleDSL.backends.C_AOS.visitors as c_visitors
 import HartreeParticleDSL.kernel_types.kernels as kernels
 from HartreeParticleDSL.backends.C_AOS.C_AOS_IO_Mixin import C_AOS_IO_Mixin
 from HartreeParticleDSL.IO_modules.IO_Exceptions import *
+from HartreeParticleDSL.c_types import c_int, c_double, c_float, c_int64_t, \
+                                       c_int32_t, c_int8_t, c_bool
 
 class C_AOS(Backend):
     '''
@@ -10,6 +12,14 @@ class C_AOS(Backend):
     Outputs from this class are Serial C code with Arrays of Struct particle
     representation.
     '''
+    _type_map = {c_int : "int",
+                 c_double : "double",
+                 c_float : "float",
+                 c_int64_t : "long long int",
+                 c_int32_t : "int",
+                 c_int8_t : "char",
+                 c_bool : "_Bool"}
+
     def __init__(self):
         self._pairwise_visitor = c_visitors.c_pairwise_visitor()
         self._per_part_visitor = c_visitors.c_perpart_visitor()
@@ -277,11 +287,22 @@ class C_AOS(Backend):
         rval = rval + " "*current_indent + f"struct part* parts = {self._input_module.call_input_c(particle_count, filename)}\n"
         return rval
 
+    def create_variable(self, c_type, name, **kwargs):
+        current_indent = kwargs.get("current_indent", 0)
+        if C_AOS._type_map.get(c_type) is None:
+            raise UnsupportedTypeError("C_AOS does not support type {0}"
+                                        " in created variables".format(c_type))
+        rval = " " * current_indent + C_AOS._type_map.get(c_type) + " " + name + ";"
+        return rval
+
     def call_language_function(self,func_call, *args):
         string = ""
         try:
             code = compile("self." +func_call, '<string>', 'eval')
             string = eval(code)
         except Exception as err:
+            import traceback
+            traceback.print_exc()
+            print(err)
             string = func_call
         return string

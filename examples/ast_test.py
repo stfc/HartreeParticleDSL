@@ -5,12 +5,15 @@ import HartreeParticleDSL.kernel_types.kernels as kernels
 import HartreeParticleDSL.IO_modules.random_IO.random_IO as io_modules
 import HartreeParticleDSL.backends.C_AOS.C_AOS as languages
 import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
+from HartreeParticleDSL.c_types import c_int, c_double
 
 
 @kernels.pairwise_interaction
 def foo(part1, part2, r2, config):
-    var_int.a = 0
-    var_double.b = 2.63
+    create_variable(c_int, "a")
+    a = 0
+    create_variable(c_double, "b")
+    b = 2.63
     a = a + 2
     for i in range(3):
         part1.force[i] = b
@@ -54,6 +57,8 @@ def main():
     config.time = 0.0
     config.dt = 0.1
     config.cutoff = 0.5
+    create_variable(c_int, "z")
+    z = 2
     while config.time < 1.0:
         invoke(random_velocity)
         invoke(move_part)
