@@ -149,23 +149,21 @@ def test_print_main(capsys):
     correct = correct + "}\n"
     assert correct in captured.out
 
-def test_gen_invoke_perpart(capsys):
+def test_gen_invoke_perpart():
     '''Test the gen_invoke function of C_AOS for perpart kernel'''
     backend = C_AOS()
-    backend.gen_invoke("kern2", 0, 1, kernels.perpart_kernel_wrapper)
-    captured = capsys.readouterr()
+    out = backend.gen_invoke("kern2", 0, 1, kernels.perpart_kernel_wrapper)
     correct = "\n /* INVOKE generated for kern2 */\n"
     correct = correct + "for( int part1 = 0; part1 < config->space.nparts; part1++){\n"
     correct = correct + " kern2(&parts[part1], config);\n"
     correct = correct + "}\n"
     correct = correct + "/* End of INVOKE generated for kern2 */\n\n"
-    assert correct in captured.out
+    assert correct in out
 
-def test_gen_invoke_pairwise(capsys):
+def test_gen_invoke_pairwise():
     '''Test the gen_invoke function of C_AOS for pairwise kernel'''
     backend = C_AOS()
-    backend.gen_invoke("kern", 0, 1, kernels.pairwise_kernel_wrapper)
-    captured = capsys.readouterr()
+    out = backend.gen_invoke("kern", 0, 1, kernels.pairwise_kernel_wrapper)
     correct = "\n /* INVOKE generated for kern */\n"
     correct = correct + "for( int part1 = 0; part1 < config->space.nparts; part1++){\n"
     correct = correct + " for( int part2 = 0; part2 < config->space.nparts; part2++){\n"
@@ -180,7 +178,7 @@ def test_gen_invoke_pairwise(capsys):
     correct = correct + " }\n"
     correct = correct + "}\n"
     correct = correct + "/* End of INVOKE generated for kern */"
-    assert correct in captured.out
+    assert correct in out
 
 def test_gen_invoke_fail(capsys):
     '''Test the gen_invoke function outputs nothing for unsupported kernel types'''

@@ -158,9 +158,12 @@ class _HartreeParticleDSL():
         :type current_indent: int
         :param indent: The amount to indent for each line of code.
         :type indent: int
+
+        :returns: The code for this invocation
+        :rval: str
         '''
         assert kernel_name in self._kernel_names
-        self._backend.gen_invoke(kernel_name, current_indent, indent, type(self._kernels[self._kernel_names.index(kernel_name)]) )
+        return self._backend.gen_invoke(kernel_name, current_indent, indent, type(self._kernels[self._kernel_names.index(kernel_name)]) )
 
     def println(self, string, *args):
         '''
@@ -279,8 +282,11 @@ def gen_invoke(kernel_name, current_indent, indent):
     :type current_indent: int
     :param indent: The amount to indent for each line of code.
     :type indent: int
+
+    :returns: The string to invoke this kernel
+    :rval: str
     '''
-    _HartreeParticleDSL.get_instance().generate_invoke(kernel_name, current_indent, indent)
+    return _HartreeParticleDSL.get_instance().generate_invoke(kernel_name, current_indent, indent)
 
 def println(string, *args):
     '''

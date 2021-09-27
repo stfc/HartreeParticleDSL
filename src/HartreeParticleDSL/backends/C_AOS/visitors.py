@@ -19,169 +19,187 @@ class c_visitor(ast.NodeVisitor):
         self._currentIndent = self._currentIndent - self._indent
 
     def addIndent(self):
-        for i in range(self._currentIndent):
-            print(" ", end="")
+        rval = " " * self._currentIndent
+        return rval
 
     def visit_Str(self, node):
-        print(f"\"{node.s}\"", end="")
+        return f"\"{node.s}\""
 
     def visit_str(self, node):
-        print(node, end="")
+        return node
 
     def visit_int(self, node):
-        print(node, end="")
+        return f"{node}"
 
     def visit_Add(self, node):
-        print(" + ", end = "")
+        return " + "
 
     def visit_Mult(self, node):
-        print(" * ", end = "")
+        return " * "
 
     def visit_Sub(self, node):
-        print(" - ", end = "")
+        return " - "
 
     def visit_LtE(self, node):
-        print(" <= ", end="")
+        return " <= "
 
     def visit_GtE(self, node):
-        print(" >= ", end="")
+        return " >= "
 
     def visit_Lt(self, node):
-        print(" < ", end="")
+        return " < "
 
     def visit_Gt(self, node):
-        print(" > ", end="")
+        return " > "
 
     def visit_USub(self, node):
-        print(" -", end="")
+        return " -"
 
     def visit_UnaryOp(self, node):
-        self.visit(node.op)
-        self.visit(node.operand)
+        rval = self.visit(node.op) + self.visit(node.operand)
+        return rval
 
     def visit_Compare(self, node):
         assert len(node.ops) == 1
         assert len(node.comparators) == 1
-        print(" ( ", end="")
-        self.visit(node.left)
-        self.visit(node.ops[0])
-        self.visit(node.comparators[0])
-        print(" ) ", end="")
+        rval = " ( "
+        rval = rval + self.visit(node.left)
+        rval = rval + self.visit(node.ops[0])
+        rval = rval + self.visit(node.comparators[0])
+        rval = rval + " ) "
+        return rval
 
     def visit_BinOp(self, node):
-        print("( ", end = "")
-        self.visit(node.left)
-        self.visit(node.op)
-        self.visit(node.right)
-        print(" )", end = "")
+        rval = "( "
+        rval = rval + self.visit(node.left)
+        rval = rval + self.visit(node.op)
+        rval = rval + self.visit(node.right)
+        rval = rval + " )"
+        return rval
 
     def visit_Name(self, node):
-        print(node.id, end="")
+        return f"{node.id}"
 
     def visit_Attribute(self, node):
+        rval = ""
         if type(node.value) is ast.Attribute:
-            self.visit(node.value)
-            print(f".{node.attr}", end="")
+            rval = rval + self.visit(node.value)
+            rval = rval + f".{node.attr}"
         elif type(node.value) is ast.Subscript:
-            self.visit(node.value)
+            rval = rval + self.visit(node.value)
         elif node.value.id.startswith("var_"):
-            print(node.value.id.replace("var_", ""), end="")
-            print(" ", end="")
-            self.visit(node.attr)
+            rval = rval + node.value.id.replace("var_", "")
+            rval = rval + " "
+            rval = rval + self.visit(node.attr)
             pass
         else:
-            self.visit(node.value)
-            print("->", end="")
-            self.visit(node.attr)
+            rval = rval + self.visit(node.value)
+            rval = rval + "->"
+            rval = rval + self.visit(node.attr)
+        return rval
 
     # For pre-python 3.8
     def visit_Num(self, node):
-        print(node.n, end = "")
+        return f"{node.n}"
 
     def visit_Constant(self, node):
+        rval = ""
         if type(node.value) is str:
-            print(f"\"{node.value}\"", end="")
+            rval = rval + f"\"{node.value}\""
         else:
-            print(node.value, end = "")
+            rval = rval + f"{node.value}"
+        return rval
 
     def visit_Assign(self, node):
         assert len(node.targets) == 1
-        self.addIndent()
-        self.visit(node.targets[0])
-        print(" = ", end="")
-        self.visit(node.value)
-        print(";")
+        rval = self.addIndent()
+        rval = rval + self.visit(node.targets[0])
+        rval = rval + " = "
+        rval = rval + self.visit(node.value)
+        rval = rval + ";\n"
+        return rval
 
     def visit_arg(self, node):
-        print(node.arg, end="")
+        return f"{node.arg}"
 
     def visit_arguments(self, node):
+        rval = ""
         for child in node.args:
-            print("struct part *", end="")
-            self.visit(child)
+            rval = rval + "struct part *"
+            rval = rval + self.visit(child)
             if child is not node.args[-1]:
-                print(", ", end="")
+                rval = rval + ", "
+        return rval
 
     def visit_FunctionDef(self, node):
-        print(f"void {node.name}( ", end="")
-        self.visit(node.args)
-        print(" )\n{\n",end="")
+        rval = f"void {node.name}( "
+        rval = rval + self.visit(node.args)
+        rval = rval + " )\n{\n"
         self.incrementIndent()
         for a in node.body:
-            self.visit(a)
+            rval = rval + self.visit(a)
         self.decrementIndent()
-        print("}\n")
-
+        rval = rval + "}\n"
+        return rval
 
     def visit_If(self, node):
+        rval = ""
         if not self._else_if:
-            self.addIndent()
+            rval = rval + self.addIndent()
         self.elseIf = False
-        print("if( ", end="")
-        self.visit(node.test)
-        print(" ){\n", end="")
+        rval = rval + "if( "
+        rval = rval + self.visit(node.test)
+        rval = rval + " ){\n"
         self.incrementIndent()
         for child in node.body:
-            self.visit(child)
+            rval = rval + self.visit(child)
         self.decrementIndent()
-        self.addIndent()
-        print("}", end="")
+        rval = rval + self.addIndent()
+        rval = rval + "}"
         for child in node.orelse:
             if type(child) == ast.If:
-                print("else ", end="")
+                rval = rval + "else "
                 self._else_if = True
-                self.visit(child)
+                rval = rval + self.visit(child)
             else:
-                print("else{\n", end="")
+                rval = rval + "else{\n"
                 self.incrementIndent()
-                self.visit(child)
+                rval = rval + self.visit(child)
                 self.decrementIndent()
-                self.addIndent()
-                print("}", end="")
-        print("\n", end="")
+                rval = rval + self.addIndent()
+                rval = rval + "}"
+        rval = rval + "\n"
+        return rval
 
     def visit_Call(self, node):
-        self.visit(node.func)
-        print("( ", end="")
+        rval = self.visit(node.func)
+        rval = rval + "( "
+        arguments = []
         for child in node.args:
-            self.visit(child)
-        print(" )", end="")
+            arguments.append(self.visit(child))
+        arg_str = ", ".join(arguments)
+        rval = rval + arg_str
+        rval = rval + " )"
         for child in node.keywords:
-            self.visit(child)
+            rval = rval + self.visit(child)
+        return rval
 
     def visit_Module(self, node):
+        rval = ""
         for a in ast.iter_child_nodes(node):
-            self.visit(a)
+            rval = rval + self.visit(a)
+        return rval
 
     def visit_Index(self, node):
-        self.visit(node.value)
+        return self.visit(node.value)
 
     def visit_Subscript(self, node):
-        self.visit(node.value)
+        rval = self.visit(node.value)
         # node.slice must be an ast.Index right now
-        print("[", end="")
-        self.visit(node.slice)
-        print("]", end="")
+        rval = rval + "["
+        rval = rval + self.visit(node.slice)
+        rval = rval + "]"
+        return rval
 
     def visit_For(self, node):
         if len(node.orelse) != 0:
@@ -207,52 +225,57 @@ class c_visitor(ast.NodeVisitor):
                     increment = -1 *  increment.operand.n
             else:
                 increment = increment.n
-            
-        self.addIndent()
-        print("for( int ", end="")
-        self.visit(node.target)
-        print(" = ", end="")
-        self.visit(startval)
-        print("; ", end="")
-        self.visit(node.target)
+        
+        rval = ""
+        rval = rval + self.addIndent()
+        rval = rval + "for( int "
+        rval = rval + self.visit(node.target)
+        rval = rval + " = "
+        rval = rval + self.visit(startval)
+        rval = rval + "; "
+        rval = rval + self.visit(node.target)
         if increment > 0:
-            print(" < ", end = "")
+            rval = rval + " < "
         else:
-            print(" >= ", end = "")
-        self.visit(endval)
-        print("; ", end="")
-        self.visit(node.target)
-        print(" = ", end="")
-        self.visit(node.target)
-        print(" + ", end="")
-        self.visit(increment)
-        print(")\n", end="")
-        self.addIndent()
-        print("{\n", end="")
+            rval = rval + " >= "
+        rval = rval + self.visit(endval)
+        rval = rval + "; "
+        rval = rval + self.visit(node.target)
+        rval = rval + " = "
+        rval = rval + self.visit(node.target)
+        rval = rval + " + "
+        rval = rval + self.visit(increment)
+        rval = rval + ")\n"
+        rval = rval + self.addIndent()
+        rval = rval + "{\n"
         self.incrementIndent()
         for child in node.body:
-            self.visit(child)
+            rval = rval + self.visit(child)
         self.decrementIndent()
-        self.addIndent()
-        print("}\n", end="")
+        rval = rval + self.addIndent()
+        rval = rval + "}\n"
+        return rval
 
     def visit_While(self, node):
-        self.addIndent()
-        print("while(", end="")
-        self.visit(node.test)
-        print("){")
+        rval = self.addIndent()
+        rval = rval + "while("
+        rval = rval + self.visit(node.test)
+        rval = rval + "){\n"
         self.incrementIndent()
         for child in node.body:
-            self.visit(child)
+            rval = rval + self.visit(child)
         self.decrementIndent()
-        self.addIndent()
-        print("}\n", end="")
+        rval = rval + self.addIndent()
+        rval = rval + "}\n"
+        return rval
 
     def visit_Expr(self, node):
+        rval = ""
         for a in ast.iter_child_nodes(node):
-            self.visit(a)
+            rval = rval + self.visit(a)
             if type(a) is ast.Call:
-                print(";")
+                rval = rval + ";\n"
+        return rval
 
     def generic_visit(self, node):
         raise UnsupportedCodeError(f"Found unsupported node of type {type(node)}")
@@ -261,14 +284,15 @@ class c_pairwise_visitor(c_visitor):
     def visit_arguments(self, node):
         if len(node.args) != 4:
             raise IllegalArgumentCountError("Pairwise function must have 4 arguments for C_AOS backend")
-        print("struct part *", end = "")
-        self.visit(node.args[0])
-        print(", struct part *", end = "")
-        self.visit(node.args[1])
-        print(", double ", end = "")
-        self.visit(node.args[2])
-        print(", struct config_type *", end="")
-        self.visit(node.args[3])
+        rval = "struct part *"
+        rval = rval + self.visit(node.args[0])
+        rval = rval + ", struct part *"
+        rval = rval + self.visit(node.args[1])
+        rval = rval + ", double "
+        rval = rval + self.visit(node.args[2])
+        rval = rval + ", struct config_type *"
+        rval = rval + self.visit(node.args[3])
+        return rval
 
 class c_main_visitor(c_visitor):
     def __init__(self, parent, indent=4):
@@ -276,8 +300,10 @@ class c_main_visitor(c_visitor):
         super().__init__(indent=indent)
 
     def visit_Expr(self, node):
+        rval = ""
         for a in ast.iter_child_nodes(node):
-            self.visit(a)
+            rval = rval + self.visit(a)
+        return rval
 
     def visit_Call(self, node):
         from HartreeParticleDSL.HartreeParticleDSL import initialise, gen_invoke, println
@@ -317,29 +343,32 @@ class c_main_visitor(c_visitor):
         arguments.append(f" indent={self._indent}")
         func_string = func_string + ",".join(arguments)
         func_string = func_string + ")"
+        rval = ""
         if function_name != "invoke":
-            x = self._parent.call_language_function(func_string)
-            print(x)
+            rval = self._parent.call_language_function(func_string)
         elif function_name == "invoke":
             for child in node.args:
-                gen_invoke(child.id, self._currentIndent, self._indent)
+                rval = gen_invoke(child.id, self._currentIndent, self._indent)
+        return rval
 
     def visit_FunctionDef(self, node):
         assert node.name is "main"
-        print(f"int {node.name}( ", end="")
-        self.visit(node.args)
-        print(" )\n{\n",end="")
+        rval = f"int {node.name}( "
+        rval = rval + self.visit(node.args)
+        rval = rval + " )\n{\n"
         self.incrementIndent()
         for a in node.body:
-            self.visit(a)
+            rval = rval + self.visit(a)
         self.decrementIndent()
-        print("}\n")
+        rval = rval + "}\n"
+        return rval
 
 class c_perpart_visitor(c_visitor):
     def visit_arguments(self, node):
         if len(node.args) != 2:
             raise IllegalArgumentCountError("Per part function must have 2 arguments for C_AOS backend")
-        print("struct part *", end="")
-        self.visit(node.args[0])
-        print(", struct config_type *", end="")
-        self.visit(node.args[1])  
+        rval = "struct part *"
+        rval = rval + self.visit(node.args[0])
+        rval = rval + ", struct config_type *"
+        rval = rval + self.visit(node.args[1])  
+        return rval
