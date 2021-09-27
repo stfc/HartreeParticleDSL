@@ -76,7 +76,7 @@ class C_AOS(Backend):
                       for output.
         :type args: str
         '''
-        current_indent = kwargs['current_indent']
+        current_indent = kwargs.get("current_indent", 0)
         output = " "*current_indent + f"printf(\"{string}\\n\""
         for arg in args:
             output = output + f", {arg}"

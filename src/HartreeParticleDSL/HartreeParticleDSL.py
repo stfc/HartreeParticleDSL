@@ -21,11 +21,12 @@ class _HartreeParticleDSL():
     '''
     the_instance = None
 
-    def __init__(self, Backend=C_AOS.C_AOS()):
+    def __init__(self, Backend=None):
         if _HartreeParticleDSL.the_instance is not None:
             raise SingletonInstanceError("Only one instance of _HartreeParticleDSL"
                                          " is allowed")
-        self._io_module = None
+        self._input_module = None
+        self._output_module = None
         self._part_type = None
         self._config_type = None
         self._kernel_names = []
@@ -57,6 +58,7 @@ class _HartreeParticleDSL():
         :type backend: :py:class:`HartreeParticleDSL.backends.base_backend.Backend`
         '''
         self._backend = backend
+        self._backend.set_io_modules(self._input_module, self._output_module)
 
     def set_particle_type(self, part):
         '''
@@ -91,6 +93,8 @@ class _HartreeParticleDSL():
         '''
         self._input_module = input_module
         self._output_module = output_module
+        if self._backend is not None:
+            self._backend.set_io_modules(self._input_module, self._output_module)
 
     def register_kernel(self, kernel_name, kernel):
         '''
@@ -122,7 +126,7 @@ class _HartreeParticleDSL():
 
         At the moment this is just output to standard out.
         '''
-        # Add the io module information to the backend chosen
+        # Add the io module information to the backend chosen just in case
         self._backend.set_io_modules(self._input_module, self._output_module)
 
         #Get the backend to generate the includes
