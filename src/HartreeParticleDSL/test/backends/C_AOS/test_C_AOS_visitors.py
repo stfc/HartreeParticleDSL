@@ -7,224 +7,202 @@ import pytest
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IllegalLoopError, UnsupportedCodeError, \
                                                             IllegalArgumentCountError
 
-def test_c_visitor_visit_Str(capsys):
+def test_c_visitor_visit_Str():
     '''Test the visit_Str function in c_visitor'''
     v = c_visitor()
     def a():
         b = "string"
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    captured = capsys.readouterr()
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "\"string\"" in captured.out
+    out = v.visit(c)
+    assert "\"string\"" in out
 
-def test_c_visitor_visit_str(capsys):
+def test_c_visitor_visit_str():
     '''Test the visit_str function in c_visitor'''
     v = c_visitor()
     def a():
         b = part.str
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "b = part->str;" in captured.out
+    out = v.visit(c)
+    assert "b = part->str;" in out
 
-def test_c_visitor_visit_int(capsys):
+def test_c_visitor_visit_int():
     '''Test the visit_int function in c_visitor'''
     v = c_visitor()
     def a():
         b = 13
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "b = 13;" in captured.out
+    out = v.visit(c)
+    assert "b = 13;" in out
 
-def test_c_visitor_visit_Add(capsys):
+def test_c_visitor_visit_Add():
     '''Test the visit_Add function in c_visitor'''
     v = c_visitor()
     def a():
         b = 1 + 2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "+" in captured.out
+    out = v.visit(c)
+    assert "+" in out
 
-def test_c_visitor_visit_Mult(capsys):
+def test_c_visitor_visit_Mult():
     '''Test the visit_Mult function in c_visitor'''
     v = c_visitor()
     def a():
         b = 1 * 2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "*" in captured.out
+    out = v.visit(c)
+    assert "*" in out
     
-def test_c_visitor_visit_Sub(capsys):
+def test_c_visitor_visit_Sub():
     '''Test the visit_Sub function in c_visitor'''
     v = c_visitor()
     def a():
         b = 1 - 2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "-" in captured.out
+    out = v.visit(c)
+    assert "-" in out
 
-def test_c_visitor_visit_LtE(capsys):
+def test_c_visitor_visit_LtE():
     '''Test the visit_LtE function in c_visitor'''
     v = c_visitor()
     def a():
         b = 1 <= 2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "<=" in captured.out
+    out = v.visit(c)
+    assert "<=" in out
 
-def test_c_visitor_visit_GtE(capsys):
+def test_c_visitor_visit_GtE():
     '''Test the visit_GtE function in c_visitor'''
     v = c_visitor()
     def a():
         b = 1 >= 2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert ">=" in captured.out
+    out = v.visit(c)
+    assert ">=" in out
 
-def test_c_visitor_visit_Lt(capsys):
+def test_c_visitor_visit_Lt():
     '''Test the visit_Lt function in c_visitor'''
     v = c_visitor()
     def a():
         b = 1 < 2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "<" in captured.out
+    out = v.visit(c)
+    assert "<" in out
 
-def test_c_visitor_visit_Gt(capsys):
+def test_c_visitor_visit_Gt():
     '''Test the visit_Gt function in c_visitor'''
     v = c_visitor()
     def a():
         b = 1 > 2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert ">" in captured.out
+    out = v.visit(c)
+    assert ">" in out
 
 
-def test_c_visitor_visit_USub(capsys):
+def test_c_visitor_visit_USub():
     '''Test the visit_USub function in c_visitor'''
     v = c_visitor()
     def a():
         b = 1 + -a
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "1 +  -a" in captured.out
+    out = v.visit(c)
+    assert "1 +  -a" in out
 
-def test_c_visitor_visit_UnaryOp(capsys):
+def test_c_visitor_visit_UnaryOp():
     '''Test the visit_UnaryOp function in c_visitor'''
     v = c_visitor()
     def a():
         b = -3
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "b =  -3" in captured.out
+    out = v.visit(c)
+    assert "b =  -3" in out
 
-def test_c_visitor_visit_Compare(capsys):
+def test_c_visitor_visit_Compare():
     '''Test the visit_Compare function in c_visitor'''
     v = c_visitor()
     def a():
         b = (2 <= 3)
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "2 <= 3" in captured.out
+    out = v.visit(c)
+    assert "2 <= 3" in out
 
-def test_c_visitor_visit_BinOp(capsys):
+def test_c_visitor_visit_BinOp():
     '''Test the visit_BinOp function in c_visitor'''
     v = c_visitor()
     def a():
         b = 1 - 2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "b = ( 1 - 2 )" in captured.out
+    out = v.visit(c)
+    assert "b = ( 1 - 2 )" in out
 
-def test_c_visitor_visit_Name(capsys):
+def test_c_visitor_visit_Name():
     '''Test the visit_Name function in c_visitor'''
     v = c_visitor()
     def a():
         d.b = 1 - 2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "d" in captured.out
+    out = v.visit(c)
+    assert "d" in out
 
 
-def test_c_visitor_visit_Attribute(capsys):
+def test_c_visitor_visit_Attribute():
     '''Test the visit_Attribute function in c_visitor'''
     v = c_visitor()
     def a():
         d.b = 1 - 2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "d->b" in captured.out
+    out = v.visit(c)
+    assert "d->b" in out
 
 
-def test_c_visitor_visit_Num(capsys):
+def test_c_visitor_visit_Num():
     '''Test the visit_Num function in c_visitor'''
     v = c_visitor()
     def a():
         b = 1.2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "1.2" in captured.out
+    out = v.visit(c)
+    assert "1.2" in out
 
-def test_c_visitor_visit_Assign(capsys):
+def test_c_visitor_visit_Assign():
     '''Test the visit_Assign function in c_visitor'''
     v = c_visitor()
     def a():
         b = 1.2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "b = 1.2;" in captured.out
+    out = v.visit(c)
+    assert "b = 1.2;" in out
 
-def test_c_visitor_visit_arg(capsys):
+def test_c_visitor_visit_arg():
     '''Test the visit_arg function in c_visitor'''
     v = c_visitor()
     def a(arg):
         b = 1.2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "arg" in captured.out
+    out = v.visit(c)
+    assert "arg" in out
 
 
-def test_c_visitor_visit_arguments(capsys):
+def test_c_visitor_visit_arguments():
     '''Test the visit_arguments function in c_visitor'''
     v = c_visitor()
     def a(arg, arg2):
         b = 1.2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "( struct part *arg, struct part *arg2 )" in captured.out
+    out = v.visit(c)
+    assert "( struct part *arg, struct part *arg2 )" in out
 
-def test_c_visitor_visit_FunctionDef(capsys):
+def test_c_visitor_visit_FunctionDef():
     '''Test the visit_FunctionDef function in c_visitor'''
     v = c_visitor()
     def a():
         b = 1.2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "void a(  )\n{\n" in captured.out
-    assert "}\n" in captured.out
+    out = v.visit(c)
+    assert "void a(  )\n{\n" in out
+    assert "}\n" in out
 
 
-def test_c_visitor_visit_If(capsys):
+def test_c_visitor_visit_If():
     '''Test the visit_If function in c_visitor'''
     v = c_visitor()
     def a():
@@ -236,55 +214,49 @@ def test_c_visitor_visit_If(capsys):
         else:
             b = 3
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "    if(  ( c > 1 )  ){\n" in captured.out
-    assert "}else if(  ( c <=  -1 )  ){\n" in captured.out
-    assert "}else{\n" in captured.out
+    out = v.visit(c)
+    assert "    if(  ( c > 1 )  ){\n" in out
+    assert "}else if(  ( c <=  -1 )  ){\n" in out
+    assert "}else{\n" in out
 
 #Fails atm
-def test_c_visitor_visit_Call(capsys):
+def test_c_visitor_visit_Call():
     '''Test the visit_Call function in c_visitor'''
     v = c_visitor()
     def a():
         func(arg1)
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    print(captured.out)
-    assert "func( arg1 );" in captured.out
+    out = v.visit(c)
+    assert "func( arg1 );" in out
 
-def test_c_visitor_visit_Module(capsys):
+def test_c_visitor_visit_Module():
     '''Test the visit_Module function in c_visitor'''
     v = c_visitor()
     def a():
         asd.fgh = 1.0
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "asd->fgh" in captured.out
+    out = v.visit(c)
+    assert "asd->fgh" in out
 
-def test_c_visitor_visit_Index(capsys):
+def test_c_visitor_visit_Index():
     '''Test the visit_Index function in c_visitor'''
     v = c_visitor()
     def a():
         d = s[2]
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "s[2]" in captured.out
+    out = v.visit(c)
+    assert "s[2]" in out
 
-def test_c_visitor_visit_Subscript(capsys):
+def test_c_visitor_visit_Subscript():
     '''Test the visit_Subscript function in c_visitor'''
     v = c_visitor()
     def a():
         s = d[1]
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "[1]" in captured.out
+    out = v.visit(c)
+    assert "[1]" in out
 
-def test_c_visitor_visit_For(capsys):
+def test_c_visitor_visit_For():
     '''Test the visit_For function in c_visitor'''
     v = c_visitor()
     def a():
@@ -297,13 +269,11 @@ def test_c_visitor_visit_For(capsys):
         for s in range(3, 9, 2):
             d[s] = 0.2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    print(captured.out)
-    assert "for( int i = 0; i < 3; i = i + 1)\n    {" in captured.out
-    assert "for( int j = 3; j < 5; j = j + 1)\n    {" in captured.out
-    assert "for( int k = 3; k >= 0; k = k + -1)\n    {" in captured.out
-    assert "for( int s = 3; s < 9; s = s + 2)\n    {" in captured.out
+    out = v.visit(c)
+    assert "for( int i = 0; i < 3; i = i + 1)\n    {" in out
+    assert "for( int j = 3; j < 5; j = j + 1)\n    {" in out
+    assert "for( int k = 3; k >= 0; k = k + -1)\n    {" in out
+    assert "for( int s = 3; s < 9; s = s + 2)\n    {" in out
     def b():
         for i in range(3):
             d[i] = 0.2
@@ -311,14 +281,14 @@ def test_c_visitor_visit_For(capsys):
             x = 0
     c = ast.parse(textwrap.dedent(inspect.getsource(b)))
     with pytest.raises(IllegalLoopError) as excinfo:
-        v.visit(c)
+        out = v.visit(c)
     assert "Else clauses on Loops are not supported in C_AOS" in str(excinfo.value)
     def f():
         for i in a:
             d[i] = 0.2
     c = ast.parse(textwrap.dedent(inspect.getsource(f)))
     with pytest.raises(IllegalLoopError) as excinfo:
-        v.visit(c)
+        out = v.visit(c)
     assert "Only range loops are supported in C_AOS" in str(excinfo.value)
 
     def g():
@@ -326,71 +296,66 @@ def test_c_visitor_visit_For(capsys):
             d[i] = 0.2
     c = ast.parse(textwrap.dedent(inspect.getsource(g)))
     with pytest.raises(IllegalLoopError) as excinfo:
-        v.visit(c)
+        out = v.visit(c)
     assert "Only range loops are supported in C_AOS" in str(excinfo.value)
 
 
-def test_c_visitor_visit_While(capsys):
+def test_c_visitor_visit_While():
     '''Test the visit_While function in c_visitor'''
     v = c_visitor()
     def a():
         while b < 3:
             b = b + 1
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "while( ( b < 3 ) ){\n" in captured.out
+    out = v.visit(c)
+    assert "while( ( b < 3 ) ){\n" in out
 
-def test_c_visitor_visit_Expr(capsys):
+def test_c_visitor_visit_Expr():
     '''Test the visit_Expr function in c_visitor'''
     v = c_visitor()
     def a():
         b = b + 1
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "b = ( b + 1 );" in captured.out
+    out = v.visit(c)
+    assert "b = ( b + 1 );" in out
 
-def test_c_visitor_generic_visit(capsys):
+def test_c_visitor_generic_visit():
     '''Test the generic_visit function in c_visitor'''
     v = c_visitor()
     with pytest.raises(UnsupportedCodeError) as excinfo:
-        v.visit(v)
+        out = v.visit(v)
     assert f"Found unsupported node of type {type(v)}" in str(excinfo.value)
 
-def test_c_pairwise_visitor_visit_arguments(capsys):
+def test_c_pairwise_visitor_visit_arguments():
     '''Test the visit_arguments function in the c_pairwise_visitor'''
     v = c_pairwise_visitor()
     def a():
         b = 0
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
     with pytest.raises(IllegalArgumentCountError) as excinfo:
-        v.visit(c)
+        out = v.visit(c)
     assert "Pairwise function must have 4 arguments for C_AOS backend" in str(excinfo.value)
-    capsys.readouterr()
     def f(part1, part2, r2, config):
         b = 0
     c = ast.parse(textwrap.dedent(inspect.getsource(f)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "struct part *part1, struct part *part2, double r2, struct config_type *config" in captured.out
+    out = v.visit(c)
+    assert "struct part *part1, struct part *part2, double r2, struct config_type *config" in out
 
 # No tests yet for c_main_visitor, definitely needs a rethink anyway.
-def test_c_main_visitor_visit_Expr(capsys):
+def test_c_main_visitor_visit_Expr():
     '''Test the visit_Expr function in c_main_visitor'''
     backend = C_AOS()
     v = c_main_visitor(backend)
     def main():
         b = b + 1
     c = ast.parse(textwrap.dedent(inspect.getsource(main)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "b = ( b + 1 );" in captured.out
+    out = v.visit(c)
+    assert "b = ( b + 1 );" in out
 
 def kern4(part1, part2, r2, config):
     part1.a = part1.a + 2.0
 
-def test_c_main_visit_Call(capsys):
+def test_c_main_visit_Call():
     '''Test the visit_Call function in c_main_visitor'''
     backend = C_AOS()
     kernel = kernels.pairwise_interaction(kern4)
@@ -399,26 +364,23 @@ def test_c_main_visit_Call(capsys):
         invoke(kern4)
         cleanup()
     c = ast.parse(textwrap.dedent(inspect.getsource(main)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "/* INVOKE generated for kern4 */" in captured.out
-    assert "/* End of INVOKE generated for kern4 */" in captured.out
-    assert "    free(config);\n    free(parts);" in captured.out
+    out = v.visit(c)
+    assert "/* INVOKE generated for kern4 */" in out
+    assert "/* End of INVOKE generated for kern4 */" in out
+    assert "    free(config);\n    free(parts);" in out
 
 
-def test_c_perpart_visitor_visit_arguments(capsys):
+def test_c_perpart_visitor_visit_arguments():
     '''Test the visit_arguments function in the c_perpart_visitor'''
     v = c_perpart_visitor()
     def a():
         b = 0
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
     with pytest.raises(IllegalArgumentCountError) as excinfo:
-        v.visit(c)
+        out = v.visit(c)
     assert "Per part function must have 2 arguments for C_AOS backend" in str(excinfo.value)
-    capsys.readouterr()
     def f(part1, config):
         b = 0
     c = ast.parse(textwrap.dedent(inspect.getsource(f)))
-    v.visit(c)
-    captured = capsys.readouterr()
-    assert "struct part *part1, struct config_type *config" in captured.out
+    out = v.visit(c)
+    assert "struct part *part1, struct config_type *config" in out

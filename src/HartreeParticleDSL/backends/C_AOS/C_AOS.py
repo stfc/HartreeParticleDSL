@@ -148,9 +148,9 @@ class C_AOS(Backend):
         '''
         tree = kernel.get_kernel_tree()
         if isinstance(kernel, kernels.perpart_kernel_wrapper):
-            self._per_part_visitor.visit(tree)
+            print(self._per_part_visitor.visit(tree))
         elif isinstance(kernel, kernels.pairwise_kernel_wrapper):
-            self._pairwise_visitor.visit(tree)
+            print(self._pairwise_visitor.visit(tree))
 
     def print_main(self, function):
         '''
@@ -160,54 +160,55 @@ class C_AOS(Backend):
         :param function: AST.Module of the Main function to generate code for.
         :type function: :py:class:`ast.Module`
         '''
-        self._main_visitor.visit(function)
+        print(self._main_visitor.visit(function))
 
     def gen_invoke(self, kernel_name, current_indent, indent, kernel_type):
         space = " "
-        print(f"\n {space*current_indent}/* INVOKE generated for {kernel_name} */")
+        rval = f"\n {space*current_indent}/* INVOKE generated for {kernel_name} */\n"
         if kernel_type == kernels.perpart_kernel_wrapper:
-            print(" "*current_indent, end="")
-            print("for( int part1 = 0; part1 < config->space.nparts; part1++){")
+            rval = rval + " "*current_indent
+            rval = rval + "for( int part1 = 0; part1 < config->space.nparts; part1++){\n"
             current_indent = current_indent + indent
-            print(" "*current_indent, end="")
-            print(f"{kernel_name}(&parts[part1], config);")
+            rval = rval + " "*current_indent
+            rval = rval + f"{kernel_name}(&parts[part1], config);\n"
             current_indent = current_indent - indent
-            print(" "*current_indent, end="")
-            print("}")
+            rval = rval + " "*current_indent
+            rval = rval + "}\n"
         elif kernel_type == kernels.pairwise_kernel_wrapper:
-            print(" "*current_indent, end="")
-            print("for( int part1 = 0; part1 < config->space.nparts; part1++){")
+            rval = rval + " "*current_indent
+            rval = rval + "for( int part1 = 0; part1 < config->space.nparts; part1++){\n"
             current_indent = current_indent + indent
-            print(" "*current_indent, end="")
-            print("for( int part2 = 0; part2 < config->space.nparts; part2++){")
+            rval = rval + " "*current_indent
+            rval = rval + "for( int part2 = 0; part2 < config->space.nparts; part2++){\n"
             current_indent = current_indent + indent
-            print(" "*current_indent, end="")
-            print("if(part1 == part2) continue;")
-            print(" "*current_indent, end="")
-            print("double r2 = 0.0;")
-            print(" "*current_indent, end="")
-            print("for(int k = 0; k < 3; k++){")
+            rval = rval + " "*current_indent
+            rval = rval + "if(part1 == part2) continue;\n"
+            rval = rval + " "*current_indent
+            rval = rval + "double r2 = 0.0;\n"
+            rval = rval + " "*current_indent
+            rval = rval + "for(int k = 0; k < 3; k++){\n"
             current_indent = current_indent + indent
-            print(" "*current_indent, end="")
-            print("r2 += (parts[part1].core_part.position[k] - parts[part2].core_part.position[k]) * (parts[part1].core_part.position[k] - parts[part2].core_part.position[k]);")
+            rval = rval +" "*current_indent
+            rval = rval + "r2 += (parts[part1].core_part.position[k] - parts[part2].core_part.position[k]) * (parts[part1].core_part.position[k] - parts[part2].core_part.position[k]);\n"
             current_indent = current_indent - indent
-            print(" "*current_indent, end="")
-            print("}")
-            print(" "*current_indent, end="")
-            print("if(r2 < config->cutoff*config->cutoff){")
+            rval = rval + " "*current_indent
+            rval = rval + "}\n"
+            rval = rval + " "*current_indent
+            rval = rval + "if(r2 < config->cutoff*config->cutoff){\n"
             current_indent = current_indent + indent
-            print(" "*current_indent, end="")
-            print(f"{kernel_name}(&parts[part1], &parts[part2], r2, config);")
+            rval = rval + " "*current_indent
+            rval = rval + f"{kernel_name}(&parts[part1], &parts[part2], r2, config);\n"
             current_indent = current_indent - indent
-            print(" "*current_indent, end="")
-            print("}")
+            rval = rval + " "*current_indent
+            rval = rval + "}\n"
             current_indent = current_indent - indent
-            print(" "*current_indent, end="")
-            print("}")
+            rval = rval + " "*current_indent
+            rval = rval + "}\n"
             current_indent = current_indent - indent
-            print(" "*current_indent, end="")
-            print("}")
-        print(f"{space*current_indent}/* End of INVOKE generated for {kernel_name} */\n")
+            rval = rval + " "*current_indent
+            rval = rval + "}\n"
+        rval = rval + f"{space*current_indent}/* End of INVOKE generated for {kernel_name} */\n\n"
+        return rval
 
     def initialisation_code(self, particle_count, filename):
         return self._input_module.call_input_c(particle_count, filename)
