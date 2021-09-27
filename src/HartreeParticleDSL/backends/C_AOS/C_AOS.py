@@ -4,6 +4,7 @@ import HartreeParticleDSL.backends.C_AOS.visitors as c_visitors
 import HartreeParticleDSL.kernel_types.kernels as kernels
 from HartreeParticleDSL.backends.C_AOS.C_AOS_IO_Mixin import C_AOS_IO_Mixin
 from HartreeParticleDSL.IO_modules.IO_Exceptions import *
+from HartreeParticleDSL.HartreeParticleDSLExceptions import InvalidNameError
 from HartreeParticleDSL.c_types import c_int, c_double, c_float, c_int64_t, \
                                        c_int32_t, c_int8_t, c_bool
 
@@ -293,9 +294,14 @@ class C_AOS(Backend):
         if C_AOS._type_map.get(c_type) is None:
             raise UnsupportedTypeError("C_AOS does not support type {0}"
                                         " in created variables".format(c_type))
+        ##Check name is allowed in C
+        a = re.match("[a-zA-Z_][a-zA-Z_0-9]*", name)
+        if a is None or a.group(0) != name:
+            raise InvalidNameError("C_AOS does not support \"{0}\" as a name"
+                                   " for variables.".format(name))
         end = ";\n"
         if initial_value is not None:
-            end = f" = {self._pairwise_visitor.visit(initial_value)};\n"
+            end = f" = {initial_value};\n"
         rval = " " * current_indent + C_AOS._type_map.get(c_type) + " " + name + end
         return rval
 
@@ -304,7 +310,7 @@ class C_AOS(Backend):
         try:
             code = compile("self." +func_call, '<string>', 'eval')
             string = eval(code)
-        except Exception as err:
+        except (SyntaxError, TypeError, AttributeError) as err:
             string = func_call
             current_index = re.search("current_indent=[0-9]*", string)
             current_indent = 0

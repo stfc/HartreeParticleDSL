@@ -18,6 +18,7 @@ def test_base_backend():
     a.print_main(None)
     a.gen_invoke(None)
     a.initialisation_code(None, None)
+    a.create_variable(None, None, None)
 
 def test_base_visitors():
     a = baseVisitor()

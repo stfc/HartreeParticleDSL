@@ -1,8 +1,10 @@
 from HartreeParticleDSL.IO_modules.base_IO_module.IO_module import IO_Module
 from HartreeParticleDSL.IO_modules.random_IO.random_IO import *
 from HartreeParticleDSL.IO_modules.IO_Exceptions import *
+from HartreeParticleDSL.HartreeParticleDSLExceptions import *
 from HartreeParticleDSL.HartreeParticleDSL import Particle, Config
 from HartreeParticleDSL.backends.C_AOS.C_AOS import *
+from HartreeParticleDSL.c_types import *
 import HartreeParticleDSL.kernel_types.kernels as kernels
 import pytest
 import os
@@ -259,3 +261,46 @@ def test_call_language_function():
     func3 = "a_c_call(*part, 20, current_indent=4, indent=1)"
     rval3 = backend.call_language_function(func3)
     assert rval3 == "    a_c_call(*part, 20);\n"
+
+def test_create_variable():
+    '''Test the create_variable function of C_AOS'''
+    backend = C_AOS()
+
+    # Test int
+    out = backend.create_variable(c_int, "a")
+    assert out == "int a;\n"
+
+    # Test double with initial value
+    out = backend.create_variable(c_double, "b", 0.0)
+    assert out == "double b = 0.0;\n"
+
+    # Test float with current_indent
+    out = backend.create_variable(c_float, "c", current_indent=4)
+    assert out == "    float c;\n"
+
+    # Test int64
+    out = backend.create_variable(c_int64_t, "d")
+    assert out == "long long int d;\n"
+
+    # Test int32
+    out = backend.create_variable(c_int32_t, "e")
+    assert out == "int e;\n"
+
+    # Test int8
+    out = backend.create_variable(c_int8_t, "foo")
+    assert out == "char foo;\n"
+
+    #Test bool
+    out = backend.create_variable(c_bool, "g")
+    assert out == "_Bool g;\n"
+
+    #Test some illegal names
+    with pytest.raises(InvalidNameError) as excinfo:
+        out = backend.create_variable(c_int, "space variable")
+    assert ("C_AOS does not support \"space variable\" as a name"
+           " for variables.") in str(excinfo.value)
+
+    with pytest.raises(InvalidNameError) as excinfo:
+        out = backend.create_variable(c_int, "0abc")
+    assert ("C_AOS does not support \"0abc\" as a name"
+           " for variables.") in str(excinfo.value)

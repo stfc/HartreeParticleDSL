@@ -15,3 +15,6 @@ class IllegalArgumentCountError(Exception):
 
 class UnsupportedTypeError(Exception):
     pass
+
+class InvalidNameError(Exception):
+    pass
