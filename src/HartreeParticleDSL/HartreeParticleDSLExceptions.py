@@ -12,3 +12,9 @@ class UnsupportedCodeError(Exception):
 
 class IllegalArgumentCountError(Exception):
     pass
+
+class UnsupportedTypeError(Exception):
+    pass
+
+class InvalidNameError(Exception):
+    pass

@@ -1,8 +1,13 @@
+import re
 from HartreeParticleDSL.backends.base_backend.backend import Backend
 import HartreeParticleDSL.backends.C_AOS.visitors as c_visitors
 import HartreeParticleDSL.kernel_types.kernels as kernels
 from HartreeParticleDSL.backends.C_AOS.C_AOS_IO_Mixin import C_AOS_IO_Mixin
 from HartreeParticleDSL.IO_modules.IO_Exceptions import *
+from HartreeParticleDSL.HartreeParticleDSLExceptions import InvalidNameError, \
+                                                            UnsupportedTypeError
+from HartreeParticleDSL.c_types import c_int, c_double, c_float, c_int64_t, \
+                                       c_int32_t, c_int8_t, c_bool
 
 class C_AOS(Backend):
     '''
@@ -10,9 +15,17 @@ class C_AOS(Backend):
     Outputs from this class are Serial C code with Arrays of Struct particle
     representation.
     '''
+    _type_map = {c_int : "int",
+                 c_double : "double",
+                 c_float : "float",
+                 c_int64_t : "long long int",
+                 c_int32_t : "int",
+                 c_int8_t : "char",
+                 c_bool : "_Bool"}
+
     def __init__(self):
-        self._pairwise_visitor = c_visitors.c_pairwise_visitor()
-        self._per_part_visitor = c_visitors.c_perpart_visitor()
+        self._pairwise_visitor = c_visitors.c_pairwise_visitor(self)
+        self._per_part_visitor = c_visitors.c_perpart_visitor(self)
         self._main_visitor = c_visitors.c_main_visitor(self)
         self._includes = []
         self._includes.append("<math.h>")
@@ -277,11 +290,35 @@ class C_AOS(Backend):
         rval = rval + " "*current_indent + f"struct part* parts = {self._input_module.call_input_c(particle_count, filename)}\n"
         return rval
 
+    def create_variable(self, c_type, name, initial_value=None, **kwargs):
+        current_indent = kwargs.get("current_indent", 0)
+        if C_AOS._type_map.get(c_type) is None:
+            raise UnsupportedTypeError("C_AOS does not support type \"{0}\""
+                                        " in created variables.".format(c_type))
+        ##Check name is allowed in C
+        a = re.match("[a-zA-Z_][a-zA-Z_0-9]*", name)
+        if a is None or a.group(0) != name:
+            raise InvalidNameError("C_AOS does not support \"{0}\" as a name"
+                                   " for variables.".format(name))
+        end = ";\n"
+        if initial_value is not None:
+            end = f" = {initial_value};\n"
+        rval = " " * current_indent + C_AOS._type_map.get(c_type) + " " + name + end
+        return rval
+
     def call_language_function(self,func_call, *args):
         string = ""
         try:
             code = compile("self." +func_call, '<string>', 'eval')
             string = eval(code)
-        except Exception as err:
+        except (SyntaxError, TypeError, AttributeError) as err:
             string = func_call
+            current_index = re.search("current_indent=[0-9]*", string)
+            current_indent = 0
+            if current_index is not None:
+                current_indent = int(current_index[0][15:])
+            string = " "*current_indent + string
+            string = re.sub(", current_indent=[0-9]*, indent=[0-9]*", "", string)
+            string = re.sub(" current_indent=[0-9]*, indent=[0-9]*", "", string)
+            string = string + ";\n"
         return string
