@@ -21,7 +21,7 @@ class _HartreeParticleDSL():
     '''
     the_instance = None
 
-    def __init__(self, Backend=None):
+    def __init__(self, Backend=C_AOS.C_AOS()):
         if _HartreeParticleDSL.the_instance is not None:
             raise SingletonInstanceError("Only one instance of _HartreeParticleDSL"
                                          " is allowed")

@@ -86,8 +86,8 @@ class c_visitor(ast.NodeVisitor):
         if type(node.value) is ast.Attribute:
             rval = rval + self.visit(node.value)
             rval = rval + f".{node.attr}"
-        elif type(node.value) is ast.Subscript:
-            rval = rval + self.visit(node.value)
+#        elif type(node.value) is ast.Subscript:
+#            rval = rval + self.visit(node.value)
         else:
             rval = rval + self.visit(node.value)
             rval = rval + "->"
