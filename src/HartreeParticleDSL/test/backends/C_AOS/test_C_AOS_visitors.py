@@ -168,6 +168,16 @@ def test_c_visitor_visit_Attribute():
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
     out = v.visit(c)
     assert "d->b" in out
+    def aa():
+        d.e.f = 1 - 2
+    c = ast.parse(textwrap.dedent(inspect.getsource(aa)))
+    out = v.visit(c)
+    assert "d->e.f" in out
+    def ab():
+        d.e[1] = 1 - 2
+    c = ast.parse(textwrap.dedent(inspect.getsource(ab)))
+    out = v.visit(c)
+    assert "d->e[1]" in out
 
 
 def test_c_visitor_visit_Num():
@@ -241,7 +251,6 @@ def test_c_visitor_visit_If():
     assert "}else if(  ( c <= -1 )  ){\n" in out
     assert "}else{\n" in out
 
-#Fails atm
 def test_c_visitor_visit_Call():
     '''Test the visit_Call function in c_visitor'''
     aos = C_AOS()
@@ -251,6 +260,11 @@ def test_c_visitor_visit_Call():
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
     out = v.visit(c)
     assert "func( arg1 );" in out
+    def b():
+        func(arg1, arg2=32)
+    c = ast.parse(textwrap.dedent(inspect.getsource(b)))
+    out = v.visit(c)
+    assert "func( arg1, arg2=32 );" in out
 
     def b():
         func(arg1, arg2)
