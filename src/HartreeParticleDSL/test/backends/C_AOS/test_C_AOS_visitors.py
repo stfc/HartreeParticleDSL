@@ -229,6 +229,12 @@ def test_c_visitor_visit_Call():
     out = v.visit(c)
     assert "func( arg1 );" in out
 
+    def b():
+        func(arg1, arg2)
+    c = ast.parse(textwrap.dedent(inspect.getsource(b)))
+    out = v.visit(c)
+    assert "func( arg1, arg2 );" in out
+
 def test_c_visitor_visit_Module():
     '''Test the visit_Module function in c_visitor'''
     v = c_visitor()

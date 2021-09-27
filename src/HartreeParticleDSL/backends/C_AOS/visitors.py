@@ -177,7 +177,7 @@ class c_visitor(ast.NodeVisitor):
         arguments = []
         for child in node.args:
             arguments.append(self.visit(child))
-        arg_str = ",".join(arguments)
+        arg_str = ", ".join(arguments)
         rval = rval + arg_str
         rval = rval + " )"
         for child in node.keywords:
