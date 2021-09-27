@@ -258,6 +258,12 @@ def test_c_visitor_visit_Call():
     out = v.visit(c)
     assert "func( arg1, arg2 );" in out
 
+    def f():
+        mod1.mod2.func()
+    c = ast.parse(textwrap.dedent(inspect.getsource(f)))
+    out = v.visit(c)
+    assert "mod1.mod2.func( )" in out
+
 def test_c_visitor_visit_Module():
     '''Test the visit_Module function in c_visitor'''
     aos = C_AOS()
