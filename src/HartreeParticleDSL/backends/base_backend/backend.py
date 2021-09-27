@@ -66,3 +66,12 @@ class Backend(metaclass=ABCMeta):
 
     def access_to_string(self, variable_access, check_valid):
         pass
+
+    def per_particle_loop_start(self, index_name):
+        pass
+
+    def per_particle_loop_end(self):
+        pass
+
+    def particle_access(self, index_name):
+        pass
