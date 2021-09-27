@@ -2,7 +2,7 @@ import ast
 import inspect
 
 class kernel():
-    def __init(self, kernel_tree=None):
+    def __init__(self, kernel_tree=None):
         pass
     def get_kernel_tree(self):
         '''
