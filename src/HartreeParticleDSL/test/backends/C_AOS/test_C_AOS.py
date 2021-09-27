@@ -304,3 +304,9 @@ def test_create_variable():
         out = backend.create_variable(c_int, "0abc")
     assert ("C_AOS does not support \"0abc\" as a name"
            " for variables.") in str(excinfo.value)
+
+    #Test illegal type
+    with pytest.raises(UnsupportedTypeError) as excinfo:
+        out = backend.create_variable("not a type", "a")
+    assert ("C_AOS does not support type \"not a type\" in"
+            " created variables.") in str(excinfo.value)

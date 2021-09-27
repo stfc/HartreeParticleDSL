@@ -4,7 +4,8 @@ import HartreeParticleDSL.backends.C_AOS.visitors as c_visitors
 import HartreeParticleDSL.kernel_types.kernels as kernels
 from HartreeParticleDSL.backends.C_AOS.C_AOS_IO_Mixin import C_AOS_IO_Mixin
 from HartreeParticleDSL.IO_modules.IO_Exceptions import *
-from HartreeParticleDSL.HartreeParticleDSLExceptions import InvalidNameError
+from HartreeParticleDSL.HartreeParticleDSLExceptions import InvalidNameError, \
+                                                            UnsupportedTypeError
 from HartreeParticleDSL.c_types import c_int, c_double, c_float, c_int64_t, \
                                        c_int32_t, c_int8_t, c_bool
 
@@ -292,8 +293,8 @@ class C_AOS(Backend):
     def create_variable(self, c_type, name, initial_value=None, **kwargs):
         current_indent = kwargs.get("current_indent", 0)
         if C_AOS._type_map.get(c_type) is None:
-            raise UnsupportedTypeError("C_AOS does not support type {0}"
-                                        " in created variables".format(c_type))
+            raise UnsupportedTypeError("C_AOS does not support type \"{0}\""
+                                        " in created variables.".format(c_type))
         ##Check name is allowed in C
         a = re.match("[a-zA-Z_][a-zA-Z_0-9]*", name)
         if a is None or a.group(0) != name:
