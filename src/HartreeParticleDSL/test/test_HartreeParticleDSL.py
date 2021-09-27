@@ -140,7 +140,7 @@ def test_global_initalise():
     r = Random_Particles()
     HartreeParticleDSL.set_io_modules(r, None)
     assert HartreeParticleDSL._HartreeParticleDSL.get_instance()._input_module is r
-    a = HartreeParticleDSL._HartreeParticleDSL.get_instance().initialisation_code(100, "abc.def")
+    a = HartreeParticleDSL.initialise(100, "abc.def")
     assert a == "random_io(100, config);"
 
 def test_global_println():
