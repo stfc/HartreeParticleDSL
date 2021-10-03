@@ -1,2 +1,0 @@
-class InvalidIOModuleError(Exception):
-    pass
