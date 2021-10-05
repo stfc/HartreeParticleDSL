@@ -18,3 +18,6 @@ class UnsupportedTypeError(Exception):
 
 class InvalidNameError(Exception):
     pass
+
+class InternalError(Exception):
+    pass
