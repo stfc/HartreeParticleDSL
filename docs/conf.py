@@ -18,8 +18,8 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'HartreeParticleDSL'
-copyright = '2021, stfc,sreyan-ghosh'
-author = 'stfc,sreyan-ghosh'
+copyright = '2021, stfc'
+author = 'stfc'
 
 
 # -- General configuration ---------------------------------------------------
