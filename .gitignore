@@ -9,9 +9,12 @@
 fparser.log
 htmlcov
 dist
+build
 src/*.egg-info
 .mypy_cache
 .ipynb_checkpoints
 *.sublime-project
 *.sublime-workspace
 .idea
+.venv
+.vscode
