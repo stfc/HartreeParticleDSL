@@ -48,6 +48,16 @@ class Random_Particles(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin):
         includes.append("\"random_io.h\"")
         return includes
 
+    def get_includes_fdps(self):
+        '''
+        :returns: The includes required for this IO module for FDPS
+        :rtype: List of str
+
+        '''
+        includes = []
+        includes.append("\"random_io.hpp\"")
+        return includes
+
     def gen_code_fdps(self, part_type):
         '''
         Generates and returns the FDPS code required for this IO module.

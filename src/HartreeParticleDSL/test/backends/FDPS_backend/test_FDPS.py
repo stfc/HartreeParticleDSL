@@ -78,43 +78,49 @@ def test_gen_headers():
         f_str = f.readlines()
     assert f_str[0] == '#ifndef PART_H\n'
     assert f_str[1] == '#define PART_H\n'
-    assert f_str[2] == 'struct space_type{\n'
-    assert f_str[3] == '    box box_dims;\n'
-    assert f_str[4] == '    PS::S32 nparts;\n'
-    assert f_str[5] == '};\n'
-    assert f_str[6] == '\n'
-    assert f_str[7] == 'struct neighbour_config_type{\n'
-    assert f_str[8] == '};\n'
-    assert f_str[9] == '\n'
-    assert f_str[10] == 'class config{\n'
-    assert f_str[11] == '    public:\n'
-    assert f_str[12] == '        struct space_type space;\n'
-    assert f_str[13] == '        struct neighbour_config_type neighbour_config;\n'
+    assert f_str[2] == 'struct boundary{\n'
+    assert f_str[3] == '    PS::F64 x_min, x_max;\n'
+    assert f_str[4] == '    PS::F64 y_min, y_max;\n'
+    assert f_str[5] == '    PS::F64 z_min, z_max;\n'
+    assert f_str[6] == '};\n'
+    assert f_str[7] == '\n'
+    assert f_str[8] == 'struct space_type{\n'
+    assert f_str[9] == '    boundary box_dims;\n'
+    assert f_str[10] == '    PS::S32 nparts;\n'
+    assert f_str[11] == '};\n'
+    assert f_str[12] == '\n'
+    assert f_str[13] == 'struct neighbour_config_type{\n'
     assert f_str[14] == '};\n'
     assert f_str[15] == '\n'
-    assert f_str[16] == 'struct core_part_type{\n'
-    assert f_str[17] == '    PS::F64vec position;\n'
-    assert f_str[18] == '    PS::F64 velocity[3];\n'
-    assert f_str[19] == '};\n'
-    assert f_str[20] == '\n'
-    assert f_str[21] == 'struct neighbour_part_type{\n'
-    assert f_str[22] == '};\n'
-    assert f_str[23] == '\n'
-    assert f_str[24] == 'class FullParticle{\n'
-    assert f_str[25] == '    public:\n'
-    assert f_str[26] == '        struct core_part_type core_part;\n'
-    assert f_str[27] == '        struct neighbour_part_type neighbour_part;\n'
-    assert f_str[28] == '        PS::F64vec getPos(){\n'
-    assert f_str[29] == '            return this->core_part.position;\n'
-    assert f_str[30] == '        }\n'
-    assert f_str[31] == '        void setPos(const PS::F64vec pos_new){\n'
-    assert f_str[32] == '            this->core_part.position = pos_new;\n'
-    assert f_str[33] == '        }\n'
-    assert f_str[34] == '        void clear(){\n'
-    assert f_str[35] == '        }\n'
-    assert f_str[36] == '};\n'
-    assert f_str[37] == '\n'
-    assert f_str[38] == '#endif'
+    assert f_str[16] == 'class config_type{\n'
+    assert f_str[17] == '    public:\n'
+    assert f_str[18] == '        struct space_type space;\n'
+    assert f_str[19] == '        struct neighbour_config_type neighbour_config;\n'
+    assert f_str[20] == '};\n'
+    assert f_str[21] == '\n'
+    assert f_str[22] == 'struct core_part_type{\n'
+    assert f_str[23] == '    PS::F64vec position;\n'
+    assert f_str[24] == '    PS::F64 velocity[3];\n'
+    assert f_str[25] == '};\n'
+    assert f_str[26] == '\n'
+    assert f_str[27] == 'struct neighbour_part_type{\n'
+    assert f_str[28] == '};\n'
+    assert f_str[29] == '\n'
+    assert f_str[30] == 'class FullParticle{\n'
+    assert f_str[31] == '    public:\n'
+    assert f_str[32] == '        struct core_part_type core_part;\n'
+    assert f_str[33] == '        struct neighbour_part_type neighbour_part;\n'
+    assert f_str[34] == '        PS::F64vec getPos(){\n'
+    assert f_str[35] == '            return this->core_part.position;\n'
+    assert f_str[36] == '        }\n'
+    assert f_str[37] == '        void setPos(const PS::F64vec pos_new){\n'
+    assert f_str[38] == '            this->core_part.position = pos_new;\n'
+    assert f_str[39] == '        }\n'
+    assert f_str[40] == '        void clear(){\n'
+    assert f_str[41] == '        }\n'
+    assert f_str[42] == '};\n'
+    assert f_str[43] == '\n'
+    assert f_str[44] == '#endif'
     os.remove("part.h")
 
 def kern(part1, part2, r2, config):
@@ -138,7 +144,7 @@ def test_gen_perpart_kernel(capsys):
     kernel = kernels.perpart_interaction(kern2)
     backend.gen_kernel(kernel)
     captured = capsys.readouterr()
-    correct = 'void kern2( FullParticle &part, config &r2 )\n'
+    correct = 'void kern2( FullParticle& part, config_type& r2 )\n'
     correct = correct + "{\n"
     correct = correct + "    part.a = ( part.a + 2.0 );\n"
     correct = correct + "}\n"
@@ -222,13 +228,18 @@ def test_gen_config():
     conf = Config()
     conf.add_element("thing", "double[4]")
     rval = backend.gen_config(conf)
-    correct = "struct space_type{\n"
-    correct = correct + "    box box_dims;\n"
+    correct = "struct boundary{\n"
+    correct = correct + "    PS::F64 x_min, x_max;\n"
+    correct = correct + "    PS::F64 y_min, y_max;\n"
+    correct = correct + "    PS::F64 z_min, z_max;\n"
+    correct = correct + "};\n\n"
+    correct = correct + "struct space_type{\n"
+    correct = correct + "    boundary box_dims;\n"
     correct = correct + "    PS::S32 nparts;\n"
     correct = correct + "};\n\n"
     correct = correct + "struct neighbour_config_type{\n"
     correct = correct + "};\n\n"
-    correct = correct + "class config{\n"
+    correct = correct + "class config_type{\n"
     correct = correct + "    public:\n"
     correct = correct + "        struct space_type space;\n"
     correct = correct + "        struct neighbour_config_type neighbour_config;\n"

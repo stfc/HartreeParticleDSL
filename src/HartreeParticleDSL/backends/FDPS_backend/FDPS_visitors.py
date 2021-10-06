@@ -55,7 +55,7 @@ class fdps_perpart_visitor(fdps_visitor):
     def visit_arguments(self, node):
         if len(node.args) != 2:
             raise IllegalArgumentCountError("Per part function must have 2 arguments for FDPS backend")
-        rval = "FullParticle &" + self.visit(node.args[0])
+        rval = "FullParticle& " + self.visit(node.args[0])
         # Assuming config type is a class for C++
-        rval = rval + ", config &" + self.visit(node.args[1])
+        rval = rval + ", config_type& " + self.visit(node.args[1])
         return rval

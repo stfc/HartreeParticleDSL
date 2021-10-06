@@ -123,12 +123,12 @@ class FDPS(Backend):
         :rtype: str
         '''
         if self._input_module is not None:
-            input_includes = self._input_module.get_includes_c()
+            input_includes = self._input_module.get_includes_fdps()
             for include in input_includes:
                 if include not in self._includes:
                     self._includes.append(include)
         if self._output_module is not None:
-            output_includes = self._output_module.get_includes_c()
+            output_includes = self._output_module.get_includes_fdps()
             for include in output_includes:
                 if include not in self._includes:
                     self._includes.append(include)
@@ -262,8 +262,13 @@ class FDPS(Backend):
     def gen_config(self, config):
         # Output the space
         output = ""
+        output = output + "struct boundary{\n"
+        output = output + "    PS::F64 x_min, x_max;\n"
+        output = output + "    PS::F64 y_min, y_max;\n"
+        output = output + "    PS::F64 z_min, z_max;\n"
+        output = output + "};\n\n"
         output = output + "struct space_type{\n"
-        output = output + "    box box_dims;\n"
+        output = output + "    boundary box_dims;\n"
         output = output + "    PS::S32 nparts;\n"
         output = output + "};\n\n"
 
@@ -271,7 +276,8 @@ class FDPS(Backend):
         output = output + "struct neighbour_config_type{\n"
         output = output + "};\n\n"
 
-        output = output + "class config{\n"
+
+        output = output + "class config_type{\n"
         output = output + "    public:\n"
         for key in config.config_type:
             is_array = config.config_type[key]['is_array']
