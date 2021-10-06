@@ -92,7 +92,7 @@ class FDPS(Backend):
         :param int current_indent: The current indentation level
         :param *args: A list of strings containing the other values
                       to output with cout. Any strings to add to cout
-                      should be surrounded with \" \".
+                      should be surrounded with \\\" \\\".
         :type args: str
         '''
         current_indent = kwargs.get("current_indent", 0)

@@ -42,5 +42,5 @@ def main():
     while config.time < 1.0:
         invoke(move_part)
         config.time = config.time + config.dt
-        println("", "config.time", "config.dt")
+        println("", "config.time","\\\" \\\"", "config.dt")
     cleanup()
