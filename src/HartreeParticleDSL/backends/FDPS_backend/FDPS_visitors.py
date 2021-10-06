@@ -38,12 +38,6 @@ class fdps_main_visitor(fdps_visitor):
         self._parent = parent
         super().__init__(parent, indent=indent)
 
-    def visit_Expr(self, node):
-        rval = ""
-        for a in ast.iter_child_nodes(node):
-            rval = rval + self.visit(a)
-        return rval
-
     def visit_FunctionDef(self, node):
         assert node.name is "main"
         rval = f"int {node.name}( "
