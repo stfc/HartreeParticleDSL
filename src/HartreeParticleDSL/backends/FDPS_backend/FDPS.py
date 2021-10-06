@@ -98,7 +98,7 @@ class FDPS(Backend):
         output = " "*current_indent + f"std::cout << \"{string}\""
         for arg in args:
             output = output + f" << {arg}"
-        output = output + " << \"\\n;\"\n"
+        output = output + " << \"\\n\";\n"
         return output
 
     def add_include(self, include_string):
@@ -248,10 +248,10 @@ class FDPS(Backend):
                 c_type = c_type[0:x]
             output = output + f"        {c_type} {varnam};\n"
         output = output + "        PS::F64vec getPos(){\n"
-        output = output + "            return this->part_pos;\n"
+        output = output + "            return this->core_part.position;\n"
         output = output + "        }\n"
         output = output + "        void setPos(const PS::F64vec pos_new){\n"
-        output = output + "            this->part_pos = pos_new;\n"
+        output = output + "            this->core_part.position = pos_new;\n"
         output = output + "        }\n"
         output = output + "        void clear(){\n"
         output = output + "        }\n"

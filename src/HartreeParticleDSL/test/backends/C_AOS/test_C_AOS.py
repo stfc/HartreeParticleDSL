@@ -74,12 +74,11 @@ def test_gen_headers():
     f_str = ""
     with open('part.h', 'r') as f:
         f_str = f.readlines()
-    print(f_str)
     assert f_str[0] == '#ifndef PART_H\n'
     assert f_str[1] == '#define PART_H\n'
     assert f_str[2] == 'struct space_type{\n'
     assert f_str[3] == '    double box_dims[3];\n'
-    assert f_str[4] == '    int nparts;\n', '};\n'
+    assert f_str[4] == '    int nparts;\n'
     assert f_str[5] == '};\n'
     assert f_str[6] == '\n'
     assert f_str[7] == 'struct neighbour_config_type{\n'

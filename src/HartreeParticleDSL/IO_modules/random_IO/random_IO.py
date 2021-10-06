@@ -40,7 +40,8 @@ class Random_Particles(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin):
     def get_includes_c(self):
         '''
         :returns: The includes required for this IO module.
-        rtype: List of str
+        :rtype: List of str
+
         '''
         includes = []
         includes.append("<stdlib.h>")
