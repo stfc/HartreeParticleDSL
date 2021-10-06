@@ -5,7 +5,8 @@ from HartreeParticleDSL.backends.FDPS_backend.FDPS_IO_Mixin import FDPS_IO_Mixin
 import HartreeParticleDSL.kernel_types.kernels as kernels
 from HartreeParticleDSL.IO_modules.IO_Exceptions import *
 from HartreeParticleDSL.HartreeParticleDSLExceptions import InvalidNameError, \
-                                                            UnsupportedTypeError
+                                                            UnsupportedTypeError, \
+                                                            InternalError
 from HartreeParticleDSL.c_types import c_int, c_double, c_float, c_int64_t, \
                                        c_int32_t, c_int8_t, c_bool
 
@@ -199,7 +200,7 @@ class FDPS(Backend):
         '''
         space = " "
         rval = space*current_indent
-        rval = rval + "for(PS::S32 i = 0; i < particle_system.getNumberOfParticleLocal() ; i++){\n"
+        rval = rval + "for(PS::S32 i = 0; i < particle_system.getNumberOfParticleLocal(); i++){\n"
         current_indent = current_indent + indent
         rval = rval + space*current_indent
         rval = rval + f"{kernel_name}(particle_system[i], config);\n"
@@ -291,11 +292,11 @@ class FDPS(Backend):
         return rval
 
     def initialise(self,particle_count, filename, current_indent, **kwargs):
-        rval = " "*current_indent + "char ** argv = NULL;\n"
+        rval = " "*current_indent + "char **argv = NULL;\n"
         rval = rval + " "*current_indent + "int args = 0;\n"
         rval = rval + " "*current_indent + "PS::Initialize(args,argv);\n"
         rval = rval + " "*current_indent + "config_type config;\n"
-        rval = rval + " "*current_indent + f"{self._input_module.call_input_fdps(particle_count, filename)}\n"
+        rval = rval + " "*current_indent + f"{self._input_module.call_input_fdps(particle_count, filename, current_indent=current_indent)}\n"
         return rval
 
     def create_variable(self, c_type, name, initial_value=None, **kwargs):

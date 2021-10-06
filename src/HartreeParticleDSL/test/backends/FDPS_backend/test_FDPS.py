@@ -57,6 +57,7 @@ def test_generate_include():
     assert "\"part.h\"" in strin
     backend = FDPS()
     backend.set_io_modules(None, mod)
+    string = backend.generate_includes()
     assert "<cmath>" in strin
     assert "<cstdio>" in strin
     assert "<iostream>" in strin
@@ -157,6 +158,17 @@ def test_print_main(capsys):
     correct = correct + "    a = ( a + 1 );\n"
     correct = correct + "}\n"
     assert correct in captured.out
+
+def test_gen_invoke_perpart():
+    '''Test the gen_invoke function of FDPS for perpart kernel'''
+    backend = FDPS()
+    out = backend.gen_invoke("kern2", 0, 1, kernels.perpart_kernel_wrapper)
+    correct = "\n /* INVOKE generated for kern2 */\n"
+    correct = correct + "for(PS::S32 i = 0; i < particle_system.getNumberOfParticleLocal(); i++){\n"
+    correct = correct + " kern2(particle_system[i], config);\n"
+    correct = correct + "}\n"
+    correct = correct + "/* End of INVOKE generated for kern2 */\n\n"
+    assert correct in out
 
 def test_gen_invoke_pairwise():
     '''Test the gen_invoke function of FDPS for pairwise kernel'''
@@ -292,3 +304,28 @@ def test_create_variable():
         out = backend.create_variable("not a type", "a")
     assert ("FDPS does not support type \"not a type\" in"
             " created variables.") in str(excinfo.value)
+
+def test_set_cutoff():
+    '''Tests the set_cutoff function of FDPS'''
+    backend = FDPS()
+    backend.set_cutoff(None)
+    assert backend._cutoff is None
+    backend.set_cutoff("2.43")
+    assert backend._cutoff == "2.43"
+    with pytest.raises(InternalError) as excinfo:
+        backend.set_cutoff(1.3)
+    assert "set_cutoff function must be supplied a str or None" in str(excinfo.value)
+
+def test_initialise():
+    '''Test the initialise function of FDPS'''
+    mod = Random_Particles()
+    backend = FDPS()
+    backend.set_io_modules(mod, mod)
+
+    correct = " char **argv = NULL;\n"
+    correct = correct + " int args = 0;\n"
+    correct = correct + " PS::Initialize(args,argv);\n"
+    correct = correct + " config_type config;\n"
+    correct = correct + " {0}\n".format(backend._input_module.call_input_fdps(100, "abc.def", current_indent=1))
+    rval = backend.initialise(particle_count=100, filename="abc.def", current_indent=1)
+    assert correct in rval

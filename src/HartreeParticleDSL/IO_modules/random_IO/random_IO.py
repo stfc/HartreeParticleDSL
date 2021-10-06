@@ -59,7 +59,7 @@ class Random_Particles(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin):
         '''
         return ""
 
-    def call_input_fdps(self, part_count, filename):
+    def call_input_fdps(self, part_count, filename, current_indent=4):
         '''
         Returns the call required to use this IO module for input.
 
@@ -68,8 +68,9 @@ class Random_Particles(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin):
         '''
         # For FDPS, the IO module needs to create the object and size it up
         # before calling the function
+        indentation = " " * current_indent
         rval = "PS::ParticleSystem<FullParticle> particle_system;\n"
-        rval = rval + "    particle_system.initialize();\n"
-        rval = rval + f"    particle_system.setNumberOfParticleLocal({part_count});" + "\n"
-        rval = rval + "    random_io( particle_system, config);\n"
+        rval = rval + indentation+ "particle_system.initialize();\n"
+        rval = rval + f"{indentation}particle_system.setNumberOfParticleLocal({part_count});" + "\n"
+        rval = rval + indentation + "random_io( particle_system, config);\n"
         return rval

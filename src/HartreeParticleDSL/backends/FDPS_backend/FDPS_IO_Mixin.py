@@ -16,7 +16,7 @@ class FDPS_IO_Mixin(metaclass=ABCMeta):
                                   "implement required function "
                                   "gen_code_fdps")
 
-    def call_input_fdps(self, part_count, filename):
+    def call_input_fdps(self, part_count, filename, current_indent=4):
         '''
         Returns the call required to use this IO module for input.
 
