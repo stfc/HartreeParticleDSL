@@ -182,11 +182,13 @@ def test_c_visitor_visit_Attribute():
         a.core_part.position.x = 3.0
         a.core_part.position.y = 4.0
         a.core_part.position.z = 5.0
+        a.core_part.position.xd = 6.0
     c = ast.parse(textwrap.dedent(inspect.getsource(abc)))
     out = v.visit(c)
     assert "a->core_part.position[0] = 3.0" in out
     assert "a->core_part.position[1] = 4.0" in out
     assert "a->core_part.position[2] = 5.0" in out
+    assert "a->core_part.position.xd = 6.0" in out
 
 
 def test_c_visitor_visit_Num():

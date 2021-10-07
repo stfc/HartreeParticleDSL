@@ -264,6 +264,19 @@ def test_call_language_function():
     rval3 = backend.call_language_function(func3)
     assert rval3 == "    a_c_call(*part, 20);\n"
 
+
+def test_get_particle_access():
+    '''Test the get_particle_access function of C_AOS'''
+    backend = C_AOS()
+    a = "core_part.position[0]"
+    b = "core_part.position[1]"
+    c = "core_part.position[2]"
+    assert backend.get_particle_access("x") == a
+    assert backend.get_particle_access("y") == b
+    assert backend.get_particle_access("z") == c
+    assert backend.get_particle_access("abc") == None
+
+
 def test_create_variable():
     '''Test the create_variable function of C_AOS'''
     backend = C_AOS()
