@@ -1,6 +1,11 @@
 HartreeParticleDSL.IO\_modules.random\_IO package
 =================================================
 
+The random_IO package creates a randomly distributed particle
+distribution within a 1x1x1 box. It has no file IO output support.
+
+Currently the random_IO package supports the C_AOS and FDPS backends.
+
 Submodules
 ----------
 

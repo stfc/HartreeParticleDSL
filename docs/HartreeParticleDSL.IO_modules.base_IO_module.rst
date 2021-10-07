@@ -1,6 +1,10 @@
 HartreeParticleDSL.IO\_modules.base\_IO\_module package
 =======================================================
 
+This module has the abstract base_IO_module package. This module
+hosts the base IO package that all other IO packages must inherit
+from.
+
 Submodules
 ----------
 

@@ -1,6 +1,10 @@
 HartreeParticleDSL.backends.C\_AOS package
 ==========================================
 
+This package contains the C_AOS backend module. This backend
+is not setup for high performance computation, and is mostly a
+simple backend used for proof-of-concept tests.
+
 Submodules
 ----------
 
