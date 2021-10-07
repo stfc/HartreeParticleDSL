@@ -1,6 +1,10 @@
 HartreeParticleDSL.backends.base\_backend package
 =================================================
 
+This module has the abstract base_backend package. This module
+hosts the base backend package that all other backend packages
+must inherit from.
+
 Submodules
 ----------
 

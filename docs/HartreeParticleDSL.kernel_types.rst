@@ -1,6 +1,13 @@
 HartreeParticleDSL.kernel\_types package
 ========================================
 
+The kernel_types module contains wrappers and definitions for
+the kernel types supported by HartreeParticleDSL.
+
+Currently HartreeParticleDSL supports:
+1. Pairwise interactions
+2. Per-particle kernels.
+
 Submodules
 ----------
 
