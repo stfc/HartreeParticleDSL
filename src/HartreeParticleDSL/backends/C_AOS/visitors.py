@@ -1,8 +1,9 @@
 import ast
+from HartreeParticleDSL.backends.base_backend.visitors import baseVisitor
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IllegalLoopError, UnsupportedCodeError, \
                                                             IllegalArgumentCountError
 
-class c_visitor(ast.NodeVisitor):
+class c_visitor(baseVisitor):
 
     _currentIndent = 0
     _else_if = False
@@ -11,7 +12,7 @@ class c_visitor(ast.NodeVisitor):
         self._currentIndent = 0
         self._parent = parent
         self._indent = indent
-        super().__init__()
+        super().__init__(parent, indent=indent)
 
     def incrementIndent(self):
         self._currentIndent = self._currentIndent + self._indent
@@ -83,11 +84,12 @@ class c_visitor(ast.NodeVisitor):
 
     def visit_Attribute(self, node):
         rval = ""
+        x = self.check_position(node)
+        if x is not None:
+            return x
         if type(node.value) is ast.Attribute:
             rval = rval + self.visit(node.value)
             rval = rval + f".{node.attr}"
-#        elif type(node.value) is ast.Subscript:
-#            rval = rval + self.visit(node.value)
         else:
             rval = rval + self.visit(node.value)
             rval = rval + "->"

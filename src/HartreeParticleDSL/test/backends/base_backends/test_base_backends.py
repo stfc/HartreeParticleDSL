@@ -22,7 +22,7 @@ def test_base_backend():
     a.set_cutoff(None)
 
 def test_base_visitors():
-    a = baseVisitor()
-    a = main_baseVisitor()
-    a = pairwise_baseVisitor()
-    a = per_part_baseVisitor()
+    a = baseVisitor(None)
+    a = main_baseVisitor(None)
+    a = pairwise_baseVisitor(None)
+    a = per_part_baseVisitor(None)

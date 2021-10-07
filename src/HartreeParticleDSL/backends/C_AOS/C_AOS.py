@@ -297,6 +297,26 @@ class C_AOS(Backend):
         rval = rval + " "*current_indent + f"struct part* parts = {self._input_module.call_input_c(particle_count, filename)}\n"
         return rval
 
+    def get_particle_access(self, dimension):
+        '''
+        Returns the code to access a particle's position
+        for each dimension. Dimensions are x/y/z. For C_AOS
+        the positions are stored in a double[3], so we return
+        the relevant array element
+
+        :param str dimension: The dimension ("x", "y" or "z") to access
+        
+        :returns: The string to access a particle's position variable.
+        :rtype: str
+        '''
+        if dimension == "x":
+            return "core_part.position[0]"
+        if dimension == "y":
+            return "core_part.position[1]"
+        if dimension == "z":
+            return "core_part.position[2]"
+        return None
+
     def create_variable(self, c_type, name, initial_value=None, **kwargs):
         current_indent = kwargs.get("current_indent", 0)
         if C_AOS._type_map.get(c_type) is None:
