@@ -79,6 +79,7 @@ def test_set_output_dir():
     HartreeParticleDSL.set_output_dir(".")
     assert "test_out_dir" not in os.getcwd()
     assert orig == os.getcwd()
+    os.rmdir("test_out_dir")
 
 
 def test_println():
