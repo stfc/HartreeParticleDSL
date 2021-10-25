@@ -1,3 +1,4 @@
+import os
 import HartreeParticleDSL.backends.C_AOS.C_AOS as C_AOS
 import HartreeParticleDSL.backends.C_AOS.visitors as c_visitors
 import HartreeParticleDSL.IO_modules.base_IO_module.IO_module as io_modules
@@ -36,6 +37,8 @@ class _HartreeParticleDSL():
         self._includes.append("<math.h>")
         self._includes.append("<stdio.h>")
         self._includes.append("\"part.h\"")
+        self._STARTDIR = os.getcwd()
+        self._outdir = "."
         _HartreeParticleDSL.the_instance = self
 
     def get_instance():
@@ -195,6 +198,22 @@ class _HartreeParticleDSL():
         '''
         self._backend.print_main(function)
 
+    def set_output_dir(self, directory):
+        '''
+        Sets the output directory for HartreeParticleDSL.
+        Relative paths are always used from the location the DSL is run from.
+
+        :param str directory: The directory to use for output by HartreeParticleDSL.
+        '''
+        # return to initial directory
+        os.chdir(self._STARTDIR)
+        # Save this directory
+        self._outdir = directory
+        # Make the directory if it doesn't exist
+        if not os.path.exists(directory):
+            os.mkdir(directory)
+        os.chdir(directory)
+
 def set_particle_type(part):
     '''
     Function to set the Particle type used by HartreeParticleDSL
@@ -317,6 +336,14 @@ def print_main(function):
     :type function: :py:class:`
     '''
     return _HartreeParticleDSL.get_instance().print_main(function)
+
+def set_output_dir(directory):
+    '''
+    Sets the output dirctory for HartreeParticleDSL.
+
+    :param str directory: The directory to use for output by HartreeParticleDSL.
+    '''
+    _HartreeParticleDSL.get_instance().set_output_dir(directory)
 
 class Particle():
     '''Particle class used in HartreeParticleDSL'''
