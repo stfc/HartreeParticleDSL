@@ -317,7 +317,8 @@ class C_AOS(Backend):
     def call_language_function(self,func_call, *args):
         string = ""
         try:
-            code = compile("self." +func_call, '<string>', 'eval')
+            fixed_func_call = func_call.replace("->", ".")
+            code = compile("self." +fixed_func_call, '<string>', 'eval')
             string = eval(code)
         except (SyntaxError, TypeError, AttributeError) as err:
             string = func_call

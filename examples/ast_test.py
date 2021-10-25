@@ -36,7 +36,6 @@ config = HartreeParticleDSL.Config()
 config.add_element( "part_mass", "double" )
 config.add_element( "time", "double")
 config.add_element( "dt", "double" )
-config.add_element( "cutoff", "double")
 
 part = HartreeParticleDSL.Particle()
 part.add_element( "force", "double[3]")
@@ -54,8 +53,8 @@ def main():
     initialise(particle_count=1000, filename="abc.def")
     config.time = 0.0
     config.dt = 0.1
-    config.cutoff = 0.5
     create_variable(c_int, "z", 2)
+    set_cutoff(0.5, C_AOS.CONSTANT)
     c_function()
     while config.time < 1.0:
         invoke(random_velocity)
