@@ -23,6 +23,10 @@ class C_AOS(Backend):
                  c_int8_t : "char",
                  c_bool : "_Bool"}
 
+    #Variables used to manage where the cutoff radius is stored
+    CONSTANT = 0
+    PARTICLE = 1
+
     def __init__(self):
         self._pairwise_visitor = c_visitors.c_pairwise_visitor(self)
         self._per_part_visitor = c_visitors.c_perpart_visitor(self)
@@ -31,6 +35,8 @@ class C_AOS(Backend):
         self._includes.append("<math.h>")
         self._includes.append("<stdio.h>")
         self._includes.append("\"part.h\"")
+        self._cutoff_type = C_AOS.CONSTANT
+        self._cutoff = "config->neighbour_config.cutoff"
         self._input_module = None
         self._output_module = None
 
@@ -207,7 +213,8 @@ class C_AOS(Backend):
             rval = rval + " "*current_indent
             rval = rval + "}\n"
             rval = rval + " "*current_indent
-            rval = rval + "if(r2 < config->cutoff*config->cutoff){\n"
+#            rval = rval + "if(r2 < config->neighbour_config.cutoff*config->neighbour_config.cutoff){\n"
+            rval = rval + f"if(r2 < ({self._cutoff} * {self._cutoff}))" + "{\n"
             current_indent = current_indent + indent
             rval = rval + " "*current_indent
             rval = rval + f"{kernel_name}(&parts[part1], &parts[part2], r2, config);\n"
@@ -263,6 +270,7 @@ class C_AOS(Backend):
 
         # Currently empty neiughbour config
         output = output + "struct neighbour_config_type{\n"
+        output = output + "    double cutoff;\n"
         output = output + "};\n\n"
 
         output = output + "struct config_type{\n"
@@ -322,3 +330,34 @@ class C_AOS(Backend):
             string = re.sub(" current_indent=[0-9]*, indent=[0-9]*", "", string)
             string = string + ";\n"
         return string
+
+    def set_cutoff(self, cutoff, var_type=CONSTANT, current_indent=0, **kwargs):
+        '''
+        Set the cutoff radius for pairwise interactions
+
+        :param cutoff: The variable name or value of the cutoff radius
+        :type cutoff: str or int
+        :param var_type: The type of variable to use for the cutoff radius.
+                         If C_AOS.CONSTANT, the value in cutoff is some constant
+                         value, used for all particles. This is the default.
+                         If C_AOS.PARTICLE is used, the variable in `cutoff`
+                         should be a member of the particle structure, and
+                         will be used individually for each particle.
+        :param int current_indent: The current indent level of the code.
+
+        :raises UnsupportedTypeError: If an unsupported var_type is supplied.
+
+        :returns: A string containing the code to set this value if C_AOS.CONSTANT
+                  is used, otherwise "".
+        :returns: str
+        '''
+        if var_type == C_AOS.CONSTANT:
+            self._cutoff_type = C_AOS.CONSTANT
+            self._cutoff = "config->neighbour_config.cutoff"
+            string = " "*current_indent + f"config.neighbour_config.cutoff = {cutoff};\n"
+            return string
+        if var_type == C_AOS.PARTICLE:
+            self._cutoff_type = C_AOS.PARTICLE
+            self._cutoff = f"parts[part1].{cutoff}"
+            return ""
+        raise UnsupportedTypeError("Unsupported var_type used in set_cutoff")

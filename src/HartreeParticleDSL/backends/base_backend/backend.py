@@ -1,6 +1,7 @@
 from abc import ABCMeta
 
 class Backend(metaclass=ABCMeta):
+    CONSTANT = 0
     def __init__(self):
         pass
 
@@ -38,4 +39,7 @@ class Backend(metaclass=ABCMeta):
         pass
 
     def create_variable(self, c_type, name, initial_value=None, **kwargs):
+        pass
+
+    def set_cutoff(self, cutoff, var_type=CONSTANT):
         pass
