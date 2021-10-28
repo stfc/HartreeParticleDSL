@@ -83,27 +83,28 @@ def test_gen_headers():
     assert f_str[5] == '};\n'
     assert f_str[6] == '\n'
     assert f_str[7] == 'struct neighbour_config_type{\n'
-    assert f_str[8] == '};\n'
-    assert f_str[9] == '\n'
-    assert f_str[10] == 'struct config_type{\n'
-    assert f_str[11] == '    struct space_type space;\n'
-    assert f_str[12] == '    struct neighbour_config_type neighbour_config;\n'
-    assert f_str[13] == '};\n'
-    assert f_str[14] == '\n'
-    assert f_str[15] == 'struct core_part_type{\n'
-    assert f_str[16] == '    double position[3];\n'
-    assert f_str[17] == '    double velocity[3];\n'
-    assert f_str[18] == '};\n'
-    assert f_str[19] == '\n'
-    assert f_str[20] == 'struct neighbour_part_type{\n'
-    assert f_str[21] == '};\n'
-    assert f_str[22] == '\n'
-    assert f_str[23] == 'struct part{\n'
-    assert f_str[24] == '    struct core_part_type core_part;\n'
-    assert f_str[25] == '    struct neighbour_part_type neighbour_part;\n'
-    assert f_str[26] == '};\n'
-    assert f_str[27] == '\n'
-    assert f_str[28] == '#endif'
+    assert f_str[8] == '    double cutoff;\n'
+    assert f_str[9] == '};\n'
+    assert f_str[10] == '\n'
+    assert f_str[11] == 'struct config_type{\n'
+    assert f_str[12] == '    struct space_type space;\n'
+    assert f_str[13] == '    struct neighbour_config_type neighbour_config;\n'
+    assert f_str[14] == '};\n'
+    assert f_str[15] == '\n'
+    assert f_str[16] == 'struct core_part_type{\n'
+    assert f_str[17] == '    double position[3];\n'
+    assert f_str[18] == '    double velocity[3];\n'
+    assert f_str[19] == '};\n'
+    assert f_str[20] == '\n'
+    assert f_str[21] == 'struct neighbour_part_type{\n'
+    assert f_str[22] == '};\n'
+    assert f_str[23] == '\n'
+    assert f_str[24] == 'struct part{\n'
+    assert f_str[25] == '    struct core_part_type core_part;\n'
+    assert f_str[26] == '    struct neighbour_part_type neighbour_part;\n'
+    assert f_str[27] == '};\n'
+    assert f_str[28] == '\n'
+    assert f_str[29] == '#endif'
     os.remove("part.h")
 
 def kern(part1, part2, r2, config):
@@ -174,7 +175,7 @@ def test_gen_invoke_pairwise():
     correct = correct + "  for(int k = 0; k < 3; k++){\n"
     correct = correct + "   r2 += (parts[part1].core_part.position[k] - parts[part2].core_part.position[k]) * (parts[part1].core_part.position[k] - parts[part2].core_part.position[k]);\n"
     correct = correct + "  }\n"
-    correct = correct + "  if(r2 < config->cutoff*config->cutoff){\n"
+    correct = correct + "  if(r2 < (config->neighbour_config.cutoff * config->neighbour_config.cutoff)){\n"
     correct = correct + "   kern(&parts[part1], &parts[part2], r2, config);\n"
     correct = correct + "  }\n"
     correct = correct + " }\n"
@@ -224,6 +225,7 @@ def test_gen_config():
     correct = correct + "    int nparts;\n"
     correct = correct + "};\n\n"
     correct = correct + "struct neighbour_config_type{\n"
+    correct = correct + "    double cutoff;\n"
     correct = correct + "};\n\n"
     correct = correct + "struct config_type{\n"
     correct = correct + "    struct space_type space;\n"
@@ -310,3 +312,60 @@ def test_create_variable():
         out = backend.create_variable("not a type", "a")
     assert ("C_AOS does not support type \"not a type\" in"
             " created variables.") in str(excinfo.value)
+
+def test_set_cutoff_constant():
+    '''Test the set_cutoff member of the C_AOS backend with a constant
+    cutoff'''
+    backend = C_AOS()
+    rval = backend.set_cutoff(3.5, var_type=C_AOS.CONSTANT)
+    assert rval == "config.neighbour_config.cutoff = 3.5;\n"
+    assert backend._cutoff_type == C_AOS.CONSTANT
+    assert backend._cutoff == "config->neighbour_config.cutoff"
+    out = backend.gen_invoke("kern", 0, 1, kernels.pairwise_kernel_wrapper)
+    correct = "\n /* INVOKE generated for kern */\n"
+    correct = correct + "for( int part1 = 0; part1 < config->space.nparts; part1++){\n"
+    correct = correct + " for( int part2 = 0; part2 < config->space.nparts; part2++){\n"
+    correct = correct + "  if(part1 == part2) continue;\n"
+    correct = correct + "  double r2 = 0.0;\n"
+    correct = correct + "  for(int k = 0; k < 3; k++){\n"
+    correct = correct + "   r2 += (parts[part1].core_part.position[k] - parts[part2].core_part.position[k]) * (parts[part1].core_part.position[k] - parts[part2].core_part.position[k]);\n"
+    correct = correct + "  }\n"
+    correct = correct + "  if(r2 < (config->neighbour_config.cutoff * config->neighbour_config.cutoff)){\n"
+    correct = correct + "   kern(&parts[part1], &parts[part2], r2, config);\n"
+    correct = correct + "  }\n"
+    correct = correct + " }\n"
+    correct = correct + "}\n"
+    correct = correct + "/* End of INVOKE generated for kern */"
+    assert correct in out
+
+def test_set_cutoff_particle():
+    '''Test the set_cutoff member of the C_AOS backend with a particle
+    variable'''
+    backend = C_AOS()
+    rval = backend.set_cutoff("h", var_type=C_AOS.PARTICLE, current_indent=4)
+    assert rval == ""
+    assert backend._cutoff_type == C_AOS.PARTICLE
+    assert backend._cutoff == "parts[part1].h"
+    out = backend.gen_invoke("kern", 0, 1, kernels.pairwise_kernel_wrapper)
+    correct = "\n /* INVOKE generated for kern */\n"
+    correct = correct + "for( int part1 = 0; part1 < config->space.nparts; part1++){\n"
+    correct = correct + " for( int part2 = 0; part2 < config->space.nparts; part2++){\n"
+    correct = correct + "  if(part1 == part2) continue;\n"
+    correct = correct + "  double r2 = 0.0;\n"
+    correct = correct + "  for(int k = 0; k < 3; k++){\n"
+    correct = correct + "   r2 += (parts[part1].core_part.position[k] - parts[part2].core_part.position[k]) * (parts[part1].core_part.position[k] - parts[part2].core_part.position[k]);\n"
+    correct = correct + "  }\n"
+    correct = correct + "  if(r2 < (parts[part1].h * parts[part1].h)){\n"
+    correct = correct + "   kern(&parts[part1], &parts[part2], r2, config);\n"
+    correct = correct + "  }\n"
+    correct = correct + " }\n"
+    correct = correct + "}\n"
+    correct = correct + "/* End of INVOKE generated for kern */"
+    assert correct in out
+
+def test_set_cutoff_error():
+    '''Test the set_cutoff member of the C_AOS backend with an invalid request'''
+    backend = C_AOS()
+    with pytest.raises(UnsupportedTypeError) as excinfo:
+        rval = backend.set_cutoff("fail", var_type="thing1")
+    assert "Unsupported var_type used in set_cutoff" in str(excinfo.value)
