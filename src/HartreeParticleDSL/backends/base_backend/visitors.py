@@ -13,9 +13,11 @@ class baseVisitor(ast.NodeVisitor, metaclass=ABCMeta):
         if type(node.value) is ast.Attribute:
             rval = rval + self.visit(node.value)
             rval = rval + f".{node.attr}"
-        a = re.match("core_part.position.[xyz]$", rval[rval.find("core_part.position"):])
+        # Search for the core_part.position.[...] in the string.
+        # Upon locating it, we pull out the contents of the [ ]
+        a = re.match("core_part.position.[a-zA-Z]*$", rval[rval.find("core_part.position"):])
         if a is not None:
-            end = self._parent.get_particle_access(a.group(0)[-1])
+            end = self._parent.get_particle_access(a.group(0)[(a.group(0).find("position.") +9 ):])
             return rval[0:rval.find("core_part.position")] + end
         return None
 

@@ -182,13 +182,19 @@ def test_c_visitor_visit_Attribute():
         a.core_part.position.x = 3.0
         a.core_part.position.y = 4.0
         a.core_part.position.z = 5.0
-        a.core_part.position.xd = 6.0
     c = ast.parse(textwrap.dedent(inspect.getsource(abc)))
     out = v.visit(c)
+    print(out)
     assert "a->core_part.position[0] = 3.0" in out
     assert "a->core_part.position[1] = 4.0" in out
     assert "a->core_part.position[2] = 5.0" in out
-    assert "a->core_part.position.xd = 6.0" in out
+
+    def illegal():
+        a.core_part.position.xd = 6.0
+    c = ast.parse(textwrap.dedent(inspect.getsource(illegal)))
+    with pytest.raises(InvalidNameError) as excinfo:
+        out = v.visit(c)
+    assert "The dimension argument should be x, y, or z" in str(excinfo.value)
 
 
 def test_c_visitor_visit_Num():

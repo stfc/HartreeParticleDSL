@@ -305,6 +305,9 @@ class C_AOS(Backend):
         the relevant array element
 
         :param str dimension: The dimension ("x", "y" or "z") to access
+
+        :raises InvalidNameError: If the dimension argument is not
+                                  "x", "y" or "z".
         
         :returns: The string to access a particle's position variable.
         :rtype: str
@@ -315,7 +318,7 @@ class C_AOS(Backend):
             return "core_part.position[1]"
         if dimension == "z":
             return "core_part.position[2]"
-        return None
+        raise InvalidNameError("The dimension argument should be x, y, or z")
 
     def create_variable(self, c_type, name, initial_value=None, **kwargs):
         current_indent = kwargs.get("current_indent", 0)

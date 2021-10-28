@@ -274,7 +274,9 @@ def test_get_particle_access():
     assert backend.get_particle_access("x") == a
     assert backend.get_particle_access("y") == b
     assert backend.get_particle_access("z") == c
-    assert backend.get_particle_access("abc") == None
+    with pytest.raises(InvalidNameError) as excinfo:
+        backend.get_particle_access("abc")
+    assert "The dimension argument should be x, y, or z" in str(excinfo.value) 
 
 
 def test_create_variable():
