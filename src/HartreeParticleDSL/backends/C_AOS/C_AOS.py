@@ -213,7 +213,6 @@ class C_AOS(Backend):
             rval = rval + " "*current_indent
             rval = rval + "}\n"
             rval = rval + " "*current_indent
-#            rval = rval + "if(r2 < config->neighbour_config.cutoff*config->neighbour_config.cutoff){\n"
             rval = rval + f"if(r2 < ({self._cutoff} * {self._cutoff}))" + "{\n"
             current_indent = current_indent + indent
             rval = rval + " "*current_indent
@@ -317,8 +316,12 @@ class C_AOS(Backend):
     def call_language_function(self,func_call, *args):
         string = ""
         try:
+            # Any arguments that were python module accesses would be
+            # converted to c pointer accesses here (so use ->).
+            # We need to change this into a python module access for now
+            # in a temporary variable
             fixed_func_call = func_call.replace("->", ".")
-            code = compile("self." +fixed_func_call, '<string>', 'eval')
+            code = compile("self." + fixed_func_call, '<string>', 'eval')
             string = eval(code)
         except (SyntaxError, TypeError, AttributeError) as err:
             string = func_call
