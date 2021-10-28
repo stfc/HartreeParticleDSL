@@ -2,6 +2,7 @@ import pytest
 import ast
 import textwrap
 import inspect
+import os
 import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
 from HartreeParticleDSL.HartreeParticleDSLExceptions import SingletonInstanceError, \
                                                             RepeatedNameError
@@ -67,6 +68,19 @@ def test_initialisation_code():
     assert HartreeParticleDSL._HartreeParticleDSL.get_instance()._input_module is not None
     a = HartreeParticleDSL._HartreeParticleDSL.get_instance().initialisation_code(100, "abc.def")
     assert a == "random_io(100, config);"
+
+def test_set_output_dir():
+    '''Test the set_output_dir function'''
+    orig = os.getcwd()
+    HartreeParticleDSL.set_output_dir("test_out_dir")
+    assert "test_out_dir" == HartreeParticleDSL._HartreeParticleDSL.get_instance()._outdir 
+    assert "test_out_dir" in os.getcwd()
+    assert orig in HartreeParticleDSL._HartreeParticleDSL.get_instance()._STARTDIR
+    HartreeParticleDSL.set_output_dir(".")
+    assert "test_out_dir" not in os.getcwd()
+    assert orig == os.getcwd()
+    os.rmdir("test_out_dir")
+
 
 def test_println():
     '''Test println function'''
