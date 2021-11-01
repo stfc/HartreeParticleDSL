@@ -20,9 +20,10 @@ def test_base_backend():
     a.initialisation_code(None, None)
     a.create_variable(None, None, None)
     a.set_cutoff(None)
+    a.get_particle_access(None)
 
 def test_base_visitors():
-    a = baseVisitor()
-    a = main_baseVisitor()
-    a = pairwise_baseVisitor()
-    a = per_part_baseVisitor()
+    a = baseVisitor(None)
+    a = main_baseVisitor(None)
+    a = pairwise_baseVisitor(None)
+    a = per_part_baseVisitor(None)

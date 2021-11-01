@@ -35,6 +35,13 @@ class Backend(metaclass=ABCMeta):
     def gen_invoke(self, kernel):
         pass
 
+    def get_particle_access(self, dimension):
+        '''
+        Returns the code to access a particle's position
+        for each dimension. Dimensions are x/y/z
+        '''
+        pass
+
     def initialisation_code(self, particle_count, filename):
         pass
 
