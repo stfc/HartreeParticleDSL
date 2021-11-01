@@ -170,8 +170,7 @@ class c_visitor(baseVisitor):
         return rval
 
     def visit_Call(self, node):
-        from HartreeParticleDSL.HartreeParticleDSL import initialise, gen_invoke, println
-        from HartreeParticleDSL.backends.C_AOS.C_AOS import C_AOS
+        from HartreeParticleDSL.HartreeParticleDSL import gen_invoke
         # Recursively build up the function name if it is of style mod1.mod2.func
         function_name = ""
         if isinstance(node.func, ast.Name):
@@ -223,13 +222,13 @@ class c_visitor(baseVisitor):
 
     def visit_For(self, node):
         if len(node.orelse) != 0:
-            raise IllegalLoopError("Else clauses on Loops are not supported in C_AOS")
+            raise IllegalLoopError(f"Else clauses on Loops are not supported in {self._parent.__class__.__name__}")
         assert len(node.orelse) == 0
         if type(node.iter) != ast.Call:
-            raise IllegalLoopError("Only range loops are supported in C_AOS")
+            raise IllegalLoopError(f"Only range loops are supported in {self._parent.__class__.__name__}")
         if type(node.iter) == ast.Call:
             if node.iter.func.id != "range":
-                raise IllegalLoopError("Only range loops are supported in C_AOS")
+                raise IllegalLoopError(f"Only range loops are supported in {self._parent.__class__.__name__}")
         startval = 0
         endval = node.iter.args[0]
         increment = 1

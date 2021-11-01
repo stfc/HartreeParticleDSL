@@ -1,7 +1,8 @@
 from HartreeParticleDSL.IO_modules.base_IO_module.IO_module import IO_Module
 from HartreeParticleDSL.backends.C_AOS.C_AOS_IO_Mixin import C_AOS_IO_Mixin
+from HartreeParticleDSL.backends.FDPS_backend.FDPS_IO_Mixin import FDPS_IO_Mixin
 
-class Random_Particles(IO_Module, C_AOS_IO_Mixin):
+class Random_Particles(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin):
     ''' Implementation of the randomly generated particles IO module '''
     def __init__(self):
         super().__init__()
@@ -39,9 +40,47 @@ class Random_Particles(IO_Module, C_AOS_IO_Mixin):
     def get_includes_c(self):
         '''
         :returns: The includes required for this IO module.
-        rtype: List of str
+        :rtype: List of str
+
         '''
         includes = []
         includes.append("<stdlib.h>")
         includes.append("\"random_io.h\"")
         return includes
+
+    def get_includes_fdps(self):
+        '''
+        :returns: The includes required for this IO module for FDPS
+        :rtype: List of str
+
+        '''
+        includes = []
+        includes.append("\"random_io.hpp\"")
+        return includes
+
+    def gen_code_fdps(self, part_type):
+        '''
+        Generates and returns the FDPS code required for this IO module.
+
+        This module uses predefined C++ code for FDPS.
+
+        :returns: The code FDPS code required for this IO module.
+        :rtype: str
+        '''
+        return ""
+
+    def call_input_fdps(self, part_count, filename, current_indent=4):
+        '''
+        Returns the call required to use this IO module for input.
+
+        :returns: The code required to use this IO module for input.
+        :rtype: str
+        '''
+        # For FDPS, the IO module needs to create the object and size it up
+        # before calling the function
+        indentation = " " * current_indent
+        rval = "PS::ParticleSystem<FullParticle> particle_system;\n"
+        rval = rval + indentation+ "particle_system.initialize();\n"
+        rval = rval + f"{indentation}particle_system.setNumberOfParticleLocal({part_count});" + "\n"
+        rval = rval + indentation + "random_io( particle_system, config);\n"
+        return rval

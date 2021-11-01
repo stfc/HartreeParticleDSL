@@ -74,12 +74,11 @@ def test_gen_headers():
     f_str = ""
     with open('part.h', 'r') as f:
         f_str = f.readlines()
-    print(f_str)
     assert f_str[0] == '#ifndef PART_H\n'
     assert f_str[1] == '#define PART_H\n'
     assert f_str[2] == 'struct space_type{\n'
     assert f_str[3] == '    double box_dims[3];\n'
-    assert f_str[4] == '    int nparts;\n', '};\n'
+    assert f_str[4] == '    int nparts;\n'
     assert f_str[5] == '};\n'
     assert f_str[6] == '\n'
     assert f_str[7] == 'struct neighbour_config_type{\n'
@@ -250,6 +249,7 @@ def test_initialise():
     correct = " struct config_type* config = malloc(sizeof(struct config_type));\n"
     correct = correct + " struct part* parts = {0}\n".format(backend._input_module.call_input_c(100, "abc.def"))
     rval = backend.initialise(particle_count=100, filename="abc.def", current_indent=1)
+    assert correct in rval
 
 def test_call_language_function():
     '''Test the test_call_language function of C_AOS'''
