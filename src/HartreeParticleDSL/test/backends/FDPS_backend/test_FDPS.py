@@ -104,23 +104,24 @@ def test_gen_headers():
     assert f_str[25] == '};\n'
     assert f_str[26] == '\n'
     assert f_str[27] == 'struct neighbour_part_type{\n'
-    assert f_str[28] == '};\n'
-    assert f_str[29] == '\n'
-    assert f_str[30] == 'class FullParticle{\n'
-    assert f_str[31] == '    public:\n'
-    assert f_str[32] == '        struct core_part_type core_part;\n'
-    assert f_str[33] == '        struct neighbour_part_type neighbour_part;\n'
-    assert f_str[34] == '        PS::F64vec getPos(){\n'
-    assert f_str[35] == '            return this->core_part.position;\n'
-    assert f_str[36] == '        }\n'
-    assert f_str[37] == '        void setPos(const PS::F64vec pos_new){\n'
-    assert f_str[38] == '            this->core_part.position = pos_new;\n'
-    assert f_str[39] == '        }\n'
-    assert f_str[40] == '        void clear(){\n'
-    assert f_str[41] == '        }\n'
-    assert f_str[42] == '};\n'
-    assert f_str[43] == '\n'
-    assert f_str[44] == '#endif'
+    assert f_str[28] == '    PS::F64 cutoff;\n'
+    assert f_str[29] == '};\n'
+    assert f_str[30] == '\n'
+    assert f_str[31] == 'class FullParticle{\n'
+    assert f_str[32] == '    public:\n'
+    assert f_str[33] == '        struct core_part_type core_part;\n'
+    assert f_str[34] == '        struct neighbour_part_type neighbour_part;\n'
+    assert f_str[35] == '        PS::F64vec getPos(){\n'
+    assert f_str[36] == '            return this->core_part.position;\n'
+    assert f_str[37] == '        }\n'
+    assert f_str[38] == '        void setPos(const PS::F64vec pos_new){\n'
+    assert f_str[39] == '            this->core_part.position = pos_new;\n'
+    assert f_str[40] == '        }\n'
+    assert f_str[41] == '        void clear(){\n'
+    assert f_str[42] == '        }\n'
+    assert f_str[43] == '};\n'
+    assert f_str[44] == '\n'
+    assert f_str[45] == '#endif'
     os.remove("part.h")
 
 def kern(part1, part2, r2, config):
@@ -205,6 +206,7 @@ def test_gen_particle():
     correct = correct + "    PS::F64 velocity[3];\n"
     correct = correct + "};\n\n"
     correct = correct + "struct neighbour_part_type{\n"
+    correct = correct + "    PS::F64 cutoff;\n"
     correct = correct + "};\n\n"
     correct = correct + "class FullParticle{\n"
     correct = correct + "    public:\n"
@@ -319,13 +321,10 @@ def test_create_variable():
 def test_set_cutoff():
     '''Tests the set_cutoff function of FDPS'''
     backend = FDPS()
-    backend.set_cutoff(None)
-    assert backend._cutoff is None
-    backend.set_cutoff("2.43")
-    assert backend._cutoff == "2.43"
-    with pytest.raises(InternalError) as excinfo:
-        backend.set_cutoff(1.3)
-    assert "set_cutoff function must be supplied a str or None" in str(excinfo.value)
+    with pytest.raises(NotImplementedError) as excinfo:
+        backend.set_cutoff(None, None)
+    assert "FDPS backend doesn't yet support pairwise interactions" in \
+            str(excinfo.value)
 
 def test_initialise():
     '''Test the initialise function of FDPS'''
@@ -340,3 +339,16 @@ def test_initialise():
     correct = correct + " {0}\n".format(backend._input_module.call_input_fdps(100, "abc.def", current_indent=1))
     rval = backend.initialise(particle_count=100, filename="abc.def", current_indent=1)
     assert correct in rval
+
+def test_get_particle_access():
+    '''Test the get_particle_access function of FDPS'''
+    backend = FDPS()
+    a = "core_part.position.x"
+    b = "core_part.position.y"
+    c = "core_part.position.z"
+    assert backend.get_particle_access("x") == a
+    assert backend.get_particle_access("y") == b
+    assert backend.get_particle_access("z") == c
+    with pytest.raises(InvalidNameError) as excinfo:
+        backend.get_particle_access("abc")
+    assert "The dimension argument should be x, y, or z" in str(excinfo.value)

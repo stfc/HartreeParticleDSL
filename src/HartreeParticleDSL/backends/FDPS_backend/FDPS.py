@@ -23,6 +23,11 @@ class FDPS(Backend):
                  c_int32_t : "PS::S32",
                  c_int8_t : "char",
                  c_bool : "bool"}
+
+    # Variables used to manage where the cutoff radius is stored
+    CONSTANT = 0
+    PARTICLE = 1
+
     def __init__(self):
         self._pairwise_visitor = FDPS_visitors.fdps_pairwise_visitor(self)
         self._per_part_visitor = FDPS_visitors.fdps_perpart_visitor(self)
@@ -34,21 +39,10 @@ class FDPS(Backend):
         self._includes.append("<vector>")
         self._includes.append("<particle_simulator.hpp>")
         self._includes.append("\"part.h\"")
-        self._cutoff = None
+        self._cutoff_type = FDPS.PARTICLE
+        self._cutoff = "neighbour_part.cutoff"
         self._input_module = None
         self._output_module = None
-
-    def set_cutoff(self, cutoff):
-        '''
-        Sets the cutoff radius to the string contained in the cutoff variable.
-
-        :param cutoff: The cutoff radius to use for pairwise interactions
-        :type cutoff: str or None.
-        '''
-        if cutoff is not None and type(cutoff) is not str:
-            raise InternalError("set_cutoff function must be supplied a "
-                                "str or None.")
-        self._cutoff = cutoff
 
     def set_io_modules(self, input_module, output_module):
         '''
@@ -220,6 +214,37 @@ class FDPS(Backend):
         rval = rval + f"{space*current_indent}/* End of INVOKE generated for {kernel_name} */\n\n"
         return rval
 
+    def get_particle_access(self, dimension):
+        '''
+        Returns the code to access a particle's position
+        for each dimension. Dimensions are x/y/z. For C_AOS
+        the positions are stored in a double[3], so we return
+        the relevant array element
+
+        :param str dimension: The dimension ("x", "y" or "z") to access
+
+        :raises InvalidNameError: If the dimension argument is not
+                                  "x", "y" or "z".
+
+        :returns: The string to access a particle's position variable.
+        :rtype: str
+        '''
+        if dimension == "x":
+            return "core_part.position.x"
+        if dimension == "y":
+            return "core_part.position.y"
+        if dimension == "z":
+            return "core_part.position.z"
+        raise InvalidNameError("The dimension argument should be x, y, or z")
+
+    def set_cutoff(self, cutoff, var_type=CONSTANT):
+        '''
+        Set the cutoff for pairwise interactions. NYI
+
+        :raises: NotImplementedError
+        '''
+        raise NotImplementedError("FDPS backend doesn't yet support pairwise interactions")
+
     def initialisation_code(self, particle_count, filename):
         return self._input_module.call_input_fdps(particle_count, filename)
 
@@ -234,6 +259,7 @@ class FDPS(Backend):
         # Output the neighbour part type
         # Currently this is empty
         output = output + "struct neighbour_part_type{\n"
+        output = output + "    PS::F64 cutoff;\n"
         output = output + "};\n\n"
 
         output = output + "class FullParticle{\n"
