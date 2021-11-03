@@ -22,6 +22,8 @@ class FDTD(force_solver):
         self.y_max = y_max
         self.z_min = z_min
         self.z_max = z_max
+        if dimensionality != 1:
+            raise NotImplementedError("Only 1D currently supported")
         self.dimensionality = dimensionality
         self.x_bc_max = x_bc_max
         self.x_bc_min = x_bc_min
