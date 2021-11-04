@@ -320,6 +320,18 @@ class C_AOS(Backend):
             return "core_part.position[2]"
         raise InvalidNameError("The dimension argument should be x, y, or z")
 
+    def get_pointer(self, var_code):
+        '''
+        Returns the code to access the pointer to the supplied var_code.
+        The var_code should already be C_AOS code.
+
+        :param str var_code: The C_AOS code to take pointer from.
+
+        :returns: The string pointer to the supplied var_code.
+        :rtype: str
+        '''
+        return f"&{var_code}"
+
     def create_variable(self, c_type, name, initial_value=None, **kwargs):
         current_indent = kwargs.get("current_indent", 0)
         if C_AOS._type_map.get(c_type) is None:

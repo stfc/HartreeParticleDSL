@@ -12,7 +12,7 @@ from HartreeParticleDSL.c_types import c_int, c_double
 def move_part(part1, config):
     for i in range(3):
         part1.core_part.position.x = part1.core_part.position.x + part1.core_part.velocity[i] * config.dt
-
+        get_pointer(part1.part_mass)
 
 # Test includes
 config = HartreeParticleDSL.Config()
