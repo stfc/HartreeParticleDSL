@@ -330,7 +330,7 @@ class C_AOS(Backend):
         :returns: The string pointer to the supplied var_code.
         :rtype: str
         '''
-        return f"&{var_code}"
+        return "&" + var_code
 
     def create_variable(self, c_type, name, initial_value=None, **kwargs):
         current_indent = kwargs.get("current_indent", 0)
