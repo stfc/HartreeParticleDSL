@@ -32,7 +32,7 @@ def test_set_io_modules():
 def test_println():
     ''' Tests the println module of the FDPS backend'''
     backend = FDPS()
-    statement = backend.println("", "total", "\"string123\"", current_indent=0)
+    statement = backend.println("\"\"", "total", "\"\"string123\"\"", current_indent=0)
     assert statement == "std::cout << \"\" << total << \"string123\" << \"\\n\";\n"
 
 def test_addinclude():
