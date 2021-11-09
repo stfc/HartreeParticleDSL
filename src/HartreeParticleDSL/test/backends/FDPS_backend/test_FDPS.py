@@ -32,7 +32,7 @@ def test_set_io_modules():
 def test_println():
     ''' Tests the println module of the FDPS backend'''
     backend = FDPS()
-    statement = backend.println("", "total", "\"string123\"", current_indent=0)
+    statement = backend.println("\"\"", "total", "\"\"string123\"\"", current_indent=0)
     assert statement == "std::cout << \"\" << total << \"string123\" << \"\\n\";\n"
 
 def test_addinclude():
@@ -259,15 +259,14 @@ def test_cleanup():
 def test_call_language_function():
     '''Test the test_call_language function of FDPS'''
     backend = FDPS()
-    func1 = "a_c_call(*part, 20)"
-    rval1 = backend.call_language_function(func1)
+    func1 = "a_c_call( *part, 20 )"
+    rval1 = backend.call_language_function("a_c_call", "*part", "20")
     assert rval1 == (func1 + ";\n")
-    func2 = "cleanup(current_indent=2, indent=1)"
-    rval2 = backend.call_language_function(func2)
+    rval2 = backend.call_language_function("cleanup", current_indent=2, indent=1)
     assert rval2 == "  PS::Finalize();\n"
     func3 = "a_c_call(*part, 20, current_indent=4, indent=1)"
-    rval3 = backend.call_language_function(func3)
-    assert rval3 == "    a_c_call(*part, 20);\n"
+    rval3 = backend.call_language_function("a_c_call", "*part", "20", current_indent=4, indent=1)
+    assert rval3 == "    a_c_call( *part, 20 );\n"
 
 def test_create_variable():
     '''Test the create_variable function of FDPS'''

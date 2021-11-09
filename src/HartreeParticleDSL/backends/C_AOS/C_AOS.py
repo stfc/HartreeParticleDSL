@@ -24,8 +24,8 @@ class C_AOS(Backend):
                  c_bool : "_Bool"}
 
     #Variables used to manage where the cutoff radius is stored
-    CONSTANT = 0
-    PARTICLE = 1
+    CONSTANT = "C_AOS.CONSTANT"
+    PARTICLE = "C_AOS.PARTICLE"
 
     def __init__(self):
         self._pairwise_visitor = c_visitors.c_pairwise_visitor(self)
@@ -326,6 +326,7 @@ class C_AOS(Backend):
             raise UnsupportedTypeError("C_AOS does not support type \"{0}\""
                                         " in created variables.".format(c_type))
         ##Check name is allowed in C
+        name = name.replace('"', '')
         a = re.match("[a-zA-Z_][a-zA-Z_0-9]*", name)
         if a is None or a.group(0) != name:
             raise InvalidNameError("C_AOS does not support \"{0}\" as a name"
@@ -336,18 +337,27 @@ class C_AOS(Backend):
         rval = " " * current_indent + C_AOS._type_map.get(c_type) + " " + name + end
         return rval
 
-    def call_language_function(self,func_call, *args):
+    def call_language_function(self,func_call, *args, **kwargs):
         string = ""
         try:
             # Any arguments that were python module accesses would be
             # converted to c pointer accesses here (so use ->).
             # We need to change this into a python module access for now
             # in a temporary variable
-            fixed_func_call = func_call.replace("->", ".")
-            code = compile("self." + fixed_func_call, '<string>', 'eval')
-            string = eval(code)
-        except (SyntaxError, TypeError, AttributeError) as err:
-            string = func_call
+            fn = getattr(self, func_call)
+            fixed_args = []
+            for arg in args:
+                fixed_args.append(arg.replace("->", "."))
+            string = fn(*fixed_args, **kwargs)
+        except (AttributeError) as err:
+            string = func_call + "( "
+            arguments = []
+            for arg in args:
+                arguments.append(arg)
+            for kwarg in kwargs:
+                arguments.append(f"{kwarg}={kwargs[kwarg]}")
+            arg_string = ", ".join(arguments)
+            string = string + arg_string + " )"
             current_index = re.search("current_indent=[0-9]*", string)
             current_indent = 0
             if current_index is not None:

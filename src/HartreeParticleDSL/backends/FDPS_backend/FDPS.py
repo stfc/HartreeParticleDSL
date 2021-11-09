@@ -86,13 +86,16 @@ class FDPS(Backend):
         :param int current_indent: The current indentation level
         :param *args: A list of strings containing the other values
                       to output with cout. Any strings to add to cout
-                      should be surrounded with \\\" \\\".
+                      should be surrounded with \"\".
         :type args: str
         '''
         current_indent = kwargs.get("current_indent", 0)
-        output = " "*current_indent + f"std::cout << \"{string}\""
+        output = " "*current_indent + f"std::cout << {string}"
         for arg in args:
-            output = output + f" << {arg}"
+            x = arg[0].replace('"', '') + arg[1:]
+            x = x[0:len(x)-1] + x[-1].replace('"', '')
+            
+            output = output + f" << {x}"
         output = output + " << \"\\n\";\n"
         return output
 
@@ -337,6 +340,7 @@ class FDPS(Backend):
             raise UnsupportedTypeError("FDPS does not support type \"{0}\""
                                         " in created variables.".format(c_type))
         ##Check name is allowed in C++
+        name = name.replace('"', '')
         a = re.match("[a-zA-Z_][a-zA-Z_0-9]*", name)
         if a is None or a.group(0) != name:
             raise InvalidNameError("FDPS does not support \"{0}\" as a name"
@@ -347,13 +351,20 @@ class FDPS(Backend):
         rval = " " * current_indent + FDPS._type_map.get(c_type) + " " + name + end
         return rval
 
-    def call_language_function(self,func_call, *args):
+    def call_language_function(self,func_call, *args, **kwargs):
         string = ""
         try:
-            code = compile("self." +func_call, '<string>', 'eval')
-            string = eval(code)
+            fn = getattr(self, func_call)
+            string = fn(*args, **kwargs)
         except (SyntaxError, TypeError, AttributeError) as err:
-            string = func_call
+            string = func_call + "( "
+            arguments = []
+            for arg in args:
+                arguments.append(arg)
+            for kwarg in kwargs:
+                arguments.append(f"{kwarg}={kwargs[kwarg]}")
+            arg_string = ", ".join(arguments)
+            string = string + arg_string + " )"
             current_index = re.search("current_indent=[0-9]*", string)
             current_indent = 0
             if current_index is not None:
