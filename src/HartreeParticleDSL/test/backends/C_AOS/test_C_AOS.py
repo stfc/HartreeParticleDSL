@@ -256,10 +256,8 @@ def test_call_language_function():
     backend = C_AOS()
     rval1 = backend.call_language_function("a_c_call", "*part", "20")
     assert rval1 == ("a_c_call( *part, 20 )" + ";\n")
-#    func2 = "cleanup(current_indent=2, indent=1)"
     rval2 = backend.call_language_function("cleanup", current_indent=2, indent=1)
     assert rval2 == "  free(config);\n  free(parts);\n"
-    #func3 = "a_c_call(*part, 20, current_indent=4, indent=1)"
     rval3 = backend.call_language_function("a_c_call", "*part", "20", current_indent=4, indent=1)
     assert rval3 == "    a_c_call( *part, 20 );\n"
 

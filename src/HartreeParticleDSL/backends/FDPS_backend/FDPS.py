@@ -92,7 +92,6 @@ class FDPS(Backend):
         current_indent = kwargs.get("current_indent", 0)
         output = " "*current_indent + f"std::cout << {string}"
         for arg in args:
-#            x = arg.replace('"', '')
             x = arg[0].replace('"', '') + arg[1:]
             x = x[0:len(x)-1] + x[-1].replace('"', '')
             

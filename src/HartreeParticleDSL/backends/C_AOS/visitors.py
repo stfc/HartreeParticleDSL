@@ -187,7 +187,6 @@ class c_visitor(baseVisitor):
         arguments = []
         # TODO #2L: Temporary version until visitors return strings instead of printing
         for child in node.args:
-            #arguments.append(self.visit(child))
             vis = self.visit(child)
             if type(vis) is str:
                 arguments.append(vis)
@@ -196,13 +195,8 @@ class c_visitor(baseVisitor):
         for child in node.keywords:
             string = f"{child.arg}={self.visit(child.value)}"
             arguments.append(string)
-#        arguments.append(f"current_indent={self._currentIndent}")
-#        arguments.append(f"indent={self._indent}")
-        #func_string = func_string + ", ".join(arguments)
-        #func_string = func_string + " )"
         rval = ""
         if function_name != "invoke":
-#            rval = self._parent.call_language_function(func_string)
             rval = self._parent.call_language_function(function_name, *arguments, current_indent=self._currentIndent,
                                                        indent=self._indent)
         elif function_name == "invoke":
