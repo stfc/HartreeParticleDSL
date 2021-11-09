@@ -347,13 +347,20 @@ class FDPS(Backend):
         rval = " " * current_indent + FDPS._type_map.get(c_type) + " " + name + end
         return rval
 
-    def call_language_function(self,func_call, *args):
+    def call_language_function(self,func_call, *args, **kwargs):
         string = ""
         try:
-            code = compile("self." +func_call, '<string>', 'eval')
-            string = eval(code)
+            fn = getattr(self, func_call)
+            string = fn(*args, **kwargs)
         except (SyntaxError, TypeError, AttributeError) as err:
-            string = func_call
+            string = func_call + "( "
+            arguments = []
+            for arg in args:
+                arguments.append(arg)
+            for kwarg in kwargs:
+                arguments.append(f"{kwarg}={kwargs[kwarg]}")
+            arg_string = ", ".join(arguments)
+            string = string + arg_string + " )"
             current_index = re.search("current_indent=[0-9]*", string)
             current_indent = 0
             if current_index is not None:
