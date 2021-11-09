@@ -366,8 +366,6 @@ class C_AOS(Backend):
             string = re.sub(", current_indent=[0-9]*, indent=[0-9]*", "", string)
             string = re.sub(" current_indent=[0-9]*, indent=[0-9]*", "", string)
             string = string + ";\n"
-        except TypeError as e:
-            pass
         return string
 
     def set_cutoff(self, cutoff, var_type=CONSTANT, current_indent=0, **kwargs):

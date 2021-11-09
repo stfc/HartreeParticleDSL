@@ -188,10 +188,7 @@ class c_visitor(baseVisitor):
         # TODO #2L: Temporary version until visitors return strings instead of printing
         for child in node.args:
             vis = self.visit(child)
-            if type(vis) is str:
-                arguments.append(vis)
-            else:
-                arguments.append(f"{self.visit(child)}")
+            arguments.append(vis)
         for child in node.keywords:
             string = f"{child.arg}={self.visit(child.value)}"
             arguments.append(string)

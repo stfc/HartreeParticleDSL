@@ -260,6 +260,8 @@ def test_call_language_function():
     assert rval2 == "  free(config);\n  free(parts);\n"
     rval3 = backend.call_language_function("a_c_call", "*part", "20", current_indent=4, indent=1)
     assert rval3 == "    a_c_call( *part, 20 );\n"
+    rval4 = backend.call_language_function("set_cutoff", "0.5", "C_AOS->CONSTANT")
+    assert rval4 == "config.neighbour_config.cutoff = 0.5;\n"
 
 
 def test_get_particle_access():
