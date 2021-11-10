@@ -383,3 +383,9 @@ def test_set_cutoff_error():
     with pytest.raises(UnsupportedTypeError) as excinfo:
         rval = backend.set_cutoff("fail", var_type="thing1")
     assert "Unsupported var_type used in set_cutoff" in str(excinfo.value)
+
+def test_get_pointer():
+    '''Test the get_pointer method of the C_AOS backend'''
+    backend = C_AOS()
+    strin = backend.get_pointer("variable")
+    assert strin == "&variable"

@@ -240,6 +240,18 @@ class FDPS(Backend):
             return "core_part.position.z"
         raise InvalidNameError("The dimension argument should be x, y, or z")
 
+    def get_pointer(self, var_code, *args, **kwargs):
+        '''
+        Returns the code to access the pointer to the supplied var_code.
+        The var_code should already be FDPS C++ code.
+
+        :param str var_code: The FDPS C++ code to take pointer from.
+
+        :returns: The string pointer to the supplied var_code.
+        :rtype: str
+        '''
+        return "&" + var_code
+
     def set_cutoff(self, cutoff, var_type=CONSTANT):
         '''
         Set the cutoff for pairwise interactions. NYI

@@ -42,6 +42,9 @@ class Backend(metaclass=ABCMeta):
         '''
         pass
 
+    def get_pointer(self, code):
+        pass
+
     def initialisation_code(self, particle_count, filename):
         pass
 

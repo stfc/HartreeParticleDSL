@@ -351,3 +351,9 @@ def test_get_particle_access():
     with pytest.raises(InvalidNameError) as excinfo:
         backend.get_particle_access("abc")
     assert "The dimension argument should be x, y, or z" in str(excinfo.value)
+
+def test_get_pointer():
+    '''Test the get_pointer method of the FDPS backend'''
+    backend = FDPS()
+    strin = backend.get_pointer("variable")
+    assert strin == "&variable"
