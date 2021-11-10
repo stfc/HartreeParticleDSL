@@ -385,7 +385,23 @@ class C_AOS(Backend):
         rval = rval + " "*current_indent + f"struct part* parts = {self._input_module.call_input_c(particle_count, filename)}\n"
         return rval
 
-    def get_particle_access(self, dimension):
+    def get_particle_access(self, index, field):
+        '''
+        Returns the code to access a particle of the given
+        index for the field provided.
+
+        :param str index: The index value to access.
+        :param str field: The field name to access.
+
+        TODO: We could check the field exists
+        '''
+        # Remove any extra " from the field from passing through the DSL
+        field = field.replace('"', '')
+
+        return f"{index}->{field}"
+
+
+    def get_particle_position(self, dimension):
         '''
         Returns the code to access a particle's position
         for each dimension. Dimensions are x/y/z. For C_AOS

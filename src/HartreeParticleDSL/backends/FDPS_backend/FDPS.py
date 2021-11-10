@@ -246,7 +246,21 @@ class FDPS(Backend):
         rval = rval + f"{space*current_indent}/* End of INVOKE generated for {kernel_name} */\n\n"
         return rval
 
-    def get_particle_access(self, dimension):
+    def get_particle_access(self, index, field):
+        '''
+        Returns the code to access a particle of the given
+        index for the field provided.
+
+        :param str index: The index value to access.
+        :param str field: The field name to access.
+
+        TODO: We could check the field exists
+        '''
+        # Remove any extra " from the field from passing through the DSL
+        field = field.replace('"', '')
+        return f"{index}.{field}"
+
+    def get_particle_position(self, dimension):
         '''
         Returns the code to access a particle's position
         for each dimension. Dimensions are x/y/z. For FDPS
@@ -403,8 +417,8 @@ class FDPS(Backend):
             pass
         for system in self._coupled_systems:
             try:
-                fn = getattr(self, func_call)
-                string = fn(*fixed_args, **kwargs)
+                fn = getattr(system, func_call)
+                string = fn(*args, **kwargs)
                 return string
             except (AttributeError) as err:
                 pass
