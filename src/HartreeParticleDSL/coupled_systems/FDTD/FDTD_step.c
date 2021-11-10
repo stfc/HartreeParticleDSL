@@ -172,6 +172,13 @@ void update_eb_fields_half_1D(struct FDTD_field *field, const int nx, const doub
 
 }
 
+void reset_jfield(struct FDTD_field *field){
+
+    for(int i = -field->ng +1; i < field->nx + field->ng; i++){
+        field->jx[i] = 0.0;
+    } 
+}
+
 void update_eb_fields_final_1D(struct FDTD_field *field, const int nx, const double dt, const double dx){
 
     field->hdt = dt / 2.0;
@@ -183,4 +190,5 @@ void update_eb_fields_final_1D(struct FDTD_field *field, const int nx, const dou
     bfield_final_bcs_1D(field);
     update_e_field_1D(field);
     efield_bcs_1D(field);
+    reset_jfield(field);
 }

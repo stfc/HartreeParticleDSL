@@ -84,3 +84,6 @@ class Backend(metaclass=ABCMeta):
 
     def particle_access(self, index_name):
         pass
+
+    def add_coupler(self, coupled_system):
+        pass

@@ -1,5 +1,6 @@
 import re
 from HartreeParticleDSL.backends.base_backend.backend import Backend
+from HartreeParticleDSL.coupled_systems.base_coupler.base_coupler import base_coupler
 import HartreeParticleDSL.backends.FDPS_backend.FDPS_visitors as FDPS_visitors
 from HartreeParticleDSL.backends.FDPS_backend.FDPS_IO_Mixin import FDPS_IO_Mixin
 import HartreeParticleDSL.kernel_types.kernels as kernels
@@ -49,6 +50,7 @@ class FDPS(Backend):
         self._output_module = None
         self._variable_scope = variable_scope()
         self._enable_variable_checks = True
+        self._coupled_systems = []
 
     @property
     def variable_scope(self):
@@ -396,23 +398,33 @@ class FDPS(Backend):
         try:
             fn = getattr(self, func_call)
             string = fn(*args, **kwargs)
-        except (SyntaxError, TypeError, AttributeError) as err:
-            string = func_call + "( "
-            arguments = []
-            for arg in args:
-                arguments.append(arg)
-            for kwarg in kwargs:
-                arguments.append(f"{kwarg}={kwargs[kwarg]}")
-            arg_string = ", ".join(arguments)
-            string = string + arg_string + " )"
-            current_index = re.search("current_indent=[0-9]*", string)
-            current_indent = 0
-            if current_index is not None:
-                current_indent = int(current_index[0][15:])
-            string = " "*current_indent + string
-            string = re.sub(", current_indent=[0-9]*, indent=[0-9]*", "", string)
-            string = re.sub(" current_indent=[0-9]*, indent=[0-9]*", "", string)
-            string = string + ";\n"
+            return string
+        except (AttributeError) as err:
+            pass
+        for system in self._coupled_systems:
+            try:
+                fn = getattr(self, func_call)
+                string = fn(*fixed_args, **kwargs)
+                return string
+            except (AttributeError) as err:
+                pass
+
+        string = func_call + "( "
+        arguments = []
+        for arg in args:
+            arguments.append(arg)
+        for kwarg in kwargs:
+            arguments.append(f"{kwarg}={kwargs[kwarg]}")
+        arg_string = ", ".join(arguments)
+        string = string + arg_string + " )"
+        current_index = re.search("current_indent=[0-9]*", string)
+        current_indent = 0
+        if current_index is not None:
+            current_indent = int(current_index[0][15:])
+        string = " "*current_indent + string
+        string = re.sub(", current_indent=[0-9]*, indent=[0-9]*", "", string)
+        string = re.sub(" current_indent=[0-9]*, indent=[0-9]*", "", string)
+        string = string + ";\n"
         return string
 
     def access_to_string(self, var_access, check_valid=False):
@@ -457,3 +469,19 @@ class FDPS(Backend):
                 code_str = code_str + "." + child_str
 
         return code_str
+
+    def add_coupler(self, coupled_system):
+        '''
+        Adds a coupled system to the list of coupled systems in the backend
+
+        :param coupled_system: The object to couple with.
+        :type couple_system: Object
+
+        :raises UnsupportedTypeError: If the object to couple with is not \
+                                      an instance of base_coupler
+        '''
+        if not isinstance(coupled_system, base_coupler):
+            raise UnsupportedTypeError("Can only couple to base_couple classes "
+                                       " or subclasses. Found {0}".format(
+                                           type(coupled_system).__name__))
+        self._coupled_systems.append(coupled_system)
