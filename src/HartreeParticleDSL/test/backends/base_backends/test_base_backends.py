@@ -21,6 +21,7 @@ def test_base_backend():
     a.create_variable(None, None, None)
     a.set_cutoff(None)
     a.get_particle_access(None)
+    a.get_pointer(None)
 
 def test_base_visitors():
     a = baseVisitor(None)
