@@ -84,3 +84,6 @@ class Backend(metaclass=ABCMeta):
 
     def add_coupler(self, coupled_system):
         pass
+
+    def add_type(self, type_name, type_string):
+        pass

@@ -72,6 +72,15 @@ class FDPS(Backend):
         '''
         self._enable_variable_checks = True
 
+    def add_type(self, type_name, type_string):
+        '''
+        Function to add a special type to the type map for this backend.
+
+        :param str type_name: The name of the type (this can just be the type_string)
+        :param str type_string: The FDPS type string to use for this type
+        '''
+        FDPS._type_map[type_name] = type_string
+
     def set_io_modules(self, input_module, output_module):
         '''
         Function to set the IO Modules. Called from HartreeParticleDSL

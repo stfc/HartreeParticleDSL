@@ -68,6 +68,15 @@ class C_AOS(Backend):
         is disabled occasionally internally or during testing.
         '''
         self._enable_variable_checks = True
+    
+    def add_type(self, type_name, type_string):
+        '''
+        Function to add a special type to the type map for this backend.
+
+        :param str type_name: The name of the type (this can just be the type_string)
+        :param str type_string: The C type string to use for this type
+        '''
+        C_AOS._type_map[type_name] = type_string
 
     def set_io_modules(self, input_module, output_module):
         '''
@@ -112,7 +121,9 @@ class C_AOS(Backend):
         :type args: str
         '''
         current_indent = kwargs.get("current_indent", 0)
-        output = " "*current_indent + f"printf(\"{string}\\n\""
+        x = string[0].replace('"', '') + string[1:]
+        x = x[0:len(x)-1] + x[-1].replace('"', '')
+        output = " "*current_indent + f"printf(\"{x}\\n\""
         for arg in args:
             output = output + f", {arg}"
         output = output + ");\n"

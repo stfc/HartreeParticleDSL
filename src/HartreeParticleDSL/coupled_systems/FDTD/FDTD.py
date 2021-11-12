@@ -11,7 +11,8 @@ class IllegalInterpolatorError(Exception):
     pass
 
 class FDTD(force_solver):
-    def __init__(self, x_min, x_max, ncells, y_min=0.0, y_max=0.0,
+    def __init__(self, x_min, x_max, ncells, config_type,
+                 y_min=0.0, y_max=0.0,
                  z_min = 0.0, z_max = 0.0, dimensionality = 1,
                  x_bc_max = PERIODIC, x_bc_min = PERIODIC,
                  y_bc_max = PERIODIC, y_bc_min = PERIODIC,
@@ -32,6 +33,8 @@ class FDTD(force_solver):
         self.z_bc_max = z_bc_max
         self.z_bc_min = z_bc_min
         self.interpolator = TOPHAT
+        config_type.add_element("field", "FDTD_field")
+        get_backend().add_type("FDTD_field", "struct *FDTD_field")
 
     def set_interpolator(self, interpolator):
         if interpolator != TOPHAT:
@@ -39,8 +42,23 @@ class FDTD(force_solver):
                                            "TOPHAT is currently supported.")
         self.interpolator = TOPHAT
 
-    def call_init_grid(self):
-        pass
+    def call_init_grid(self, current_indent=0, indent=0):
+        assert self.dimensionality == 1
+        in_str = " " * current_indent
+        code = in_str + "config.field = (struct *FDTD_field) malloc(sizeof(struct FDTD_field));\n"
+        code = code + in_str + "fdtd_initialize(config.field, config.nx, config.ng);\n"
+        return code 
+
+    def setup_testcase(self, current_indent=0, indent=0):
+        in_str = " " * current_indent
+        code = in_str + "fdtd_initialize_example_1D(config.field, config.nx, config.ng);\n"
+        return code
+
+    def call_cleanup_grid(self, current_indent=0, indent=0):
+        in_str = " " * current_indent
+        code = in_str + "FDTD_cleanup_1D(config.field);\n"
+        code = in_str + "free(config.field);\n"
+        return code
 
     def call_interpolate_to_particles(self, part_weight, part_charge, part_mass, 
                                       part_momentum_x, part_momentum_y,
@@ -76,7 +94,7 @@ class FDTD(force_solver):
         code = code + f"{in_str}{double_type} cmratio = part_q * dtfac * ipart_mc;\n"
         code = code + f"{in_str}{double_type} ccmratio = c * cmratio;\n"
         code = code + in_str + "//Copy out the particle properties\n"
-        code = code + f"{in_str}{double_type} part_x = " + backend.get_particle_access("part1", backend.get_particle_position("x")) + " - field->x_grid_min_local;\n"
+        code = code + f"{in_str}{double_type} part_x = " + backend.get_particle_access("part1", backend.get_particle_position("x")) + " - config.field->x_grid_min_local;\n"
         code = code + f"{in_str}{double_type} part_ux = " + backend.get_particle_access("part1", part_momentum_x) + ";\n"
         code = code + f"{in_str}{double_type} part_uy = " + backend.get_particle_access("part1", part_momentum_y) + ";\n"
         code = code + f"{in_str}{double_type} part_uz = " + backend.get_particle_access("part1", part_momentum_z) + ";\n"
@@ -101,19 +119,19 @@ class FDTD(force_solver):
         code = code + in_str*2 + backend.get_pointer("ey_part") + ", " + backend.get_pointer("ez_part") + ",\n"
         code = code + in_str*2 + backend.get_pointer("bx_part") + ", " + backend.get_pointer("by_part") + ",\n"
         code = code + in_str*2 + backend.get_pointer("bz_part") + ", cell_x_r, " + backend.get_pointer("cell_x1") + ",\n"
-        code = code + in_str*2 + "field, idt, idx, dtco2, idtf, idxf, field->nx, fcx, fcy);\n"
+        code = code + in_str*2 + "config.field, idt, idx, dtco2, idtf, idxf, config.field->nx, fcx, fcy);\n"
         return code
 
-    def gather_forces_to_grid(delta_x, part_vy, part_vz, current_indent=0, indent=0):
+    def gather_forces_to_grid(self, delta_x, part_vy, part_vz, current_indent=0, indent=0):
         assert self.dimensionality == 1
         assert self.interpolator == TOPHAT
         backend = get_backend()
         double_type = backend._type_map["c_double"]
         int32_type = backend._type_map["c_int32_t"]
+        #Remove excess " from strings
         in_str = " " * current_indent
-        code = f"{in_str}{double_type} part_x = " + backend.get_particle_access("part1", backend.get_position("x")) + " - field->x_grid_mind_local;\n"
+        code = f"{in_str}{double_type} part_x = " + backend.get_particle_access("part1", backend.get_particle_position("x")) + " - config.field->x_grid_min_local;\n"
         code = code + f"{in_str}gather_forces_to_grid_tophat_1D(part_weight, part_q, part_x, {delta_x}, \n"
-        code = code + f"{in_str}{in_str}" + "cell_x1, field, idt, {part_vy}, {part_vz}, idx, dtco2, idtf, idxf, \n"
-        code = code + f"{in_str}{in_str}" + "field->nx, fcx, fcy);\n"
-
+        code = code + f"{in_str}{in_str}" + f"cell_x1, config.field, idt, {part_vy}, {part_vz}, idx, dtco2, idtf, idxf, \n"
+        code = code + f"{in_str}{in_str}" + "config.field->nx, fcx, fcy);\n"
         return code

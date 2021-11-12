@@ -14,6 +14,10 @@ def move_part(part1, config):
         call_interpolate_to_particles("weight", "charge", "mass", "p_x", "p_y", "p_z", "dx", "dt")
         part1.core_part.position.x = part1.core_part.position.x + part1.core_part.velocity[i] * config.dt
         part1.core_part.position.y = get_pointer(part1.part_mass)
+        create_variable(c_double, "delta_x", 0.1)
+        create_variable(c_double, "part_vy", 0.1)
+        create_variable(c_double, "part_vz", 0.1)
+        gather_forces_to_grid(delta_x, part_vy, part_vz) 
         
 
 # Test includes
@@ -30,7 +34,7 @@ io_module = io_modules.Random_Particles()
 
 fdps = FDPS()
 HartreeParticleDSL.set_backend(fdps)
-fdps.add_coupler(FDTD(0, 2.0, 12500))
+fdps.add_coupler(FDTD(0, 2.0, 12500, config))
 HartreeParticleDSL.set_particle_type(part)
 HartreeParticleDSL.set_config_type(config)
 HartreeParticleDSL.set_io_modules(io_module, io_module)
@@ -42,9 +46,11 @@ def main():
     config.time = 0.0
     config.dt = 0.1
     config.cutoff = 0.5
+    call_init_grid()
+    setup_testcase()
     create_variable(c_int, "z", 2)
     while config.time < 1.0:
         invoke(move_part)
         config.time = config.time + config.dt
-        println("", "config.time","\" \"", "config.dt")
+        println("", config.time,"\" \"", config.dt)
     cleanup()
