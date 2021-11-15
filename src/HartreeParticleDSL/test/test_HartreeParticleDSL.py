@@ -5,7 +5,9 @@ import inspect
 import os
 import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
 from HartreeParticleDSL.HartreeParticleDSLExceptions import SingletonInstanceError, \
-                                                            RepeatedNameError
+                                                            RepeatedNameError, \
+                                                            NoBackendError
+from HartreeParticleDSL.backends.base_backend.backend import Backend
 from HartreeParticleDSL.backends.C_AOS.C_AOS import C_AOS
 from HartreeParticleDSL.IO_modules.random_IO.random_IO import *
 from HartreeParticleDSL.kernel_types.kernels import perpart_kernel_wrapper
@@ -23,6 +25,10 @@ def test_single_instance():
     with pytest.raises(SingletonInstanceError) as excinfo:
         b = HartreeParticleDSL._HartreeParticleDSL()
     assert "Only one instance of _HartreeParticleDSL is allowed" in str(excinfo.value)
+
+def test_get_backend():
+    '''Test the get_backend fucntion of HartreeParticleDSL'''
+    assert isinstance(HartreeParticleDSL.get_backend(), Backend)
 
 def test_set_backend():
     '''Test the set_backend function of HartreeParticleDSL'''
@@ -209,3 +215,4 @@ def test_particle_add_element():
     with pytest.raises(RepeatedNameError) as excinfo:
         part.add_element("value", "int")
     assert "The variable name value is already in the particle type" in str(excinfo.value)
+

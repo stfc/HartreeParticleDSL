@@ -25,6 +25,7 @@ def test_c_visitor_visit_str():
     aos = C_AOS()
     HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
+    aos.variable_scope.add_variable("b", "c_double", False)
     def a():
         b = part.str
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))

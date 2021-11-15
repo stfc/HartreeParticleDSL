@@ -230,9 +230,9 @@ class FDPS(Backend):
     def get_particle_access(self, dimension):
         '''
         Returns the code to access a particle's position
-        for each dimension. Dimensions are x/y/z. For C_AOS
-        the positions are stored in a double[3], so we return
-        the relevant array element
+        for each dimension. Dimensions are x/y/z. For FDPS
+        the positions are stored in a PS::F64vec, so we return
+        the relevant vector element
 
         :param str dimension: The dimension ("x", "y" or "z") to access
 
@@ -400,12 +400,12 @@ class FDPS(Backend):
 
     def access_to_string(self, var_access):
         '''
-        Takes a variable_access and converts it to a C_AOS string to output
+        Takes a variable_access and converts it to a FDPS string to output
 
         :param var_access: The variable access to output as a string
         :type var_access: variable_access
 
-        :returns: The C_AOS string for this variable access
+        :returns: The FDPS string for this variable access
         :rtype: str
         '''
         code_str = ""

@@ -67,12 +67,9 @@ class _HartreeParticleDSL():
         '''
         Function to retrieve the currently used backend.
     
-        :raises NoBackendError: If no backend is set
         :returns: The current backend
         :rtype: :py:class:`HartreeParticleDSL.backends.base_backend.Backend`
         '''
-        if self._backend is None:
-            raise NoBackendError("No backend is currently set in the DSL")
         return self._backend
 
     def set_particle_type(self, part):
