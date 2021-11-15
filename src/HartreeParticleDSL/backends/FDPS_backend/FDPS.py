@@ -9,6 +9,8 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import InvalidNameError, \
                                                             InternalError
 from HartreeParticleDSL.c_types import c_int, c_double, c_float, c_int64_t, \
                                        c_int32_t, c_int8_t, c_bool
+from HartreeParticleDSL.language_utils.variable_scope import variable_scope, \
+                                                             variable_access
 
 class FDPS(Backend):
     '''
@@ -22,7 +24,9 @@ class FDPS(Backend):
                  c_int64_t : "PS::S64",
                  c_int32_t : "PS::S32",
                  c_int8_t : "char",
-                 c_bool : "bool"}
+                 c_bool : "bool",
+                 "FullParticle" : "FullParticle",
+                 "config_type" : "config_type"}
 
     # Variables used to manage where the cutoff radius is stored
     CONSTANT = 0
@@ -43,6 +47,11 @@ class FDPS(Backend):
         self._cutoff = "neighbour_part.cutoff"
         self._input_module = None
         self._output_module = None
+        self._variable_scope = variable_scope()
+
+    @property
+    def variable_scope(self):
+        return self._variable_scope
 
     def set_io_modules(self, input_module, output_module):
         '''
@@ -176,6 +185,7 @@ class FDPS(Backend):
         :type kernel: :py:class:`HartreeParticleDSL.kernel_types.kernels.kernel`
         '''
         tree = kernel.get_kernel_tree()
+        self._variable_scope = variable_scope()
         if isinstance(kernel, kernels.perpart_kernel_wrapper):
             print(self._per_part_visitor.visit(tree))
         elif isinstance(kernel, kernels.pairwise_kernel_wrapper):
@@ -361,6 +371,7 @@ class FDPS(Backend):
         if initial_value is not None:
             end = f" = {initial_value};\n"
         rval = " " * current_indent + FDPS._type_map.get(c_type) + " " + name + end
+        self.variable_scope.add_variable(name, c_type, False)
         return rval
 
     def call_language_function(self,func_call, *args, **kwargs):
@@ -386,3 +397,64 @@ class FDPS(Backend):
             string = re.sub(" current_indent=[0-9]*, indent=[0-9]*", "", string)
             string = string + ";\n"
         return string
+
+    def access_to_string(self, var_access):
+        '''
+        Takes a variable_access and converts it to a C_AOS string to output
+
+        :param var_access: The variable access to output as a string
+        :type var_access: variable_access
+
+        :returns: The C_AOS string for this variable access
+        :rtype: str
+        '''
+        code_str = ""
+        name = var_access.variable.var_name
+        code_str = code_str + name
+        array_access = (len(var_access.array_indices) != 0)
+        if array_access:
+            for index in var_access.array_indices:
+                if isinstance(index, str):
+                    code_str = code_str + f"[{index}]"
+                if isinstance(index, variable_access):
+                    code_str = code_str + f"[{self.access_to_string(index)}]"
+
+        if variable_access.child is not None:
+            if var_access.variable.is_pointer and not array_access:
+                code_str = code_str + f"->{self.access_to_string(variable_access.child)}"
+            else:
+                code_str = code_str + f".{self.access_to_string(variable_access.child)}"
+
+        return code_str
+
+    def access_to_string(self, var_access):
+        '''
+        Takes a variable_access and converts it to a FDPS string to output
+
+        :param var_access: The variable access to output as a string
+        :type var_access: variable_access or str
+
+        :returns: The FDPS string for this variable access
+        :rtype: str
+        '''
+        code_str = ""
+        name = var_access.variable.var_name
+        code_str = code_str + name
+        array_access = (len(var_access.array_indices) != 0)
+        if var_access.child is not None:
+            if var_access.variable.is_pointer and not array_access:
+                child = var_access.child
+                child_str = self.access_to_string(child)
+                code_str = code_str + "->" + child_str
+            else:
+                child = var_access.child
+                child_str = self.access_to_string(child)
+                code_str = code_str + "." + child_str
+        if array_access:
+            for index in var_access.array_indices:
+                if isinstance(index, str):
+                    code_str = code_str + f"[{index}]"
+                if isinstance(index, variable_access):
+                    code_str = code_str + "[" + self.access_to_string(index) + "]"
+
+        return code_str

@@ -53,3 +53,6 @@ class Backend(metaclass=ABCMeta):
 
     def set_cutoff(self, cutoff, var_type=CONSTANT):
         pass
+
+    def access_to_string(self, variable_access):
+        pass

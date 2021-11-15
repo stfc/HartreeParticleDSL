@@ -2,7 +2,8 @@ from HartreeParticleDSL.IO_modules.base_IO_module.IO_module import IO_Module
 from HartreeParticleDSL.IO_modules.random_IO.random_IO import *
 from HartreeParticleDSL.IO_modules.IO_Exceptions import *
 from HartreeParticleDSL.HartreeParticleDSLExceptions import *
-from HartreeParticleDSL.HartreeParticleDSL import Particle, Config, _HartreeParticleDSL
+from HartreeParticleDSL.HartreeParticleDSL import Particle, Config, _HartreeParticleDSL, \
+                                                  set_backend
 from HartreeParticleDSL.backends.FDPS_backend.FDPS import *
 from HartreeParticleDSL.c_types import *
 import HartreeParticleDSL.kernel_types.kernels as kernels
@@ -134,6 +135,7 @@ def test_gen_pairwise_kernel(capsys):
     '''Test the gen_kernel function of FDPS module for a pairwise kernel'''
     _HartreeParticleDSL.the_instance = None
     backend = FDPS()
+    set_backend(backend)
     kernel = kernels.pairwise_interaction(kern)
     with pytest.raises(UnsupportedCodeError) as excinfo:
         backend.gen_kernel(kernel)
@@ -142,6 +144,7 @@ def test_gen_pairwise_kernel(capsys):
 def test_gen_perpart_kernel(capsys):
     '''Test the gen_kernel function of FDPS module for a perpart kernel'''
     backend = FDPS()
+    set_backend(backend)
     kernel = kernels.perpart_interaction(kern2)
     backend.gen_kernel(kernel)
     captured = capsys.readouterr()

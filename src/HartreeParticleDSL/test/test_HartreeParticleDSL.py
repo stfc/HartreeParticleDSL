@@ -159,6 +159,7 @@ def test_global_initalise():
 
 def test_global_println():
     '''Test the globally used println function'''
+    HartreeParticleDSL.set_backend(C_AOS())
     a = HartreeParticleDSL.println("%f", "val")
     assert a == "printf(\"%f\\n\", val);\n"
 

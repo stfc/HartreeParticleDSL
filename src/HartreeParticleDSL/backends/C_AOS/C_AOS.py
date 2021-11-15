@@ -8,6 +8,9 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import InvalidNameError, \
                                                             UnsupportedTypeError
 from HartreeParticleDSL.c_types import c_int, c_double, c_float, c_int64_t, \
                                        c_int32_t, c_int8_t, c_bool
+from HartreeParticleDSL.language_utils.variable_scope import variable_scope, \
+                                                             variable_access
+
 
 class C_AOS(Backend):
     '''
@@ -21,7 +24,9 @@ class C_AOS(Backend):
                  c_int64_t : "long long int",
                  c_int32_t : "int",
                  c_int8_t : "char",
-                 c_bool : "_Bool"}
+                 c_bool : "_Bool",
+                 "struct part": "struct part",
+                 "struct config_type": "struct config_type"}
 
     #Variables used to manage where the cutoff radius is stored
     CONSTANT = "C_AOS.CONSTANT"
@@ -39,6 +44,11 @@ class C_AOS(Backend):
         self._cutoff = "config->neighbour_config.cutoff"
         self._input_module = None
         self._output_module = None
+        self._variable_scope = variable_scope()
+
+    @property
+    def variable_scope(self):
+        return self._variable_scope
 
     def set_io_modules(self, input_module, output_module):
         '''
@@ -166,6 +176,7 @@ class C_AOS(Backend):
         :type kernel: :py:class:`HartreeParticleDSL.kernel_types.kernels.kernel`
         '''
         tree = kernel.get_kernel_tree()
+        self._variable_scope = variable_scope()
         if isinstance(kernel, kernels.perpart_kernel_wrapper):
             print(self._per_part_visitor.visit(tree))
         elif isinstance(kernel, kernels.pairwise_kernel_wrapper):
@@ -179,6 +190,7 @@ class C_AOS(Backend):
         :param function: AST.Module of the Main function to generate code for.
         :type function: :py:class:`ast.Module`
         '''
+        self._variable_scope = variable_scope()
         print(self._main_visitor.visit(function))
 
     def gen_invoke(self, kernel_name, current_indent, indent, kernel_type):
@@ -293,6 +305,8 @@ class C_AOS(Backend):
         return rval
 
     def initialise(self,particle_count, filename, current_indent, **kwargs):
+        self.variable_scope.add_variable("config", "config_type", True)
+        self.variable_scope.add_variable("parts", "config_type", True)
         rval = " "*current_indent + "struct config_type* config = malloc(sizeof(struct config_type));\n"
         rval = rval + " "*current_indent + f"struct part* parts = {self._input_module.call_input_c(particle_count, filename)}\n"
         return rval
@@ -347,6 +361,7 @@ class C_AOS(Backend):
         if initial_value is not None:
             end = f" = {initial_value};\n"
         rval = " " * current_indent + C_AOS._type_map.get(c_type) + " " + name + end
+        self.variable_scope.add_variable(name, c_type, False)
         return rval
 
     def call_language_function(self,func_call, *args, **kwargs):
@@ -367,7 +382,8 @@ class C_AOS(Backend):
             for arg in args:
                 arguments.append(arg)
             for kwarg in kwargs:
-                arguments.append(f"{kwarg}={kwargs[kwarg]}")
+
+                arguments.append(str(kwarg) + "=" + str(kwargs[kwarg]))
             arg_string = ", ".join(arguments)
             string = string + arg_string + " )"
             current_index = re.search("current_indent=[0-9]*", string)
@@ -410,3 +426,35 @@ class C_AOS(Backend):
             self._cutoff = f"parts[part1].{cutoff}"
             return ""
         raise UnsupportedTypeError("Unsupported var_type used in set_cutoff")
+
+    def access_to_string(self, var_access):
+        '''
+        Takes a variable_access and converts it to a C_AOS string to output
+
+        :param var_access: The variable access to output as a string
+        :type var_access: variable_access or str
+
+        :returns: The C_AOS string for this variable access
+        :rtype: str
+        '''
+        code_str = ""
+        name = var_access.variable.var_name
+        code_str = code_str + name
+        array_access = (len(var_access.array_indices) != 0)
+        if var_access.child is not None:
+            if var_access.variable.is_pointer and not array_access:
+                child = var_access.child
+                child_str = self.access_to_string(child)
+                code_str = code_str + "->" + child_str
+            else:
+                child = var_access.child
+                child_str = self.access_to_string(child)
+                code_str = code_str + "." + child_str
+        if array_access:
+            for index in var_access.array_indices:
+                if isinstance(index, str):
+                    code_str = code_str + f"[{index}]"
+                if isinstance(index, variable_access):
+                    code_str = code_str + "[" + self.access_to_string(index) + "]"
+
+        return code_str

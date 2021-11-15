@@ -6,10 +6,13 @@ import textwrap
 import pytest
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IllegalLoopError, UnsupportedCodeError, \
                                                             IllegalArgumentCountError
+import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
+
 
 def test_c_visitor_visit_Str():
     '''Test the visit_Str function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = "string"
@@ -20,16 +23,18 @@ def test_c_visitor_visit_Str():
 def test_c_visitor_visit_str():
     '''Test the visit_str function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = part.str
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
     out = v.visit(c)
-    assert "b = part->str;" in out
+    assert "b = part.str;" in out
 
 def test_c_visitor_visit_int():
     '''Test the visit_int function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = 13
@@ -40,6 +45,7 @@ def test_c_visitor_visit_int():
 def test_c_visitor_visit_Add():
     '''Test the visit_Add function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = 1 + 2
@@ -50,6 +56,7 @@ def test_c_visitor_visit_Add():
 def test_c_visitor_visit_Mult():
     '''Test the visit_Mult function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = 1 * 2
@@ -60,6 +67,7 @@ def test_c_visitor_visit_Mult():
 def test_c_visitor_visit_Sub():
     '''Test the visit_Sub function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = 1 - 2
@@ -70,6 +78,7 @@ def test_c_visitor_visit_Sub():
 def test_c_visitor_visit_LtE():
     '''Test the visit_LtE function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = 1 <= 2
@@ -80,6 +89,7 @@ def test_c_visitor_visit_LtE():
 def test_c_visitor_visit_GtE():
     '''Test the visit_GtE function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = 1 >= 2
@@ -90,6 +100,7 @@ def test_c_visitor_visit_GtE():
 def test_c_visitor_visit_Lt():
     '''Test the visit_Lt function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = 1 < 2
@@ -100,6 +111,7 @@ def test_c_visitor_visit_Lt():
 def test_c_visitor_visit_Gt():
     '''Test the visit_Gt function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = 1 > 2
@@ -111,6 +123,7 @@ def test_c_visitor_visit_Gt():
 def test_c_visitor_visit_USub():
     '''Test the visit_USub function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = 1 + -a
@@ -121,6 +134,7 @@ def test_c_visitor_visit_USub():
 def test_c_visitor_visit_UnaryOp():
     '''Test the visit_UnaryOp function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = -3
@@ -131,6 +145,7 @@ def test_c_visitor_visit_UnaryOp():
 def test_c_visitor_visit_Compare():
     '''Test the visit_Compare function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = (2 <= 3)
@@ -141,6 +156,7 @@ def test_c_visitor_visit_Compare():
 def test_c_visitor_visit_BinOp():
     '''Test the visit_BinOp function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = 1 - 2
@@ -151,6 +167,7 @@ def test_c_visitor_visit_BinOp():
 def test_c_visitor_visit_Name():
     '''Test the visit_Name function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         d.b = 1 - 2
@@ -162,32 +179,37 @@ def test_c_visitor_visit_Name():
 def test_c_visitor_visit_Attribute():
     '''Test the visit_Attribute function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         d.b = 1 - 2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
     out = v.visit(c)
-    assert "d->b" in out
+    assert "d.b" in out
     def aa():
         d.e.f = 1 - 2
     c = ast.parse(textwrap.dedent(inspect.getsource(aa)))
     out = v.visit(c)
-    assert "d->e.f" in out
+    assert "d.e.f" in out
     def ab():
         d.e[1] = 1 - 2
     c = ast.parse(textwrap.dedent(inspect.getsource(ab)))
     out = v.visit(c)
-    assert "d->e[1]" in out
+    assert "d.e[1]" in out
+    def ac():
+        d.e[1][2][3][4] = 1 - 2
+    c = ast.parse(textwrap.dedent(inspect.getsource(ac)))
+    out = v.visit(c)
+    assert "d.e[1][2][3][4]" in out
     def abc():
         a.core_part.position.x = 3.0
         a.core_part.position.y = 4.0
         a.core_part.position.z = 5.0
     c = ast.parse(textwrap.dedent(inspect.getsource(abc)))
     out = v.visit(c)
-    print(out)
-    assert "a->core_part.position[0] = 3.0" in out
-    assert "a->core_part.position[1] = 4.0" in out
-    assert "a->core_part.position[2] = 5.0" in out
+    assert "a.core_part.position[0] = 3.0" in out
+    assert "a.core_part.position[1] = 4.0" in out
+    assert "a.core_part.position[2] = 5.0" in out
 
     def illegal():
         a.core_part.position.xd = 6.0
@@ -200,6 +222,7 @@ def test_c_visitor_visit_Attribute():
 def test_c_visitor_visit_Num():
     '''Test the visit_Num function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = 1.2
@@ -210,6 +233,7 @@ def test_c_visitor_visit_Num():
 def test_c_visitor_visit_Assign():
     '''Test the visit_Assign function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = 1.2
@@ -220,6 +244,7 @@ def test_c_visitor_visit_Assign():
 def test_c_visitor_visit_arg():
     '''Test the visit_arg function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a(arg):
         b = 1.2
@@ -231,6 +256,7 @@ def test_c_visitor_visit_arg():
 def test_c_visitor_visit_arguments():
     '''Test the visit_arguments function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a(arg, arg2):
         b = 1.2
@@ -241,6 +267,7 @@ def test_c_visitor_visit_arguments():
 def test_c_visitor_visit_FunctionDef():
     '''Test the visit_FunctionDef function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = 1.2
@@ -253,6 +280,7 @@ def test_c_visitor_visit_FunctionDef():
 def test_c_visitor_visit_If():
     '''Test the visit_If function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = 0
@@ -271,6 +299,7 @@ def test_c_visitor_visit_If():
 def test_c_visitor_visit_Call():
     '''Test the visit_Call function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         func(arg1)
@@ -298,16 +327,18 @@ def test_c_visitor_visit_Call():
 def test_c_visitor_visit_Module():
     '''Test the visit_Module function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         asd.fgh = 1.0
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
     out = v.visit(c)
-    assert "asd->fgh" in out
+    assert "asd.fgh" in out
 
 def test_c_visitor_visit_Index():
     '''Test the visit_Index function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         d = s[2]
@@ -318,6 +349,7 @@ def test_c_visitor_visit_Index():
 def test_c_visitor_visit_Subscript():
     '''Test the visit_Subscript function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         s = d[1]
@@ -328,6 +360,7 @@ def test_c_visitor_visit_Subscript():
 def test_c_visitor_visit_For():
     '''Test the visit_For function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         for i in range(3):
@@ -373,6 +406,7 @@ def test_c_visitor_visit_For():
 def test_c_visitor_visit_While():
     '''Test the visit_While function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         while b < 3:
@@ -384,6 +418,7 @@ def test_c_visitor_visit_While():
 def test_c_visitor_visit_Expr():
     '''Test the visit_Expr function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
         b = b + 1
@@ -394,6 +429,7 @@ def test_c_visitor_visit_Expr():
 def test_c_visitor_generic_visit():
     '''Test the generic_visit function in c_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     with pytest.raises(UnsupportedCodeError) as excinfo:
         out = v.visit(v)
@@ -402,6 +438,7 @@ def test_c_visitor_generic_visit():
 def test_c_pairwise_visitor_visit_arguments():
     '''Test the visit_arguments function in the c_pairwise_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_pairwise_visitor(aos)
     def a():
         b = 0
@@ -415,10 +452,10 @@ def test_c_pairwise_visitor_visit_arguments():
     out = v.visit(c)
     assert "struct part *part1, struct part *part2, double r2, struct config_type *config" in out
 
-# No tests yet for c_main_visitor, definitely needs a rethink anyway.
 def test_c_main_visitor_visit_Expr():
     '''Test the visit_Expr function in c_main_visitor'''
     backend = C_AOS()
+    HartreeParticleDSL.set_backend(backend)
     v = c_main_visitor(backend)
     def main():
         b = b + 1
@@ -432,6 +469,7 @@ def kern4(part1, part2, r2, config):
 def test_c_main_visit_Call():
     '''Test the visit_Call function in c_main_visitor'''
     backend = C_AOS()
+    HartreeParticleDSL.set_backend(backend)
     kernel = kernels.pairwise_interaction(kern4)
     v = c_main_visitor(backend)
     def main():
@@ -447,6 +485,7 @@ def test_c_main_visit_Call():
 def test_c_perpart_visitor_visit_arguments():
     '''Test the visit_arguments function in the c_perpart_visitor'''
     aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
     v = c_perpart_visitor(aos)
     def a():
         b = 0

@@ -11,7 +11,7 @@ class baseVisitor(ast.NodeVisitor, metaclass=ABCMeta):
     def check_position(self, node):
         rval = ""
         if type(node.value) is ast.Attribute:
-            rval = rval + self.visit(node.value)
+            rval = rval + str(self.visit(node.value))
             rval = rval + f".{node.attr}"
         # Search for the core_part.position.[...] in the string.
         # Upon locating it, we pull out the contents of the [ ]

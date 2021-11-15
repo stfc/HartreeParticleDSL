@@ -16,14 +16,16 @@ class fdps_visitor(c_visitors.c_visitor):
 
     def visit_Attribute(self, node):
         rval = ""
-        if type(node.value) is ast.Attribute:
-            rval = rval + self.visit(node.value)
-            rval = rval + f".{node.attr}"
-        else:
-            rval = rval + self.visit(node.value)
-            rval = rval + "."
-            rval = rval + self.visit(node.attr)
-        return rval
+        x = self.check_position(node)
+        if x is not None:
+            return x
+        var = self.visit(node.value)
+        attr = self.visit(node.attr)
+        childless = var
+        while childless.child is not None:
+            childless = childless.child
+        childless.child = attr
+        return var
 
 class fdps_pairwise_visitor(fdps_visitor):
     ''' FDPS pairwise visitor class. Inherits from the fdps_visitor class
@@ -55,6 +57,8 @@ class fdps_perpart_visitor(fdps_visitor):
     def visit_arguments(self, node):
         if len(node.args) != 2:
             raise IllegalArgumentCountError("Per part function must have 2 arguments for FDPS backend")
+        self._parent.variable_scope.add_variable(self.visit(node.args[0]), "FullParticle", False)
+        self._parent.variable_scope.add_variable(self.visit(node.args[1]), "config_type", False)
         rval = "FullParticle& " + self.visit(node.args[0])
         # Assuming config type is a class for C++
         rval = rval + ", config_type& " + self.visit(node.args[1])
