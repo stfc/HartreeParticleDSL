@@ -412,6 +412,11 @@ class FDPS(Backend):
         name = var_access.variable.var_name
         code_str = code_str + name
         array_access = (len(var_access.array_indices) != 0)
+        if variable_access.child is not None:
+            if var_access.variable.is_pointer and not array_access:
+                code_str = code_str + f"->{self.access_to_string(variable_access.child)}"
+            else:
+                code_str = code_str + f".{self.access_to_string(variable_access.child)}"
         if array_access:
             for index in var_access.array_indices:
                 if isinstance(index, str):
@@ -419,11 +424,6 @@ class FDPS(Backend):
                 if isinstance(index, variable_access):
                     code_str = code_str + f"[{self.access_to_string(index)}]"
 
-        if variable_access.child is not None:
-            if var_access.variable.is_pointer and not array_access:
-                code_str = code_str + f"->{self.access_to_string(variable_access.child)}"
-            else:
-                code_str = code_str + f".{self.access_to_string(variable_access.child)}"
 
         return code_str
 

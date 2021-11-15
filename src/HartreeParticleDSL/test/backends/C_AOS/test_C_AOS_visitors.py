@@ -201,6 +201,21 @@ def test_c_visitor_visit_Attribute():
     c = ast.parse(textwrap.dedent(inspect.getsource(ac)))
     out = v.visit(c)
     assert "d.e[1][2][3][4]" in out
+    def ad():
+        d[1].e[2] = 1 - 2
+    c = ast.parse(textwrap.dedent(inspect.getsource(ad)))
+    out = v.visit(c)
+    assert "d[1].e[2]" in out
+    def ae():
+        d[1][3].e = 1 - 2
+    c = ast.parse(textwrap.dedent(inspect.getsource(ae)))
+    out = v.visit(c)
+    assert "d[1][3].e" in out
+    def af():
+        d.e[2].f = 1 - 2
+    c = ast.parse(textwrap.dedent(inspect.getsource(af)))
+    out = v.visit(c)
+    assert "d.e[2].f" in out
     def abc():
         a.core_part.position.x = 3.0
         a.core_part.position.y = 4.0

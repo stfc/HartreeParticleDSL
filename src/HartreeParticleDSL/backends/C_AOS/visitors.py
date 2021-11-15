@@ -228,7 +228,11 @@ class c_visitor(baseVisitor):
     def visit_Subscript(self, node):
         rval = self.visit(node.value)
         # node.slice must be an ast.Index right now
-        rval.add_array_index(self.visit(node.slice))
+        # Add the array index to the lowest child
+        last_child = rval
+        while last_child.child is not None:
+            last_child = last_child.child
+        last_child.add_array_index(self.visit(node.slice))
 #        rval = rval + "["
 #        rval = rval + self.visit(node.slice)
 #        rval = rval + "]"

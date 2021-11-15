@@ -441,6 +441,12 @@ class C_AOS(Backend):
         name = var_access.variable.var_name
         code_str = code_str + name
         array_access = (len(var_access.array_indices) != 0)
+        if array_access:
+            for index in var_access.array_indices:
+                if isinstance(index, str):
+                    code_str = code_str + f"[{index}]"
+                if isinstance(index, variable_access):
+                    code_str = code_str + "[" + self.access_to_string(index) + "]"
         if var_access.child is not None:
             if var_access.variable.is_pointer and not array_access:
                 child = var_access.child
@@ -450,11 +456,5 @@ class C_AOS(Backend):
                 child = var_access.child
                 child_str = self.access_to_string(child)
                 code_str = code_str + "." + child_str
-        if array_access:
-            for index in var_access.array_indices:
-                if isinstance(index, str):
-                    code_str = code_str + f"[{index}]"
-                if isinstance(index, variable_access):
-                    code_str = code_str + "[" + self.access_to_string(index) + "]"
 
         return code_str
