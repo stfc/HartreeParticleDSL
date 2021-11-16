@@ -1,10 +1,10 @@
 import os
-import HartreeParticleDSL.backends.C_AOS.C_AOS as C_AOS
-import HartreeParticleDSL.backends.C_AOS.visitors as c_visitors
+from HartreeParticleDSL.backends.base_backend import backend
 import HartreeParticleDSL.IO_modules.base_IO_module.IO_module as io_modules
 import HartreeParticleDSL.IO_modules.random_IO.random_IO as random_io
 from HartreeParticleDSL.HartreeParticleDSLExceptions import SingletonInstanceError, \
-                                                            RepeatedNameError
+                                                            RepeatedNameError, \
+                                                            NoBackendError
 
 class _HartreeParticleDSL():
     '''
@@ -22,7 +22,7 @@ class _HartreeParticleDSL():
     '''
     the_instance = None
 
-    def __init__(self, Backend=C_AOS.C_AOS()):
+    def __init__(self, Backend=backend.Backend()):
         if _HartreeParticleDSL.the_instance is not None:
             raise SingletonInstanceError("Only one instance of _HartreeParticleDSL"
                                          " is allowed")
@@ -62,6 +62,15 @@ class _HartreeParticleDSL():
         '''
         self._backend = backend
         self._backend.set_io_modules(self._input_module, self._output_module)
+
+    def get_backend(self):
+        '''
+        Function to retrieve the currently used backend.
+    
+        :returns: The current backend
+        :rtype: :py:class:`HartreeParticleDSL.backends.base_backend.Backend`
+        '''
+        return self._backend
 
     def set_particle_type(self, part):
         '''
@@ -253,6 +262,15 @@ def set_backend(backend):
     :type backend: :py:class:`HartreeParticleDSL.backends.base_backend.Backend`
     '''
     _HartreeParticleDSL.get_instance().set_backend(backend)
+
+def get_backend():
+    '''
+    Function to retrieve the currently used backend.
+
+    :returns: The current backend
+    :rtype: :py:class:`HartreeParticleDSL.backends.base_backend.Backend`
+    '''
+    return _HartreeParticleDSL.get_instance().get_backend()
 
 def set_io_modules(input_mod, output_mod):
     '''

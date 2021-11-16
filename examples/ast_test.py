@@ -3,7 +3,7 @@ import inspect as inspect
 
 import HartreeParticleDSL.kernel_types.kernels as kernels
 import HartreeParticleDSL.IO_modules.random_IO.random_IO as io_modules
-import HartreeParticleDSL.backends.C_AOS.C_AOS as languages
+import HartreeParticleDSL.backends.C_AOS.C_AOS as C_AOS
 import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
 from HartreeParticleDSL.c_types import c_int, c_double
 
@@ -21,7 +21,7 @@ def foo(part1, part2, r2, config):
 @kernels.pairwise_interaction
 def random_velocity(part1, part2, r2, config):
     for i in range(3):
-        create_variable(c_double, "r", "random_double()")
+        create_variable(c_double, "r", random_double())
         part1.core_part.velocity[i] = part1.core_part.velocity[i] + r
         part2.core_part.velocity[i] = part2.core_part.velocity[i] - r
 
@@ -43,9 +43,11 @@ part.add_element( "two_dim_array", "double[4][3]")
 
 io_module = io_modules.Random_Particles()
 
+HartreeParticleDSL.set_backend(C_AOS.C_AOS())
 HartreeParticleDSL.set_particle_type(part)
 HartreeParticleDSL.set_config_type(config)
 HartreeParticleDSL.set_io_modules(io_module, io_module)
+print("hello", type(HartreeParticleDSL.get_backend()))
 HartreeParticleDSL.gen_code()
 
 @kernels.main_declaration
@@ -60,5 +62,5 @@ def main():
         invoke(random_velocity)
         invoke(move_part)
         config.time = config.time + config.dt
-        println("%f %f", "config->time", "config->dt")
+        println("%f %f", config.time, config.dt)
     cleanup()

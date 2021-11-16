@@ -5,7 +5,9 @@ import inspect
 import os
 import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
 from HartreeParticleDSL.HartreeParticleDSLExceptions import SingletonInstanceError, \
-                                                            RepeatedNameError
+                                                            RepeatedNameError, \
+                                                            NoBackendError
+from HartreeParticleDSL.backends.base_backend.backend import Backend
 from HartreeParticleDSL.backends.C_AOS.C_AOS import C_AOS
 from HartreeParticleDSL.IO_modules.random_IO.random_IO import *
 from HartreeParticleDSL.kernel_types.kernels import perpart_kernel_wrapper
@@ -23,6 +25,10 @@ def test_single_instance():
     with pytest.raises(SingletonInstanceError) as excinfo:
         b = HartreeParticleDSL._HartreeParticleDSL()
     assert "Only one instance of _HartreeParticleDSL is allowed" in str(excinfo.value)
+
+def test_get_backend():
+    '''Test the get_backend fucntion of HartreeParticleDSL'''
+    assert isinstance(HartreeParticleDSL.get_backend(), Backend)
 
 def test_set_backend():
     '''Test the set_backend function of HartreeParticleDSL'''
@@ -99,6 +105,7 @@ def test_register_kernel():
 
 def test_generate_code(capsys):
     '''Test generate_code'''
+    HartreeParticleDSL.get_backend().variable_scope.add_variable("s", "c_int", False)
     HartreeParticleDSL._HartreeParticleDSL.get_instance().generate_code()
     captured = capsys.readouterr()
     correct = "#include <math.h>\n"
@@ -159,16 +166,18 @@ def test_global_initalise():
 
 def test_global_println():
     '''Test the globally used println function'''
+    HartreeParticleDSL.set_backend(C_AOS())
     a = HartreeParticleDSL.println("%f", "val")
     assert a == "printf(\"%f\\n\", val);\n"
 
 def test_global_print_main(capsys):
     def main():
+        create_variable(c_int, z)
         z = z + 1
     m_func = ast.parse(textwrap.dedent(inspect.getsource(main)))
     HartreeParticleDSL.print_main(m_func)
     captured = capsys.readouterr()
-    assert "int main(  )\n{\n    z = ( z + 1 );\n}\n\n" == captured.out
+    assert "int main(  )\n{\n    int z;\n    z = ( z + 1 );\n}\n\n" == captured.out
 
 
 def test_config_add_element():
@@ -208,3 +217,4 @@ def test_particle_add_element():
     with pytest.raises(RepeatedNameError) as excinfo:
         part.add_element("value", "int")
     assert "The variable name value is already in the particle type" in str(excinfo.value)
+

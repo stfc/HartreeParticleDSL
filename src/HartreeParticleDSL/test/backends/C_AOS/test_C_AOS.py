@@ -5,6 +5,7 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import *
 from HartreeParticleDSL.HartreeParticleDSL import Particle, Config
 from HartreeParticleDSL.backends.C_AOS.C_AOS import *
 from HartreeParticleDSL.c_types import *
+from HartreeParticleDSL.language_utils.variable_scope import *
 import HartreeParticleDSL.kernel_types.kernels as kernels
 import pytest
 import os
@@ -389,3 +390,29 @@ def test_get_pointer():
     backend = C_AOS()
     strin = backend.get_pointer("variable")
     assert strin == "&variable"
+
+def test_access_to_string():
+    '''Test the access_to_string method of the C_AOS backend'''
+    backend = C_AOS()
+    HartreeParticleDSL.set_backend(backend)
+    backend.variable_scope.add_variable("var1", "c_double", True)
+    backend.variable_scope.add_variable("var2", "c_double", False)
+
+    var1_access = variable_access(backend.variable_scope.get_variable("var1"))
+    var2_access = variable_access(backend.variable_scope.get_variable("var2"))
+    var1_access.child = var2_access
+    var2_access.add_array_index("i")
+
+    z = backend.access_to_string(var1_access, True)
+    assert z == "var1->var2[i]"
+
+    var1_access.add_array_index("z")
+    z = str(var1_access)
+    assert z == "var1[z].var2[i]"
+
+    backend.variable_scope.add_variable("var3", "UNKNOWN", False)
+    var3_access = variable_access(backend.variable_scope.get_variable("var3"))
+    with pytest.raises(UnsupportedTypeError) as excinfo:
+       z = backend.access_to_string(var3_access, True)
+    assert ("Accessing a variable of type UNKNOWN which is not supported "
+            "by C_AOS backend.") in str(excinfo.value)

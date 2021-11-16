@@ -2,6 +2,8 @@ import ast
 from HartreeParticleDSL.backends.base_backend.visitors import baseVisitor
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IllegalLoopError, UnsupportedCodeError, \
                                                             IllegalArgumentCountError
+from HartreeParticleDSL.language_utils.variable_scope import variable_scope, variable_access, variable
+from HartreeParticleDSL.c_types import c_double, c_int
 
 class c_visitor(baseVisitor):
 
@@ -28,7 +30,14 @@ class c_visitor(baseVisitor):
         return f"\"{node.s}\""
 
     def visit_str(self, node):
-        return node
+        v = self._parent.variable_scope.get_variable(node)
+        if v is not None:
+            var = variable_access(v)
+            return var
+        else:
+            v = variable(node, "UNKNOWN", False)
+            var = variable_access(v)
+            return var
 
     def visit_int(self, node):
         return f"{node}"
@@ -58,14 +67,14 @@ class c_visitor(baseVisitor):
         return "-"
 
     def visit_UnaryOp(self, node):
-        rval = self.visit(node.op) + self.visit(node.operand)
+        rval = self.visit(node.op) + str(self.visit(node.operand))
         return rval
 
     def visit_Compare(self, node):
         assert len(node.ops) == 1
         assert len(node.comparators) == 1
         rval = " ( "
-        rval = rval + self.visit(node.left)
+        rval = rval + str(self.visit(node.left))
         rval = rval + self.visit(node.ops[0])
         rval = rval + self.visit(node.comparators[0])
         rval = rval + " ) "
@@ -73,28 +82,34 @@ class c_visitor(baseVisitor):
 
     def visit_BinOp(self, node):
         rval = "( "
-        rval = rval + self.visit(node.left)
+        rval = rval + str(self.visit(node.left))
         rval = rval + self.visit(node.op)
-        rval = rval + self.visit(node.right)
+        rval = rval + str(self.visit(node.right))
         rval = rval + " )"
         return rval
 
     def visit_Name(self, node):
-        return f"{node.id}"
+        v = self._parent.variable_scope.get_variable(f"{node.id}")
+        if v is not None:
+            var = variable_access(v)
+            return var
+        else:
+            v = variable(f"{node.id}", "UNKNOWN", False)
+            var = variable_access(v)
+            return var
 
     def visit_Attribute(self, node):
         rval = ""
         x = self.check_position(node)
         if x is not None:
             return x
-        if type(node.value) is ast.Attribute:
-            rval = rval + self.visit(node.value)
-            rval = rval + f".{node.attr}"
-        else:
-            rval = rval + self.visit(node.value)
-            rval = rval + "->"
-            rval = rval + self.visit(node.attr)
-        return rval
+        var = self.visit(node.value)
+        attr = self.visit(node.attr)
+        childless = var
+        while childless.child is not None:
+            childless = childless.child
+        childless.child = attr
+        return var
 
     # For pre-python 3.8
     def visit_Num(self, node):
@@ -111,9 +126,9 @@ class c_visitor(baseVisitor):
     def visit_Assign(self, node):
         assert len(node.targets) == 1
         rval = self.addIndent()
-        rval = rval + self.visit(node.targets[0])
+        rval = rval + str(self.visit(node.targets[0]))
         rval = rval + " = "
-        rval = rval + self.visit(node.value).lstrip()
+        rval = rval + str(self.visit(node.value)).lstrip()
         rval = rval + ";\n"
         return rval
 
@@ -187,10 +202,10 @@ class c_visitor(baseVisitor):
         arguments = []
         # TODO #2L: Temporary version until visitors return strings instead of printing
         for child in node.args:
-            vis = self.visit(child)
+            vis = str(self.visit(child))
             arguments.append(vis)
         for child in node.keywords:
-            string = f"{child.arg}={self.visit(child.value)}"
+            string = f"{child.arg}={str(self.visit(child.value))}"
             arguments.append(string)
         rval = ""
         if function_name != "invoke":
@@ -213,9 +228,14 @@ class c_visitor(baseVisitor):
     def visit_Subscript(self, node):
         rval = self.visit(node.value)
         # node.slice must be an ast.Index right now
-        rval = rval + "["
-        rval = rval + self.visit(node.slice)
-        rval = rval + "]"
+        # Add the array index to the lowest child
+        last_child = rval
+        while last_child.child is not None:
+            last_child = last_child.child
+        last_child.add_array_index(self.visit(node.slice))
+#        rval = rval + "["
+#        rval = rval + self.visit(node.slice)
+#        rval = rval + "]"
         return rval
 
     def visit_For(self, node):
@@ -242,24 +262,27 @@ class c_visitor(baseVisitor):
                     increment = -1 *  increment.operand.n
             else:
                 increment = increment.n
-        
+       
+        # Add the loop variable to the scope
+        self._parent.variable_scope.add_variable(node.target, c_int, False)
+
         rval = ""
         rval = rval + self.addIndent()
         rval = rval + "for( int "
-        rval = rval + self.visit(node.target)
+        rval = rval + str(self.visit(node.target))
         rval = rval + " = "
         rval = rval + self.visit(startval)
         rval = rval + "; "
-        rval = rval + self.visit(node.target)
+        rval = rval + str(self.visit(node.target))
         if increment > 0:
             rval = rval + " < "
         else:
             rval = rval + " >= "
         rval = rval + self.visit(endval)
         rval = rval + "; "
-        rval = rval + self.visit(node.target)
+        rval = rval + str(self.visit(node.target))
         rval = rval + " = "
-        rval = rval + self.visit(node.target)
+        rval = rval + str(self.visit(node.target))
         rval = rval + " + "
         rval = rval + self.visit(increment)
         rval = rval + ")\n"
@@ -271,6 +294,7 @@ class c_visitor(baseVisitor):
         self.decrementIndent()
         rval = rval + self.addIndent()
         rval = rval + "}\n"
+        self._parent.variable_scope.remove_variable(node.target)
         return rval
 
     def visit_While(self, node):
@@ -289,7 +313,7 @@ class c_visitor(baseVisitor):
     def visit_Expr(self, node):
         rval = ""
         for a in ast.iter_child_nodes(node):
-            rval = rval + self.visit(a)
+            rval = rval + str(self.visit(a))
 #            if type(a) is ast.Call:
 #                rval = rval + ";\n"
         return rval
@@ -301,6 +325,10 @@ class c_pairwise_visitor(c_visitor):
     def visit_arguments(self, node):
         if len(node.args) != 4:
             raise IllegalArgumentCountError("Pairwise function must have 4 arguments for C_AOS backend")
+        self._parent.variable_scope.add_variable(self.visit(node.args[0]), "struct part", True)
+        self._parent.variable_scope.add_variable(self.visit(node.args[1]), "struct part", True)
+        self._parent.variable_scope.add_variable(self.visit(node.args[2]), c_double, False)
+        self._parent.variable_scope.add_variable(self.visit(node.args[3]), "struct config_type", True)
         rval = "struct part *"
         rval = rval + self.visit(node.args[0])
         rval = rval + ", struct part *"
@@ -338,6 +366,9 @@ class c_perpart_visitor(c_visitor):
     def visit_arguments(self, node):
         if len(node.args) != 2:
             raise IllegalArgumentCountError("Per part function must have 2 arguments for C_AOS backend")
+        self._parent.variable_scope.add_variable(self.visit(node.args[0]), "struct part", True)
+        self._parent.variable_scope.add_variable(self.visit(node.args[1]), "struct config", True)
+
         rval = "struct part *"
         rval = rval + self.visit(node.args[0])
         rval = rval + ", struct config_type *"

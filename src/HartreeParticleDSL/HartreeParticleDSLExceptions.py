@@ -21,3 +21,6 @@ class InvalidNameError(Exception):
 
 class InternalError(Exception):
     pass
+
+class NoBackendError(Exception):
+    pass
