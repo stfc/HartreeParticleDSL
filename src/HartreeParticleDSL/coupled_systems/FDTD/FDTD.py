@@ -73,44 +73,48 @@ class FDTD(force_solver):
         int32_type = backend._type_map["c_int32_t"]
         in_str = " " * current_indent
         # Do all the setup required beforehand
-        code = f"{in_str}{double_type} idt = 1.0 / {dt};\n"
-        code = code + f"{in_str}{double_type} idx = 1.0 / {dx};\n"
-        code = code + f"{in_str}{double_type} dto2 = {dt} / 2.0;\n"
-        code = code + f"{in_str}{double_type} dtco2 = c * dto2;\n"
-        code = code + f"{in_str}{double_type} dtfac = 0.5 * dt;\n"
-        code = code + f"{in_str}{double_type} idtf = idt;\n"
-        code = code + f"{in_str}{double_type} idxf = idx;\n"
+        code = f"{in_str}" + backend.create_variable("c_double", "idt", f"1.0 / {dt}")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "idx", f"1.0 / {dx}")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "dto2", f"{dt} / 2.0")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "dtco2", f"c * dto2")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "dtfac", f"0.5 * {dt}")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "idft", "idt")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "idxf", "idx")
+        # Can't yet create ararys with create_variable calls.
         code = code + f"{in_str}{double_type} gxarray[4] = {0.0, 0.0, 0., 0.};\n"
         code = code + f"{in_str}{double_type} hxarray[4] = {0.0, 0.0, 0.0, 0.0};\n"
         code = code + f"{in_str}{double_type}* gx = &gxarray[1];\n"
         code = code + f"{in_str}{double_type}* hx = &hxarray[1];\n"
-        code = code + f"{in_str}{double_type} part_weight = " + backend.get_particle_access("part1", part_weight) + ";\n"
-        code = code + f"{in_str}{double_type} fcx = idtf * part_weight;\n"
-        code = code + f"{in_str}{double_type} fcy = idxf * part_weight;\n"
-        code = code + f"{in_str}{double_type} part_q = " + backend.get_particle_access("part1", part_charge) + ";\n"
-        code = code + f"{in_str}{double_type} part_m = " + backend.get_particle_access("part1", part_mass) + ";\n"
-        code = code + f"{in_str}{double_type} part_mc = c * part_m;\n"
-        code = code + f"{in_str}{double_type} ipart_mc = 1.0 / part_m;\n"
-        code = code + f"{in_str}{double_type} cmratio = part_q * dtfac * ipart_mc;\n"
-        code = code + f"{in_str}{double_type} ccmratio = c * cmratio;\n"
+        # Add gx and hx into scope (since we can't currently use create_variable to do this).
+        backend.variable_scope.add_variable("gx", "c_double", True)
+        backend.variable_scope.add_variable("hx", "c_double", True)
+        code = code + f"{in_str}" + backend.create_variable("c_double", "part_weight", backend.get_particle_access("part1", part_weight))
+        code = code + f"{in_str}" + backend.create_variable("c_double", "fcx", "idtf * part_weight")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "fcy", "idxf * part_weight")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "part_q", backend.get_particle_access("part1", part_charge))
+        code = code + f"{in_str}" + backend.create_variable("c_double", "part_m", backend.get_particle_access("part1", part_mass))
+        code = code + f"{in_str}" + backend.create_variable("c_double", "part_mc", "c * part_m")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "ipart_mc", "1.0 / part_m")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "cmratio", "part_q * dtfac * ipart_mc")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "ccmratio", "c * cmratio")
         code = code + in_str + "//Copy out the particle properties\n"
-        code = code + f"{in_str}{double_type} part_x = " + backend.get_particle_access("part1", backend.get_particle_position("x")) + " - config.field->x_grid_min_local;\n"
-        code = code + f"{in_str}{double_type} part_ux = " + backend.get_particle_access("part1", part_momentum_x) + ";\n"
-        code = code + f"{in_str}{double_type} part_uy = " + backend.get_particle_access("part1", part_momentum_y) + ";\n"
-        code = code + f"{in_str}{double_type} part_uz = " + backend.get_particle_access("part1", part_momentum_z) + ";\n"
+        code = code + f"{in_str}" + backend.create_variable("c_double", "part_x",  backend.get_particle_access("part1", backend.get_particle_position("x")) + " - config.field->x_grid_min_local")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "part_ux", backend.get_particle_access("part1", part_momentum_x))
+        code = code + f"{in_str}" + backend.create_variable("c_double", "part_uy", backend.get_particle_access("part1", part_momentum_y))
+        code = code + f"{in_str}" + backend.create_variable("c_double", "part_uz", backend.get_particle_access("part1", part_momentum_z))
         code = code + in_str + "//Calculate v(t) from p(t)\n"
-        code = code + f"{in_str}{double_type} gamma_rel = sqrtf(part_ux*part_ux + part_uy*part_uy + part_uz*part_uz + 1.0);\n"
-        code = code + f"{in_str}{double_type} root = dtco2 / gamma_rel;\n\n"
+        code = code + f"{in_str}" + backend.create_variable("c_double", "gamma_rel", "sqrtf(part_ux*part_ux + part_uy*part_uy + part_uz*part_uz + 1.0)")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "root", "dtco2 / gamma_rel") + "\n"
         code = code + in_str + "//Move particles to half timestep position (first order)\n"
         code = code + f"{in_str}part_x = part_x + part_ux * root;\n"
-        code = code + f"{in_str}{double_type} cell_x_r = part_x * idx - 0.5;\n"
-        code = code + f"{in_str}{double_type} ex_part = 0.0;\n"
-        code = code + f"{in_str}{double_type} ey_part = 0.0;\n"
-        code = code + f"{in_str}{double_type} ez_part = 0.0;\n"
-        code = code + f"{in_str}{double_type} bx_part = 0.0;\n"
-        code = code + f"{in_str}{double_type} by_part = 0.0;\n"
-        code = code + f"{in_str}{double_type} bz_part = 0.0;\n"
-        code = code + f"{in_str}{int32_type} cell_x1 = 0;\n\n"
+        code = code + f"{in_str}" + backend.create_variable("c_double", "cell_x_r", "part_x * idx - 0.5")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "ex_part", "0.0")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "ey_part", "0.0")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "ez_part", "0.0")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "bx_part", "0.0")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "by_part", "0.0")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "bz_part", "0.0")
+        code = code + f"{in_str}" + backend.create_variable("c_int32_t", "cell_x1", "0") + "\n"
 
         # Call the interpolation function
         code = code + f"{in_str}interpolate_from_grid_tophat_1D(part_weight, part_q, part_m,\n"
@@ -130,7 +134,8 @@ class FDTD(force_solver):
         int32_type = backend._type_map["c_int32_t"]
         #Remove excess " from strings
         in_str = " " * current_indent
-        code = f"{in_str}{double_type} part_x = " + backend.get_particle_access("part1", backend.get_particle_position("x")) + " - config.field->x_grid_min_local;\n"
+        code = f"\n{in_str}//Gathering forces to grid\n"
+        code = code + f"{in_str}part_x = " + backend.get_particle_access("part1", backend.get_particle_position("x")) + " - config.field->x_grid_min_local;\n"
         code = code + f"{in_str}gather_forces_to_grid_tophat_1D(part_weight, part_q, part_x, {delta_x}, \n"
         code = code + f"{in_str}{in_str}" + f"cell_x1, config.field, idt, {part_vy}, {part_vz}, idx, dtco2, idtf, idxf, \n"
         code = code + f"{in_str}{in_str}" + "config.field->nx, fcx, fcy);\n"

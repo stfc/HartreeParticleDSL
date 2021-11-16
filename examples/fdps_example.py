@@ -11,7 +11,7 @@ from HartreeParticleDSL.coupled_systems.FDTD.FDTD import FDTD
 
 @kernels.perpart_interaction
 def move_part(part1, config):
-        call_interpolate_to_particles("weight", "charge", "mass", "p_x", "p_y", "p_z", "dx", "dt")
+        call_interpolate_to_particles(weight, charge, mass, p_x, p_y, p_z, dx, dt)
         part1.core_part.position.x = part1.core_part.position.x + part1.core_part.velocity[i] * config.dt
         part1.core_part.position.y = get_pointer(part1.part_mass)
         create_variable(c_double, "delta_x", 0.1)
