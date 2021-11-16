@@ -1,4 +1,5 @@
-from HartreeParticleDSL.HartreeParticleDSLExceptions import RepeatedNameError
+from HartreeParticleDSL.HartreeParticleDSLExceptions import RepeatedNameError, \
+                                                            InvalidNameError
 import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
 
 class variable_access():

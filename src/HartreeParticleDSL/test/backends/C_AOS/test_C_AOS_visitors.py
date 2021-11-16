@@ -31,6 +31,12 @@ def test_c_visitor_visit_str():
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
     out = v.visit(c)
     assert "b = part.str;" in out
+    aos.variable_scope.add_variable("yz", "c_int", False)
+    def z():
+        b = x.yz
+    c = ast.parse(textwrap.dedent(inspect.getsource(z)))
+    out = v.visit(c)
+    assert "b = x.yz" in out
 
 def test_c_visitor_visit_int():
     '''Test the visit_int function in c_visitor'''
