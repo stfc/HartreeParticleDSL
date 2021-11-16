@@ -398,13 +398,16 @@ class FDPS(Backend):
             string = string + ";\n"
         return string
 
-    def access_to_string(self, var_access):
+    def access_to_string(self, var_access, check_valid=False):
         '''
         Takes a variable_access and converts it to a FDPS string to output
 
         :param var_access: The variable access to output as a string
         :type var_access: variable_access
 
+        :raises UnsupportedTypeError: If the variable is of a type not supported
+                                      by FDPS and not a child of a structure.
+
         :returns: The FDPS string for this variable access
         :rtype: str
         '''
@@ -412,35 +415,19 @@ class FDPS(Backend):
         name = var_access.variable.var_name
         code_str = code_str + name
         array_access = (len(var_access.array_indices) != 0)
-        if variable_access.child is not None:
-            if var_access.variable.is_pointer and not array_access:
-                code_str = code_str + f"->{self.access_to_string(variable_access.child)}"
-            else:
-                code_str = code_str + f".{self.access_to_string(variable_access.child)}"
+        # Check for type existing
+        if not var_access.is_child and check_valid:
+            if FDPS._type_map.get(var_access.variable.var_type) is None:
+                raise UnsupportedTypeError("Accessing a variable of type "
+                                          f"{var_access.variable.var_type} "
+                                           "which is not supported by FDPS backend."
+                                           f" Variable name is {var_access.variable.var_name}")
         if array_access:
             for index in var_access.array_indices:
                 if isinstance(index, str):
                     code_str = code_str + f"[{index}]"
                 if isinstance(index, variable_access):
-                    code_str = code_str + f"[{self.access_to_string(index)}]"
-
-
-        return code_str
-
-    def access_to_string(self, var_access):
-        '''
-        Takes a variable_access and converts it to a FDPS string to output
-
-        :param var_access: The variable access to output as a string
-        :type var_access: variable_access or str
-
-        :returns: The FDPS string for this variable access
-        :rtype: str
-        '''
-        code_str = ""
-        name = var_access.variable.var_name
-        code_str = code_str + name
-        array_access = (len(var_access.array_indices) != 0)
+                    code_str = code_str + "[" + self.access_to_string(index) + "]"
         if var_access.child is not None:
             if var_access.variable.is_pointer and not array_access:
                 child = var_access.child
@@ -450,11 +437,5 @@ class FDPS(Backend):
                 child = var_access.child
                 child_str = self.access_to_string(child)
                 code_str = code_str + "." + child_str
-        if array_access:
-            for index in var_access.array_indices:
-                if isinstance(index, str):
-                    code_str = code_str + f"[{index}]"
-                if isinstance(index, variable_access):
-                    code_str = code_str + "[" + self.access_to_string(index) + "]"
 
         return code_str

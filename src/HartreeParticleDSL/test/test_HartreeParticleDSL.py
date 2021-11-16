@@ -105,6 +105,7 @@ def test_register_kernel():
 
 def test_generate_code(capsys):
     '''Test generate_code'''
+    HartreeParticleDSL.get_backend().variable_scope.add_variable("s", "c_int", False)
     HartreeParticleDSL._HartreeParticleDSL.get_instance().generate_code()
     captured = capsys.readouterr()
     correct = "#include <math.h>\n"
@@ -171,11 +172,12 @@ def test_global_println():
 
 def test_global_print_main(capsys):
     def main():
+        create_variable(c_int, z)
         z = z + 1
     m_func = ast.parse(textwrap.dedent(inspect.getsource(main)))
     HartreeParticleDSL.print_main(m_func)
     captured = capsys.readouterr()
-    assert "int main(  )\n{\n    z = ( z + 1 );\n}\n\n" == captured.out
+    assert "int main(  )\n{\n    int z;\n    z = ( z + 1 );\n}\n\n" == captured.out
 
 
 def test_config_add_element():

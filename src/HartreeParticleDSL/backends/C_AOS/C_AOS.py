@@ -427,12 +427,15 @@ class C_AOS(Backend):
             return ""
         raise UnsupportedTypeError("Unsupported var_type used in set_cutoff")
 
-    def access_to_string(self, var_access):
+    def access_to_string(self, var_access, check_valid=False):
         '''
         Takes a variable_access and converts it to a C_AOS string to output
 
         :param var_access: The variable access to output as a string
         :type var_access: variable_access or str
+
+        :raises UnsupportedTypeError: If the variable is of a type not supported
+                                      by C_AOS and not a child of a structure.
 
         :returns: The C_AOS string for this variable access
         :rtype: str
@@ -441,6 +444,13 @@ class C_AOS(Backend):
         name = var_access.variable.var_name
         code_str = code_str + name
         array_access = (len(var_access.array_indices) != 0)
+        # Check for type existing
+        if not var_access.is_child and check_valid:
+            if C_AOS._type_map.get(var_access.variable.var_type) is None:
+                raise UnsupportedTypeError("Accessing a variable of type "
+                                          f"{var_access.variable.var_type} "
+                                           "which is not supported by C_AOS backend."
+                                           f" Variable name is {var_access.variable.var_name}")
         if array_access:
             for index in var_access.array_indices:
                 if isinstance(index, str):

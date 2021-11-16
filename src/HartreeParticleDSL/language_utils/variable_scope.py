@@ -26,6 +26,7 @@ class variable_access():
         else:
             self._array_indices = array_index
         self._child = child
+        self._is_child = False
 
     def __str__(self):
         '''
@@ -91,8 +92,24 @@ class variable_access():
         '''
         if self._child is not None:
             raise SyntaxError("Variable access already contains a child")
+        child.is_child = True
         self._child = child
 
+    @property
+    def is_child(self):
+        '''
+        :returns: Whether this is a child variable.
+        :rtype: bool
+        '''
+        return self._is_child
+
+    @is_child.setter
+    def is_child(self, is_child):
+        '''
+        Sets whether this variable is a child or not.
+        :param bool is_child: Whether this variable is a child
+        '''
+        self._is_child = is_child
 
 class variable():
     '''
