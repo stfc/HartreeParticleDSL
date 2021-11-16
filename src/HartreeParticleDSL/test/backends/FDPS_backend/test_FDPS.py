@@ -387,3 +387,8 @@ def test_access_to_string():
        z = backend.access_to_string(var3_access, True)
     assert ("Accessing a variable of type UNKNOWN which is not supported "
             "by FDPS backend.") in str(excinfo.value) 
+
+    var1_access = variable_access(backend.variable_scope.get_variable("var1"))
+    var2_access = variable_access(backend.variable_scope.get_variable("var2"))
+    var1_access.add_array_index(var2_access)
+    assert str(var1_access) == "var1[var2]"

@@ -56,10 +56,18 @@ def test_fdps_visitor_visit_Attribute():
     c = ast.parse(textwrap.dedent(inspect.getsource(ae)))
     out = v.visit(c)
     assert "d[1][3].e" in out
-    def af():                                                                                                                                                                                                                                       d.e[2].f = 1 - 2
+    def af():
+        d.e[2].f = 1 - 2
     c = ast.parse(textwrap.dedent(inspect.getsource(af)))
     out = v.visit(c)
     assert "d.e[2].f" in out
+
+    def ag():
+        d.core_part.position.x = 1
+    c = ast.parse(textwrap.dedent(inspect.getsource(ag)))
+    out = v.visit(c)
+    assert "d.core_part.position.x = 1" in out
+
 
 def test_fdps_main_visitor_visit_Expr():
     '''Test the visit_Expr function in the fdps_main_visitor'''

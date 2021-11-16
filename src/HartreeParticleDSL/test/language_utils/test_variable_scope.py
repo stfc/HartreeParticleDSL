@@ -21,6 +21,9 @@ def test_variable_access_init():
     assert var2_access.child is None
     var2_access.child = var1_access
     assert var1_access.is_child == True
+    with pytest.raises(SyntaxError) as excinfo:
+        var2_access.child = "123"
+    assert "Variable access already contains a child" in str(excinfo.value)
     assert var2_access.array_indices[0] == "0"
     assert var2_access.array_indices[1] == "1"
     var2_access.add_array_index("2")
