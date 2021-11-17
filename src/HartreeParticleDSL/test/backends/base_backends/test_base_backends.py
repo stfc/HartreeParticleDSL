@@ -23,6 +23,10 @@ def test_base_backend():
     a.get_particle_access(None)
     a.get_pointer(None)
     a.access_to_string(None, None)
+    assert a.variable_scope is None
+    a.disable_variable_checks()
+    a.enable_variable_checks()
+
 
 def test_base_visitors():
     a = baseVisitor(None)

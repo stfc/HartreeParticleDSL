@@ -5,6 +5,16 @@ class Backend(metaclass=ABCMeta):
     def __init__(self):
         pass
 
+    @property
+    def variable_scope(self):
+        return None
+
+    def disable_variable_checks(self):
+        pass
+
+    def enable_variable_checks(self):
+        pass
+
     def set_io_modules(self, input_module, output_module):
         pass
 
