@@ -52,9 +52,19 @@ class C_AOS(Backend):
         return self._variable_scope
 
     def disable_variable_checks(self):
+        '''
+        Disables validity checking when creating strings
+        from variable accesses. Usually used during internals
+        and tests when non-C_AOS variables can appear.
+        '''
         self._enable_variable_checks = False
 
     def enable_variable_checks(self):
+        '''
+        Enables validity checking when creating strings
+        from variable accesses. This is the default state, and
+        is disabled occasionally internally or during testing.
+        '''
         self._enable_variable_checks = True
 
     def set_io_modules(self, input_module, output_module):
