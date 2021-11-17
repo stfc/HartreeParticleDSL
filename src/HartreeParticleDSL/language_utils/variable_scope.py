@@ -34,7 +34,7 @@ class variable_access():
         :returns: The string representation of this variable access. This uses \
                   the currently set backend to create the string.
         '''
-        return HartreeParticleDSL.get_backend().access_to_string(self)
+        return HartreeParticleDSL.get_backend().access_to_string(self, check_valid=True)
 
 
     def add_array_index(self, array_index):

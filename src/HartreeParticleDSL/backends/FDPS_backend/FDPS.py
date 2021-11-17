@@ -48,10 +48,27 @@ class FDPS(Backend):
         self._input_module = None
         self._output_module = None
         self._variable_scope = variable_scope()
+        self._enable_variable_checks = True
 
     @property
     def variable_scope(self):
         return self._variable_scope
+
+    def disable_variable_checks(self):
+        '''
+        Disables validity checking when creating strings
+        from variable accesses. Usually used during internals
+        and tests when non-FDPS variables can appear.
+        '''
+        self._enable_variable_checks = False
+
+    def enable_variable_checks(self):
+        '''
+        Enables validity checking when creating strings
+        from variable accesses. This is the default state, and
+        is disabled occasionally internally or during testing.
+        '''
+        self._enable_variable_checks = True
 
     def set_io_modules(self, input_module, output_module):
         '''
@@ -415,8 +432,9 @@ class FDPS(Backend):
         name = var_access.variable.var_name
         code_str = code_str + name
         array_access = (len(var_access.array_indices) != 0)
+        check = check_valid and self._enable_variable_checks
         # Check for type existing
-        if not var_access.is_child and check_valid:
+        if not var_access.is_child and check:
             if FDPS._type_map.get(var_access.variable.var_type) is None:
                 raise UnsupportedTypeError("Accessing a variable of type "
                                           f"{var_access.variable.var_type} "

@@ -11,6 +11,7 @@ import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
 def test_plus_mul():
     '''Test the plus_mul order for C_AOS'''
     aos = C_AOS()
+    aos.disable_variable_checks()
     HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
@@ -22,6 +23,7 @@ def test_plus_mul():
 def test_plus_div():
     '''Test the plus_div order for C_AOS'''
     aos = C_AOS()
+    aos.disable_variable_checks()
     HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
@@ -33,6 +35,7 @@ def test_plus_div():
 def test_mul_div():
     '''Test the mul_div order for C_AOS'''
     aos = C_AOS()
+    aos.disable_variable_checks()
     HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
@@ -49,6 +52,7 @@ def test_mul_div():
 def test_bracket_plus_mul():
     '''Test how brackets affect the plus_mul order for C_AOS'''
     aos = C_AOS()
+    aos.disable_variable_checks()
     HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
@@ -60,6 +64,7 @@ def test_bracket_plus_mul():
 def test_bracket_plus_div():
     '''Test how brackets affect the plus_div order for C_AOS'''
     aos = C_AOS()
+    aos.disable_variable_checks()
     HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
@@ -71,6 +76,7 @@ def test_bracket_plus_div():
 def test_gte_plus():
     '''Test order of gte and plus for C_AOS'''
     aos = C_AOS()
+    aos.disable_variable_checks()
     HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
@@ -82,6 +88,7 @@ def test_gte_plus():
 def test_gt_plus():
     '''Test order of gt and plus for C_AOS'''
     aos = C_AOS()
+    aos.disable_variable_checks()
     HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
@@ -93,6 +100,7 @@ def test_gt_plus():
 def test_lt_plus():
     '''Test order of lt and plus for C_AOS'''
     aos = C_AOS()
+    aos.disable_variable_checks()
     HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
@@ -104,6 +112,7 @@ def test_lt_plus():
 def test_lte_plus():
     '''Test order of lte and plus for C_AOS'''
     aos = C_AOS()
+    aos.disable_variable_checks()
     HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
@@ -115,6 +124,7 @@ def test_lte_plus():
 def test_not_land():
     '''Test order of not and l_and works'''
     aos = C_AOS()
+    aos.disable_variable_checks()
     HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():

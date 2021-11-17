@@ -106,6 +106,7 @@ def test_register_kernel():
 def test_generate_code(capsys):
     '''Test generate_code'''
     HartreeParticleDSL.get_backend().variable_scope.add_variable("s", "c_int", False)
+    HartreeParticleDSL.get_backend().disable_variable_checks()
     HartreeParticleDSL._HartreeParticleDSL.get_instance().generate_code()
     captured = capsys.readouterr()
     correct = "#include <math.h>\n"
@@ -121,6 +122,7 @@ def test_generate_code(capsys):
     correct = correct + "    s = ( s - 1 );\n"
     correct = correct + "}\n\n"
     assert correct == captured.out
+    HartreeParticleDSL.get_backend().enable_variable_checks()
 
 
 def test_global_set_particle_type():

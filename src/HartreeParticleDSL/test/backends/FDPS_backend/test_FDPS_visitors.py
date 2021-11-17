@@ -6,10 +6,13 @@ import textwrap
 import pytest
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IllegalLoopError, UnsupportedCodeError, \
                                                             IllegalArgumentCountError
+from HartreeParticleDSL.HartreeParticleDSL import set_backend
 
 def test_fdps_visitor_visit_Attribute():
     '''Test the visit_Attribute function in fdps_visitor'''
     aos = FDPS()
+    aos.disable_variable_checks()
+    set_backend(aos)
     v = fdps_visitor(aos)
     def a():
         d.b = 1 - 2
@@ -72,6 +75,8 @@ def test_fdps_visitor_visit_Attribute():
 def test_fdps_main_visitor_visit_Expr():
     '''Test the visit_Expr function in the fdps_main_visitor'''
     aos = FDPS()
+    aos.disable_variable_checks()
+    set_backend(aos)
     v = fdps_main_visitor(aos)
     def main():
         b = b + 1
@@ -81,6 +86,8 @@ def test_fdps_main_visitor_visit_Expr():
 
 def test_fdps_perpart_visitor_visit_arguments():
     aos = FDPS()
+    aos.disable_variable_checks()
+    set_backend(aos)
     v = fdps_perpart_visitor(aos)
     def func(p1):
         a = a - 2
