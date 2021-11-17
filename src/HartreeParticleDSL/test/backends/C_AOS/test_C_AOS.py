@@ -108,19 +108,23 @@ def test_gen_headers():
     os.remove("part.h")
 
 def kern(part1, part2, r2, config):
+    create_variable(c_double, a, 2.0)
     part1.a = part1.a + 2.0
 
 def kern2(part, r2):
+    create_variable(c_double, a, 2.0)
     part.a = part.a + 2.0
 
 def test_gen_pairwise_kernel(capsys):
     '''Test the gen_kernel function of C_AOS module for a pairwise kernel'''
     backend = C_AOS()
+    HartreeParticleDSL.set_backend(backend)
     kernel = kernels.pairwise_interaction(kern)
     backend.gen_kernel(kernel)
     captured = capsys.readouterr()
     correct = 'void kern( struct part *part1, struct part *part2, double r2, struct config_type *config )\n'
     correct = correct + "{\n"
+    correct = correct + "    double a = 2.0;\n"
     correct = correct + "    part1->a = ( part1->a + 2.0 );\n"
     correct = correct + "}\n"
     assert correct in captured.out
@@ -128,26 +132,31 @@ def test_gen_pairwise_kernel(capsys):
 def test_gen_perpart_kernel(capsys):
     '''Test the gen_kernel function of C_AOS module for a perpart kernel'''
     backend = C_AOS()
+    HartreeParticleDSL.set_backend(backend)
     kernel = kernels.perpart_interaction(kern2)
     backend.gen_kernel(kernel)
     captured = capsys.readouterr()
     correct = 'void kern2( struct part *part, struct config_type *r2 )\n'
     correct = correct + "{\n"
+    correct = correct + "    double a = 2.0;\n"
     correct = correct + "    part->a = ( part->a + 2.0 );\n"
     correct = correct + "}\n"
     assert correct in captured.out
 
 def main():
+    create_variable(c_int, a, 0)
     a = a + 1
 
 def test_print_main(capsys):
     '''Test the print_main function of C_AOS'''
     backend = C_AOS()
+    HartreeParticleDSL.set_backend(backend)
     m = ast.parse(inspect.getsource(main))
     backend.print_main(m)
     captured = capsys.readouterr()
     correct = 'int main(  )\n'
     correct = correct + "{\n"
+    correct = correct + "    int a = 0;\n"
     correct = correct + "    a = ( a + 1 );\n"
     correct = correct + "}\n"
     assert correct in captured.out

@@ -204,6 +204,8 @@ class c_visitor(baseVisitor):
 
     def visit_Call(self, node):
         from HartreeParticleDSL.HartreeParticleDSL import gen_invoke
+        # Disable variable checking during visit call as they might be python variables
+        self._parent.disable_variable_checks()
         # Recursively build up the function name if it is of style mod1.mod2.func
         function_name = ""
         if isinstance(node.func, ast.Name):
@@ -232,6 +234,7 @@ class c_visitor(baseVisitor):
         elif function_name == "invoke":
             for child in node.args:
                 rval = gen_invoke(child.id, self._currentIndent, self._indent)
+        self._parent.enable_variable_checks()
         return rval
 
     def visit_Module(self, node):
@@ -282,7 +285,7 @@ class c_visitor(baseVisitor):
                 increment = increment.n
        
         # Add the loop variable to the scope
-        self._parent.variable_scope.add_variable(node.target, c_int, False)
+        self._parent.variable_scope.add_variable(node.target.id, c_int, False)
 
         rval = ""
         rval = rval + self.addIndent()
@@ -312,7 +315,7 @@ class c_visitor(baseVisitor):
         self.decrementIndent()
         rval = rval + self.addIndent()
         rval = rval + "}\n"
-        self._parent.variable_scope.remove_variable(node.target)
+        self._parent.variable_scope.remove_variable(node.target.id)
         return rval
 
     def visit_While(self, node):
@@ -385,7 +388,7 @@ class c_perpart_visitor(c_visitor):
         if len(node.args) != 2:
             raise IllegalArgumentCountError("Per part function must have 2 arguments for C_AOS backend")
         self._parent.variable_scope.add_variable(self.visit(node.args[0]), "struct part", True)
-        self._parent.variable_scope.add_variable(self.visit(node.args[1]), "struct config", True)
+        self._parent.variable_scope.add_variable(self.visit(node.args[1]), "struct config_type", True)
 
         rval = "struct part *"
         rval = rval + self.visit(node.args[0])

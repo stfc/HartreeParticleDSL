@@ -156,16 +156,19 @@ def test_gen_perpart_kernel(capsys):
     assert correct in captured.out
 
 def main():
+    create_variable(c_int, a, 1)
     a = a + 1
 
 def test_print_main(capsys):
     '''Test the print_main function of FDPS'''
     backend = FDPS()
+    set_backend(backend)
     m = ast.parse(inspect.getsource(main))
     backend.print_main(m)
     captured = capsys.readouterr()
     correct = 'int main(  )\n'
     correct = correct + "{\n"
+    correct = correct + "    PS::S32 a = 1;\n"
     correct = correct + "    a = ( a + 1 );\n"
     correct = correct + "}\n"
     assert correct in captured.out

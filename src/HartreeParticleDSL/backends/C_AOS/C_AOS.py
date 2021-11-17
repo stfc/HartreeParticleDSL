@@ -45,10 +45,17 @@ class C_AOS(Backend):
         self._input_module = None
         self._output_module = None
         self._variable_scope = variable_scope()
+        self._enable_variable_checks = True
 
     @property
     def variable_scope(self):
         return self._variable_scope
+
+    def disable_variable_checks(self):
+        self._enable_variable_checks = False
+
+    def enable_variable_checks(self):
+        self._enable_variable_checks = True
 
     def set_io_modules(self, input_module, output_module):
         '''
@@ -305,8 +312,8 @@ class C_AOS(Backend):
         return rval
 
     def initialise(self,particle_count, filename, current_indent, **kwargs):
-        self.variable_scope.add_variable("config", "config_type", True)
-        self.variable_scope.add_variable("parts", "config_type", True)
+        self.variable_scope.add_variable("config", "struct config_type", True)
+        self.variable_scope.add_variable("parts", "struct part", True)
         rval = " "*current_indent + "struct config_type* config = malloc(sizeof(struct config_type));\n"
         rval = rval + " "*current_indent + f"struct part* parts = {self._input_module.call_input_c(particle_count, filename)}\n"
         return rval
@@ -444,8 +451,9 @@ class C_AOS(Backend):
         name = var_access.variable.var_name
         code_str = code_str + name
         array_access = (len(var_access.array_indices) != 0)
+        check = check_valid and self._enable_variable_checks
         # Check for type existing
-        if not var_access.is_child and check_valid:
+        if not var_access.is_child and check:
             if C_AOS._type_map.get(var_access.variable.var_type) is None:
                 raise UnsupportedTypeError("Accessing a variable of type "
                                           f"{var_access.variable.var_type} "
