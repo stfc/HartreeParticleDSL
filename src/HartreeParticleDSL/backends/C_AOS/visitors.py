@@ -51,6 +51,9 @@ class c_visitor(baseVisitor):
     def visit_Sub(self, node):
         return " - "
 
+    def visit_Div(self, node):
+        return " / "
+
     def visit_LtE(self, node):
         return " <= "
 
@@ -65,6 +68,18 @@ class c_visitor(baseVisitor):
 
     def visit_USub(self, node):
         return "-"
+
+    def visit_And(self, node):
+        return " && "
+
+    def visit_Or(self, node):
+        return " || "
+
+    def visit_BoolOp(self, node):
+        code = "( " + str(self.visit(node.values[0]))
+        code = code + self.visit(node.op)
+        code = code + str(self.visit(node.values[1])) + " )"
+        return code
 
     def visit_UnaryOp(self, node):
         rval = self.visit(node.op) + str(self.visit(node.operand))
