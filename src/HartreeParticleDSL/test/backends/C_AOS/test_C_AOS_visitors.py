@@ -205,6 +205,18 @@ def test_c_visitor_visit_Or():
     out = v.visit(c)
     assert "||" in out
 
+def test_c_visitor_visit_Not():
+    '''Test the visit_Not function in c_visitor'''
+    aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
+    v = c_visitor(aos)
+    def a():
+        b = not y
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    out = v.visit(c)
+    assert "!y" in out
+    
+
 def test_c_visitor_visit_BoolOp():
     '''Test the visit_BoolOp function in c_visitor'''
     aos = C_AOS()

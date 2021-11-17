@@ -75,6 +75,9 @@ class c_visitor(baseVisitor):
     def visit_Or(self, node):
         return " || "
 
+    def visit_Not(self, node):
+        return " !"
+
     def visit_BoolOp(self, node):
         code = "( " + str(self.visit(node.values[0]))
         code = code + self.visit(node.op)

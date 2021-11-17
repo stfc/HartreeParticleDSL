@@ -68,14 +68,58 @@ def test_bracket_plus_div():
     out = v.visit(c)
     assert "( ( 1 + 2 ) / 3 )" in out
 
-def test_land():
-    '''Test how l_and works'''
+def test_gte_plus():
+    '''Test order of gte and plus for C_AOS'''
     aos = C_AOS()
     HartreeParticleDSL.set_backend(aos)
     v = c_visitor(aos)
     def a():
-        b = z and y
+        b = 3 >= 1 + 2
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
     out = v.visit(c)
-    assert "z && y" in out
+    assert "( 3 >= ( 1 + 2 ) )" in out
+    
+def test_gt_plus():
+    '''Test order of gt and plus for C_AOS'''
+    aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
+    v = c_visitor(aos)
+    def a():
+        b = 3 > 1 + 2
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    out = v.visit(c)
+    assert "( 3 > ( 1 + 2 ) )" in out
+
+def test_lt_plus():
+    '''Test order of lt and plus for C_AOS'''
+    aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
+    v = c_visitor(aos)
+    def a():
+        b = 3 < 1 + 2
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    out = v.visit(c)
+    assert "( 3 < ( 1 + 2 ) )" in out
+
+def test_lte_plus():
+    '''Test order of lte and plus for C_AOS'''
+    aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
+    v = c_visitor(aos)
+    def a():
+        b = 3 <= 1 + 2
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    out = v.visit(c)
+    assert "( 3 <= ( 1 + 2 ) )" in out
+
+def test_not_land():
+    '''Test order of not and l_and works'''
+    aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
+    v = c_visitor(aos)
+    def a():
+        b = not z and y
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    out = v.visit(c)
+    assert "!z && y" in out
 
