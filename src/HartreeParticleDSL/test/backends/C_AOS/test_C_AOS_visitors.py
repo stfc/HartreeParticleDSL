@@ -82,6 +82,18 @@ def test_c_visitor_visit_Sub():
     out = v.visit(c)
     assert "-" in out
 
+def test_c_visitor_visit_Div():
+    '''Test the visit_Div function in c_visitor'''
+    aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
+    v = c_visitor(aos)
+    def a():
+        b = 1 / 2
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    out = v.visit(c)
+    assert "/" in out
+
+
 def test_c_visitor_visit_LtE():
     '''Test the visit_LtE function in c_visitor'''
     aos = C_AOS()
@@ -170,6 +182,52 @@ def test_c_visitor_visit_BinOp():
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
     out = v.visit(c)
     assert "b = ( 1 - 2 )" in out
+
+def test_c_visitor_visit_And():
+    '''Test the visit_And function in c_visitor'''
+    aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
+    v = c_visitor(aos)
+    def a():
+        b = z and y
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    out = v.visit(c)
+    assert "&&" in out
+    
+def test_c_visitor_visit_Or():
+    '''Test the visit_Or function in c_visitor'''
+    aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
+    v = c_visitor(aos)
+    def a():
+        b = z or y
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    out = v.visit(c)
+    assert "||" in out
+
+def test_c_visitor_visit_Not():
+    '''Test the visit_Not function in c_visitor'''
+    aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
+    v = c_visitor(aos)
+    def a():
+        b = not y
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    out = v.visit(c)
+    assert "!y" in out
+    
+
+def test_c_visitor_visit_BoolOp():
+    '''Test the visit_BoolOp function in c_visitor'''
+    aos = C_AOS()
+    HartreeParticleDSL.set_backend(aos)
+    v = c_visitor(aos)
+    def a():
+        b = z and y
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    out = v.visit(c)
+    assert "b = ( z && y )" in out
+
 
 def test_c_visitor_visit_Name():
     '''Test the visit_Name function in c_visitor'''
