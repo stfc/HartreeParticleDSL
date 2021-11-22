@@ -280,6 +280,9 @@ class coupler_test(base_coupler):
 
     def a_function(self):
         return "test_string"
+    
+    def b_function(self, arg):
+        return arg
 
 def test_add_coupler():
     '''Test the add_coupler function of C_AOS'''
@@ -287,6 +290,10 @@ def test_add_coupler():
     coupler = coupler_test()
     backend.add_coupler(coupler)
     assert coupler in backend._coupled_systems
+    with pytest.raises(UnsupportedTypeError) as excinfo:
+        backend.add_coupler(32)
+    assert ("Can only couple to base_coupler classes or "
+            "subclasses. Found int") in str(excinfo.value)
 
 def test_call_language_function_coupled_system():
     '''Test the coupled system functionality'''
@@ -295,6 +302,10 @@ def test_call_language_function_coupled_system():
     backend.add_coupler(coupler)
     rval = backend.call_language_function("a_function")
     assert rval == "test_string"
+    rval = backend.call_language_function("b_function", "thing->thing2")
+    assert rval == "thing.thing2"
+    rval = backend.call_language_function("unknown_func")
+    assert rval == "unknown_func(  );\n"
 
 
 def test_get_particle_position():
