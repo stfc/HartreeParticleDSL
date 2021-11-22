@@ -6,6 +6,7 @@ from HartreeParticleDSL.HartreeParticleDSL import Particle, Config
 from HartreeParticleDSL.backends.C_AOS.C_AOS import *
 from HartreeParticleDSL.c_types import *
 from HartreeParticleDSL.language_utils.variable_scope import *
+from HartreeParticleDSL.coupled_systems.base_coupler.base_coupler import *
 import HartreeParticleDSL.kernel_types.kernels as kernels
 import pytest
 import os
@@ -273,6 +274,28 @@ def test_call_language_function():
     rval4 = backend.call_language_function("set_cutoff", "0.5", "C_AOS->CONSTANT")
     assert rval4 == "config.neighbour_config.cutoff = 0.5;\n"
 
+class coupler_test(base_coupler):
+    def __init__(self):
+        pass
+
+    def a_function(self):
+        return "test_string"
+
+def test_add_coupler():
+    '''Test the add_coupler function of C_AOS'''
+    backend = C_AOS()
+    coupler = coupler_test()
+    backend.add_coupler(coupler)
+    assert coupler in backend._coupled_systems
+
+def test_call_language_function_coupled_system():
+    '''Test the coupled system functionality'''
+    backend = C_AOS()
+    coupler = coupler_test()
+    backend.add_coupler(coupler)
+    rval = backend.call_language_function("a_function")
+    assert rval == "test_string"
+
 
 def test_get_particle_position():
     '''Test the get_particle_position function of C_AOS'''
@@ -425,3 +448,28 @@ def test_access_to_string():
        z = backend.access_to_string(var3_access, True)
     assert ("Accessing a variable of type UNKNOWN which is not supported "
             "by C_AOS backend.") in str(excinfo.value)
+
+def test_add_type():
+    '''Test the add_type method of the C_AOS backend'''
+    backend = C_AOS()
+    backend.add_type('test_string', 'test_type')
+    assert C_AOS._type_map['test_string'] == 'test_type'
+
+def test_get_particle_access():
+    '''Test the get_particle_access method of the C_AOS backend'''
+    backend = C_AOS()
+    rval = backend.get_particle_access("particle", "field")
+    assert rval == "particle->field"
+    rval = backend.get_particle_access("particle", "\"field\"")
+    assert rval == "particle->field"
+
+def test_per_particle_loop_start():
+    backend = C_AOS()
+    rval = backend.per_particle_loop_start("i")
+    correct ='''for( int i = 0; i < config->space.nparts; i++){\n'''
+    assert rval == correct
+
+def test_particle_access():
+    backend = C_AOS()
+    rval = backend.particle_access("i", "test")
+    assert rval == "parts[i].test"

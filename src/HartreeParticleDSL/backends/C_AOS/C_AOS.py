@@ -490,7 +490,7 @@ class C_AOS(Backend):
             pass
         for system in self._coupled_systems:
             try:
-                fn = getattr(self, func_call)
+                fn = getattr(system, func_call)
                 fixed_args = []
                 for arg in args:
                     fixed_args.append(arg.replace("->", "."))
