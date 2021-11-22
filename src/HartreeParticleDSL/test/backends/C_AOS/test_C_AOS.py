@@ -274,17 +274,17 @@ def test_call_language_function():
     assert rval4 == "config.neighbour_config.cutoff = 0.5;\n"
 
 
-def test_get_particle_access():
-    '''Test the get_particle_access function of C_AOS'''
+def test_get_particle_position():
+    '''Test the get_particle_position function of C_AOS'''
     backend = C_AOS()
     a = "core_part.position[0]"
     b = "core_part.position[1]"
     c = "core_part.position[2]"
-    assert backend.get_particle_access("x") == a
-    assert backend.get_particle_access("y") == b
-    assert backend.get_particle_access("z") == c
+    assert backend.get_particle_position("x") == a
+    assert backend.get_particle_position("y") == b
+    assert backend.get_particle_position("z") == c
     with pytest.raises(InvalidNameError) as excinfo:
-        backend.get_particle_access("abc")
+        backend.get_particle_position("abc")
     assert "The dimension argument should be x, y, or z" in str(excinfo.value) 
 
 

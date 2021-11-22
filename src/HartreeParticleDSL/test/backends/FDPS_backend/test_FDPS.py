@@ -346,17 +346,17 @@ def test_initialise():
     rval = backend.initialise(particle_count=100, filename="abc.def", current_indent=1)
     assert correct in rval
 
-def test_get_particle_access():
-    '''Test the get_particle_access function of FDPS'''
+def test_get_particle_position():
+    '''Test the get_particle_position function of FDPS'''
     backend = FDPS()
     a = "core_part.position.x"
     b = "core_part.position.y"
     c = "core_part.position.z"
-    assert backend.get_particle_access("x") == a
-    assert backend.get_particle_access("y") == b
-    assert backend.get_particle_access("z") == c
+    assert backend.get_particle_position("x") == a
+    assert backend.get_particle_position("y") == b
+    assert backend.get_particle_position("z") == c
     with pytest.raises(InvalidNameError) as excinfo:
-        backend.get_particle_access("abc")
+        backend.get_particle_position("abc")
     assert "The dimension argument should be x, y, or z" in str(excinfo.value)
 
 def test_get_pointer():
