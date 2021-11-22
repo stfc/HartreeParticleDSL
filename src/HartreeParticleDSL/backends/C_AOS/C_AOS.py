@@ -390,8 +390,8 @@ class C_AOS(Backend):
         :returns: Initialisation code for this system.
         :rtype: str
         '''
-        self.variable_scope.add_variable("config", "config_type", True)
-        self.variable_scope.add_variable("parts", "config_type", True)
+        self.variable_scope.add_variable("config", "struct config_type", True)
+        self.variable_scope.add_variable("parts", "struct part", True)
         rval = " "*current_indent + "struct config_type* config = malloc(sizeof(struct config_type));\n"
         rval = rval + " "*current_indent + f"struct part* parts = {self._input_module.call_input_c(particle_count, filename)}\n"
         return rval
