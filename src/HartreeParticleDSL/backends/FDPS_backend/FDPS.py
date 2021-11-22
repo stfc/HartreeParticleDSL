@@ -504,7 +504,7 @@ class FDPS(Backend):
                                       an instance of base_coupler
         '''
         if not isinstance(coupled_system, base_coupler):
-            raise UnsupportedTypeError("Can only couple to base_couple classes "
-                                       " or subclasses. Found {0}".format(
+            raise UnsupportedTypeError("Can only couple to base_coupler classes "
+                                       "or subclasses. Found {0}".format(
                                            type(coupled_system).__name__))
         self._coupled_systems.append(coupled_system)

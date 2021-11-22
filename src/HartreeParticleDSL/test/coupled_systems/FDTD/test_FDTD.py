@@ -10,6 +10,9 @@ def test_FDTD_init():
     assert s.x_max == 1.0
     assert s.ncells == 256
     assert "field" in conf.config_type
+    with pytest.raises(NotImplementedError) as excinfo:
+        s = FDTD(0.0, 1.0, 256, conf, dimensionality = 3)
+    assert "Only 1D currently supported" in str(excinfo.value)
 
 def test_set_interoplator():
     conf = Config()

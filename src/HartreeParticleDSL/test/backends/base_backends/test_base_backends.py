@@ -26,6 +26,11 @@ def test_base_backend():
     assert a.variable_scope is None
     a.disable_variable_checks()
     a.enable_variable_checks()
+    a.per_particle_loop_start(None)
+    a.per_particle_loop_end()
+    a.get_particle_access(None, None)
+    a.add_coupler(None)
+    a.add_type(None, None)
 
 
 def test_base_visitors():

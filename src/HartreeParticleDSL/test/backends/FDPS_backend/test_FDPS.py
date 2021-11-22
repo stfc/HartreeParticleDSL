@@ -8,6 +8,7 @@ import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
 from HartreeParticleDSL.backends.FDPS_backend.FDPS import *
 from HartreeParticleDSL.c_types import *
 import HartreeParticleDSL.kernel_types.kernels as kernels
+from HartreeParticleDSL.coupled_systems.base_coupler.base_coupler import *
 import pytest
 import os
 import inspect
@@ -395,3 +396,42 @@ def test_access_to_string():
     var2_access = variable_access(backend.variable_scope.get_variable("var2"))
     var1_access.add_array_index(var2_access)
     assert str(var1_access) == "var1[var2]"
+
+def test_get_particle_access():
+    '''Test the get_particle_access of the FDPS backend'''
+    backend = FDPS()
+    rval = backend.get_particle_access("part1", "field")
+    assert rval == "part1.field"
+
+class coupler_test(base_coupler):
+    def __init__(self):
+        pass
+
+    def a_function(self):
+        return "test_string"
+
+    def b_function(self, arg):
+        return arg
+
+def test_add_coupler():
+    '''Test the add_coupler function of FDPS'''
+    backend = FDPS()
+    coupler = coupler_test()
+    backend.add_coupler(coupler)
+    assert coupler in backend._coupled_systems
+    with pytest.raises(UnsupportedTypeError) as excinfo:
+        backend.add_coupler(32)
+    assert ("Can only couple to base_coupler classes or "
+            "subclasses. Found int") in str(excinfo.value)
+
+def test_call_language_function_coupled_system():
+    '''Test the coupled system functionality'''
+    backend = FDPS()
+    coupler = coupler_test()
+    backend.add_coupler(coupler)
+    rval = backend.call_language_function("a_function")
+    assert rval == "test_string"
+    rval = backend.call_language_function("b_function", "thing.thing2")
+    assert rval == "thing.thing2"
+    rval = backend.call_language_function("unknown_func")
+    assert rval == "unknown_func(  );\n"

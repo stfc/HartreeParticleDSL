@@ -76,12 +76,6 @@ class Backend(metaclass=ABCMeta):
     def get_particle_access(self, index_name, field):
         pass
 
-    def per_particle_loop_start(self, index_name):
-        pass
-
-    def per_particle_loop_end(self):
-        pass
-
     def add_coupler(self, coupled_system):
         pass
 
