@@ -23,6 +23,7 @@ class FDTD(force_solver):
         self.y_max = y_max
         self.z_min = z_min
         self.z_max = z_max
+        self.ncells = ncells
         if dimensionality != 1:
             raise NotImplementedError("Only 1D currently supported")
         self.dimensionality = dimensionality
@@ -57,7 +58,7 @@ class FDTD(force_solver):
     def call_cleanup_grid(self, current_indent=0, indent=0):
         in_str = " " * current_indent
         code = in_str + "FDTD_cleanup_1D(config.field);\n"
-        code = in_str + "free(config.field);\n"
+        code = code + in_str + "free(config.field);\n"
         return code
 
     def call_interpolate_to_particles(self, part_weight, part_charge, part_mass, 
@@ -79,10 +80,10 @@ class FDTD(force_solver):
         code = code + f"{in_str}" + backend.create_variable("c_double", "dtco2", f"c * dto2")
         code = code + f"{in_str}" + backend.create_variable("c_double", "dtfac", f"0.5 * {dt}")
         code = code + f"{in_str}" + backend.create_variable("c_double", "idft", "idt")
-        code = code + f"{in_str}" + backend.create_variable("c_double", "idxf", "idx")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "idxt", "idx")
         # Can't yet create ararys with create_variable calls.
-        code = code + f"{in_str}{double_type} gxarray[4] = {0.0, 0.0, 0., 0.};\n"
-        code = code + f"{in_str}{double_type} hxarray[4] = {0.0, 0.0, 0.0, 0.0};\n"
+        code = code + f"{in_str}{double_type} gxarray[4] = " + "{0.0, 0.0, 0., 0.};\n"
+        code = code + f"{in_str}{double_type} hxarray[4] = " + "{0.0, 0.0, 0.0, 0.0};\n"
         code = code + f"{in_str}{double_type}* gx = &gxarray[1];\n"
         code = code + f"{in_str}{double_type}* hx = &hxarray[1];\n"
         # Add gx and hx into scope (since we can't currently use create_variable to do this).
@@ -94,7 +95,7 @@ class FDTD(force_solver):
         code = code + f"{in_str}" + backend.create_variable("c_double", "part_q", backend.get_particle_access("part1", part_charge))
         code = code + f"{in_str}" + backend.create_variable("c_double", "part_m", backend.get_particle_access("part1", part_mass))
         code = code + f"{in_str}" + backend.create_variable("c_double", "part_mc", "c * part_m")
-        code = code + f"{in_str}" + backend.create_variable("c_double", "ipart_mc", "1.0 / part_m")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "ipart_mc", "1.0 / part_mc")
         code = code + f"{in_str}" + backend.create_variable("c_double", "cmratio", "part_q * dtfac * ipart_mc")
         code = code + f"{in_str}" + backend.create_variable("c_double", "ccmratio", "c * cmratio")
         code = code + in_str + "//Copy out the particle properties\n"
@@ -118,7 +119,7 @@ class FDTD(force_solver):
 
         # Call the interpolation function
         code = code + f"{in_str}interpolate_from_grid_tophat_1D(part_weight, part_q, part_m,\n"
-        code = code + in_str*2 + backend.get_pointer("part_x") + ", part_p_x, part_p_y, \n"
+        code = code + in_str*2 + backend.get_pointer("part_x") + ", part_p_x, part_p_y,\n"
         code = code + in_str*2 + "part_p_z, " + backend.get_pointer("ex_part") + ",\n"
         code = code + in_str*2 + backend.get_pointer("ey_part") + ", " + backend.get_pointer("ez_part") + ",\n"
         code = code + in_str*2 + backend.get_pointer("bx_part") + ", " + backend.get_pointer("by_part") + ",\n"
@@ -136,7 +137,7 @@ class FDTD(force_solver):
         in_str = " " * current_indent
         code = f"\n{in_str}//Gathering forces to grid\n"
         code = code + f"{in_str}part_x = " + backend.get_particle_access("part1", backend.get_particle_position("x")) + " - config.field->x_grid_min_local;\n"
-        code = code + f"{in_str}gather_forces_to_grid_tophat_1D(part_weight, part_q, part_x, {delta_x}, \n"
-        code = code + f"{in_str}{in_str}" + f"cell_x1, config.field, idt, {part_vy}, {part_vz}, idx, dtco2, idtf, idxf, \n"
+        code = code + f"{in_str}gather_forces_to_grid_tophat_1D(part_weight, part_q, part_x, {delta_x},\n"
+        code = code + f"{in_str}{in_str}" + f"cell_x1, config.field, idt, {part_vy}, {part_vz}, idx, dtco2, idtf, idxf,\n"
         code = code + f"{in_str}{in_str}" + "config.field->nx, fcx, fcy);\n"
         return code
