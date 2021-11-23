@@ -65,10 +65,10 @@ class _HartreeParticleDSL():
 
     def get_backend(self):
         '''
-        Function to retrieve the currently used backend.
-    
+        Returns the backend used by HartreeParticleDSL
+
         :returns: The current backend
-        :rtype: :py:class:`HartreeParticleDSL.backends.base_backend.Backend`
+        :type backend: :py:class:`HartreeParticleDSL.backends.base_backend.Backend`
         '''
         return self._backend
 

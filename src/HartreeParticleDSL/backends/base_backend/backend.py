@@ -45,7 +45,7 @@ class Backend(metaclass=ABCMeta):
     def gen_invoke(self, kernel):
         pass
 
-    def get_particle_access(self, dimension):
+    def get_particle_position(self, dimension):
         '''
         Returns the code to access a particle's position
         for each dimension. Dimensions are x/y/z
@@ -65,4 +65,19 @@ class Backend(metaclass=ABCMeta):
         pass
 
     def access_to_string(self, variable_access, check_valid):
+        pass
+
+    def per_particle_loop_start(self, index_name):
+        pass
+
+    def per_particle_loop_end(self):
+        pass
+
+    def get_particle_access(self, index_name, field):
+        pass
+
+    def add_coupler(self, coupled_system):
+        pass
+
+    def add_type(self, type_name, type_string):
         pass

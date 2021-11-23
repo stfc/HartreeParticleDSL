@@ -1,5 +1,6 @@
 import re
 from HartreeParticleDSL.backends.base_backend.backend import Backend
+from HartreeParticleDSL.coupled_systems.base_coupler.base_coupler import base_coupler
 import HartreeParticleDSL.backends.C_AOS.visitors as c_visitors
 import HartreeParticleDSL.kernel_types.kernels as kernels
 from HartreeParticleDSL.backends.C_AOS.C_AOS_IO_Mixin import C_AOS_IO_Mixin
@@ -46,6 +47,7 @@ class C_AOS(Backend):
         self._output_module = None
         self._variable_scope = variable_scope()
         self._enable_variable_checks = True
+        self._coupled_systems = []
 
     @property
     def variable_scope(self):
@@ -66,6 +68,15 @@ class C_AOS(Backend):
         is disabled occasionally internally or during testing.
         '''
         self._enable_variable_checks = True
+    
+    def add_type(self, type_name, type_string):
+        '''
+        Function to add a special type to the type map for this backend.
+
+        :param str type_name: The name of the type (this can just be the type_string)
+        :param str type_string: The C type string to use for this type
+        '''
+        C_AOS._type_map[type_name] = type_string
 
     def set_io_modules(self, input_module, output_module):
         '''
@@ -110,7 +121,9 @@ class C_AOS(Backend):
         :type args: str
         '''
         current_indent = kwargs.get("current_indent", 0)
-        output = " "*current_indent + f"printf(\"{string}\\n\""
+        x = string[0].replace('"', '') + string[1:]
+        x = x[0:len(x)-1] + x[-1].replace('"', '')
+        output = " "*current_indent + f"printf(\"{x}\\n\""
         for arg in args:
             output = output + f", {arg}"
         output = output + ");\n"
@@ -211,6 +224,16 @@ class C_AOS(Backend):
         print(self._main_visitor.visit(function))
 
     def gen_invoke(self, kernel_name, current_indent, indent, kernel_type):
+        '''
+        Generates the code for a specific invoke call
+        Currently ouputs to STDOUT
+
+        :param str kernel_name: Name of the kernel name to be generated.
+        :param int current_indent: The current indentation level of code.
+        :param int indent: The amount to indent for further indentation levels.
+        :param kernel_type: The type of the kernel to be invoked.
+        :type kernel_type: type
+        '''
         space = " "
         rval = f"\n {space*current_indent}/* INVOKE generated for {kernel_name} */\n"
         if kernel_type == kernels.perpart_kernel_wrapper:
@@ -259,9 +282,27 @@ class C_AOS(Backend):
         return rval
 
     def initialisation_code(self, particle_count, filename):
+        '''
+        Returns the initialisation code for this system.
+
+        :param int particle_count: The particle count required for this job.
+        :param str filename: The filename required for this job
+
+        :returns: The initialisation code for this system.
+        :rtype: str
+        '''
         return self._input_module.call_input_c(particle_count, filename)
 
     def gen_particle(self, particle):
+        '''
+        Returns the code to setup the particle type in this module.
+
+        :param particle: The particle type to be generated as code.
+        :type particle: :py:class:`HartreeParticleDSL.HartreeParticleDSL.Particle` 
+
+        :returns: The particle code for this system.
+        :rtype: str
+        '''
         # Output the core part type
         output = ""
         output = output + "struct core_part_type{\n"
@@ -289,6 +330,15 @@ class C_AOS(Backend):
         return output
 
     def gen_config(self, config):
+        '''
+        Returns the code to setup the config type in this module.
+
+        :param particle: The particle type to be generated as code.
+        :type particle: :py:class:`HartreeParticleDSL.HartreeParticleDSL.Config` 
+
+        :returns: The config code for this system.
+        :rtype: str
+        '''
         # Output the space
         output = ""
         output = output + "struct space_type{\n"
@@ -316,19 +366,53 @@ class C_AOS(Backend):
         return output
 
     def cleanup(self, current_indent, *args, **kwargs):
+        '''
+        Returns the cleanup code for this system.
+
+        :param int current_indent: The current indentation level
+
+        :returns: Cleanup code for this system.
+        :rtype: str
+        '''
         rval = ""
         rval = " "*current_indent + "free(config);\n"
         rval = rval + " "*current_indent + "free(parts);\n"
         return rval
 
     def initialise(self,particle_count, filename, current_indent, **kwargs):
+        '''
+        Returns the initialisation code for this sytem.
+
+        :param int particle_count: The particle count for this system.
+        :param str filename: The filename for this system.
+        :param int current_indent: The current indentation for this system.
+
+        :returns: Initialisation code for this system.
+        :rtype: str
+        '''
         self.variable_scope.add_variable("config", "struct config_type", True)
         self.variable_scope.add_variable("parts", "struct part", True)
         rval = " "*current_indent + "struct config_type* config = malloc(sizeof(struct config_type));\n"
         rval = rval + " "*current_indent + f"struct part* parts = {self._input_module.call_input_c(particle_count, filename)}\n"
         return rval
 
-    def get_particle_access(self, dimension):
+    def get_particle_access(self, index, field):
+        '''
+        Returns the code to access a particle of the given
+        index for the field provided.
+
+        :param str index: The index value to access.
+        :param str field: The field name to access.
+
+        TODO: We could check the field exists
+        '''
+        # Remove any extra " from the field from passing through the DSL
+        field = field.replace('"', '')
+
+        return f"{index}->{field}"
+
+
+    def get_particle_position(self, dimension):
         '''
         Returns the code to access a particle's position
         for each dimension. Dimensions are x/y/z. For C_AOS
@@ -382,6 +466,14 @@ class C_AOS(Backend):
         return rval
 
     def call_language_function(self,func_call, *args, **kwargs):
+        '''
+        Calls a language function from the visitors.
+
+        :param str func_call: The function call to be called for this language.
+        
+        :returns: The generated code from the language function call.
+        :rtype: str
+        '''
         string = ""
         try:
             # Any arguments that were python module accesses would be
@@ -393,24 +485,36 @@ class C_AOS(Backend):
             for arg in args:
                 fixed_args.append(arg.replace("->", "."))
             string = fn(*fixed_args, **kwargs)
+            return string
         except (AttributeError) as err:
-            string = func_call + "( "
-            arguments = []
-            for arg in args:
-                arguments.append(arg)
-            for kwarg in kwargs:
+            pass
+        for system in self._coupled_systems:
+            try:
+                fn = getattr(system, func_call)
+                fixed_args = []
+                for arg in args:
+                    fixed_args.append(arg.replace("->", "."))
+                string = fn(*fixed_args, **kwargs)
+                return string
+            except (AttributeError) as err:
+                pass
 
-                arguments.append(str(kwarg) + "=" + str(kwargs[kwarg]))
-            arg_string = ", ".join(arguments)
-            string = string + arg_string + " )"
-            current_index = re.search("current_indent=[0-9]*", string)
-            current_indent = 0
-            if current_index is not None:
-                current_indent = int(current_index[0][15:])
-            string = " "*current_indent + string
-            string = re.sub(", current_indent=[0-9]*, indent=[0-9]*", "", string)
-            string = re.sub(" current_indent=[0-9]*, indent=[0-9]*", "", string)
-            string = string + ";\n"
+        string = func_call + "( "
+        arguments = []
+        for arg in args:
+            arguments.append(arg)
+        for kwarg in kwargs:
+            arguments.append(str(kwarg) + "=" + str(kwargs[kwarg]))
+        arg_string = ", ".join(arguments)
+        string = string + arg_string + " )"
+        current_index = re.search("current_indent=[0-9]*", string)
+        current_indent = 0
+        if current_index is not None:
+            current_indent = int(current_index[0][15:])
+        string = " "*current_indent + string
+        string = re.sub(", current_indent=[0-9]*, indent=[0-9]*", "", string)
+        string = re.sub(" current_indent=[0-9]*, indent=[0-9]*", "", string)
+        string = string + ";\n"
         return string
 
     def set_cutoff(self, cutoff, var_type=CONSTANT, current_indent=0, **kwargs):
@@ -486,3 +590,45 @@ class C_AOS(Backend):
                 code_str = code_str + "." + child_str
 
         return code_str
+    
+    def per_particle_loop_start(self, index_name):
+        '''
+        Returns the code to start a per_particle loop.
+
+        :param str index_name: The name to use to index the loop
+
+        :returns: The code to start a per_particle loop.
+        :rtype: str
+        '''
+        loop = f"for( int {index_name} = 0; {index_name} < config->space.nparts"
+        loop = loop + f"; {index_name}++)" + "{\n"
+        return loop
+
+    def particle_access(self, index_name, element):
+        '''
+        Returns the code to access a particle for a given index and element
+
+        :param str index_name: The name of the index to access the particle
+        :param str element: The particle element to access
+
+        :returns: The code to access a particle
+        :rtype: str
+        '''
+        access = f"parts[{index_name}].{element}" 
+        return access
+
+    def add_coupler(self, coupled_system):
+        '''
+        Adds a coupled system to the list of coupled systems in the backend
+
+        :param coupled_system: The object to couple with.
+        :type couple_system: Object
+
+        :raises UnsupportedTypeError: If the object to couple with is not \
+                                      an instance of base_coupler
+        '''
+        if not isinstance(coupled_system, base_coupler):
+            raise UnsupportedTypeError("Can only couple to base_coupler classes "
+                                       "or subclasses. Found {0}".format(
+                                           type(coupled_system).__name__))
+        self._coupled_systems.append(coupled_system)
