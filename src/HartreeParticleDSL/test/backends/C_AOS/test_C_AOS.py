@@ -271,8 +271,8 @@ def test_call_language_function():
     assert rval2 == "  free(config);\n  free(parts);\n"
     rval3 = backend.call_language_function("a_c_call", "*part", "20", current_indent=4, indent=1)
     assert rval3 == "    a_c_call( *part, 20 );\n"
-    rval4 = backend.call_language_function("set_cutoff", "0.5", "C_AOS->CONSTANT")
-    assert rval4 == "config.neighbour_config.cutoff = 0.5;\n"
+    rval4 = backend.call_language_function("set_cutoff", "0.5", "C_AOS.CONSTANT")
+    assert rval4 == "config->neighbour_config.cutoff = 0.5;\n"
 
 class coupler_test(base_coupler):
     def __init__(self):
@@ -303,7 +303,7 @@ def test_call_language_function_coupled_system():
     rval = backend.call_language_function("a_function")
     assert rval == "test_string"
     rval = backend.call_language_function("b_function", "thing->thing2")
-    assert rval == "thing.thing2"
+    assert rval == "thing->thing2"
     rval = backend.call_language_function("unknown_func")
     assert rval == "unknown_func(  );\n"
 
@@ -376,7 +376,7 @@ def test_set_cutoff_constant():
     cutoff'''
     backend = C_AOS()
     rval = backend.set_cutoff(3.5, var_type=C_AOS.CONSTANT)
-    assert rval == "config.neighbour_config.cutoff = 3.5;\n"
+    assert rval == "config->neighbour_config.cutoff = 3.5;\n"
     assert backend._cutoff_type == C_AOS.CONSTANT
     assert backend._cutoff == "config->neighbour_config.cutoff"
     out = backend.gen_invoke("kern", 0, 1, kernels.pairwise_kernel_wrapper)
