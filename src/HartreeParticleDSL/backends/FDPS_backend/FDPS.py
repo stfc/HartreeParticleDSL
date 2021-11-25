@@ -195,14 +195,12 @@ class FDPS(Backend):
         if self._input_module is not None:
             input_module_header = self._input_module.gen_code_fdps(part_type)
         if input_module_header is not "":
-            # Do something later
-            pass
+            print(output_module_header)
         output_module_header = ""
         if self._output_module is not None:
             output_module_header = self._output_module.gen_code_fdps(part_type)
-        if output_module_header is not "":
-            # Do something later
-            pass
+        if output_module_header is not "" and type(self._output_module) is not type(self._input_module):
+            print(output_module_header)
 
     def gen_kernel(self, kernel):
         '''
@@ -508,3 +506,15 @@ class FDPS(Backend):
                                        "or subclasses. Found {0}".format(
                                            type(coupled_system).__name__))
         self._coupled_systems.append(coupled_system)
+
+    def write_output(self, filename, **kwargs):
+        '''
+        Generates the code to write a file output using the selected output module.
+
+        :param str filename: The filename to write the file to.
+
+        '''
+        current_indent = kwargs.get("current_indent", 0)
+        code = " " * current_indent
+        code = code + self._output_module.call_output_fdps(0, filename) + "\n"
+        return code

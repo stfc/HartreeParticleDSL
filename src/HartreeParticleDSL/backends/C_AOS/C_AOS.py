@@ -188,14 +188,13 @@ class C_AOS(Backend):
         if self._input_module is not None:
             input_module_header = self._input_module.gen_code_c(part_type)
         if input_module_header is not "":
-            # Do something later
-            pass
+            print(input_module_header)
         output_module_header = ""
         if self._output_module is not None:
             output_module_header = self._output_module.gen_code_c(part_type)
-        if output_module_header is not "":
-            # Do something later
-            pass
+        if output_module_header is not "" and type(self._output_module) is not type(self._input_module):
+            # For now we just print this
+            print(output_module_header)
 
     def gen_kernel(self, kernel):
         '''
@@ -482,8 +481,11 @@ class C_AOS(Backend):
             # in a temporary variable
             fn = getattr(self, func_call)
             fixed_args = []
-            for arg in args:
-                fixed_args.append(arg.replace("->", "."))
+          #  if func_call != "println":
+          #      for arg in args:
+          #          fixed_args.append(arg.replace("->", "."))
+          #  else:
+            fixed_args = args
             string = fn(*fixed_args, **kwargs)
             return string
         except (AttributeError) as err:
@@ -492,8 +494,9 @@ class C_AOS(Backend):
             try:
                 fn = getattr(system, func_call)
                 fixed_args = []
-                for arg in args:
-                    fixed_args.append(arg.replace("->", "."))
+                #for arg in args:
+                #    fixed_args.append(arg.replace("->", "."))
+                fixed_args = args
                 string = fn(*fixed_args, **kwargs)
                 return string
             except (AttributeError) as err:
@@ -540,7 +543,7 @@ class C_AOS(Backend):
         if var_type == C_AOS.CONSTANT:
             self._cutoff_type = C_AOS.CONSTANT
             self._cutoff = "config->neighbour_config.cutoff"
-            string = " "*current_indent + f"config.neighbour_config.cutoff = {cutoff};\n"
+            string = " "*current_indent + f"config->neighbour_config.cutoff = {cutoff};\n"
             return string
         if var_type == C_AOS.PARTICLE:
             self._cutoff_type = C_AOS.PARTICLE
@@ -632,3 +635,15 @@ class C_AOS(Backend):
                                        "or subclasses. Found {0}".format(
                                            type(coupled_system).__name__))
         self._coupled_systems.append(coupled_system)
+
+    def write_output(self, filename, **kwargs):
+        ''' 
+        Generates the code to write a file output using the selected output module.
+
+        :param str filename: The filename to write the file to.
+
+        '''
+        current_indent = kwargs.get("current_indent", 0)
+        code = " " * current_indent
+        code = code + self._output_module.call_output_c(0, filename) + "\n"
+        return code

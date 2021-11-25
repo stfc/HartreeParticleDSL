@@ -81,3 +81,6 @@ class Backend(metaclass=ABCMeta):
 
     def add_type(self, type_name, type_string):
         pass
+
+    def write_output(self, filename):
+        pass

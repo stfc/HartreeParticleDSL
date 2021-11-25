@@ -1,7 +1,9 @@
 from HartreeParticleDSL.c_types import c_int, c_double, c_float, c_int64_t, \
                                        c_int32_t, c_int8_t, c_bool
 from HartreeParticleDSL.IO_modules.base_IO_module.IO_module import IO_Module
+from HartreeParticleDSL.backends.C_AOS.C_AOS import C_AOS
 from HartreeParticleDSL.backends.C_AOS.C_AOS_IO_Mixin import C_AOS_IO_Mixin
+from HartreeParticleDSL.backends.FDPS_backend.FDPS import FDPS
 from HartreeParticleDSL.backends.FDPS_backend.FDPS_IO_Mixin import FDPS_IO_Mixin
 
 class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin):
@@ -58,176 +60,180 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin):
         '''
         code = ""
 
-        # Create the hdf5_input function
-        code = code + self.indent() + "struct part* hdf5_input(const char* filename, struct config_type* config){\n"
-        self.increment_indent()
-        # Check that the asked for fields are in the file, and pull out the number of particles
-        code = code + self.indent() + "hid_t file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);\n"
-        code = code + self.indent() + "if( file_id < 0 ){\n"
-        self.increment_indent()
-        code = code + self.indent() + "printf(\"Failed to open %s\", filename);\n"
-        code = code + self.indent() + "exit(1);\n"
-        self.decrement_indent()
-        code = code + self.indent() + "}\n"
-        for key in self._inputs.keys():
-            code = code + self.indent() + "hid_t {0}_test_var = H5Dopen2(file_id, {0}, H5P_DEFAULT);\n".format(key)
-            code = code + self.indent() + "if( {0}_test_var < 0){\n".format(key)
+        if len(self._inputs) > 0:
+            # Create the hdf5_input function
+            code = code + self.indent() + "struct part* hdf5_input(const char* filename, struct config_type* config){\n"
             self.increment_indent()
-            code = code + self.indent() + "printf(\"Failed to find dataset {0}\");\n".format(key)
+            # Check that the asked for fields are in the file, and pull out the number of particles
+            code = code + self.indent() + "hid_t file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);\n"
+            code = code + self.indent() + "if( file_id < 0 ){\n"
+            self.increment_indent()
+            code = code + self.indent() + "printf(\"Failed to open %s\\n\", filename);\n"
             code = code + self.indent() + "exit(1);\n"
             self.decrement_indent()
             code = code + self.indent() + "}\n"
-            code = code + self.indent() + "H5Dclose({0});\n".format(key)
-        # All of the fields are in the HDF5 file as requested, fetch the particle count.
-        code = code + self.indent() + "hid_t part_count_var = H5Dopen2(file_id, {0}, H5P_DEFAULT);\n".format(self._inputs.keys()[0])
-        code = code + self.indent() + "hid_t space = H5Dget_space(part_count_var);\n"
-        code = code + self.indent() + "int ndims = H5Sget_simple_extent_ndims(space);\n"
-        # Can't handle multi dimensional datasets for now
-        code = code + self.indent() + "if( ndims != 1 ){\n"
-        self.increment_indent()
-        code = code + self.indent() + "printf(\"Don't yet support multidimensional datasets.\");\n".format(key)
-        code = code + self.indent() + "exit(1);\n"
-        self.decrement_indent()
-        code = code + self.indent() + "}\n"
-        # Get the num parts
-        code = code + self.indent() + "hsize_t[1] dims;\n"
-        code = code + self.indent() + "H5Sget_simple_extent_dims(space, dims, NULL);\n"
-        code = code + self.indent() + "int num_parts = dims[0];\n"
-
-        # Init the data structures
-        code = code + self.indent() + "struct part *parts = malloc(sizeof(struct part)) * num_parts);\n"
-        code = code + self.indent() + "config->space.nparts = num_parts;\n\n"
-
-        # Read the values from the file into the particles
-        code = code + self.indent() + "hsize_t shape[2], offsets[2];\n"
-        code = code + self.indent() + "int rank = 2;\n"
-        code = code + self.indent() + "shape[0] = num_parts;\n"
-        code = code + self.indent() + "shape[1] = 1;\n"
-        code = code + self.indent() + "offsets[0] = 0;\n"
-        code = code + self.indent() + "offsets[1] = 0;\n"
-        code = code + self.indent() + "hid_t memspace = H5Screate_simple(rank, shape, NULL);\n"
-        code = code + self.indent() + "hid_t filespace = H5Dget_space(h_data);\n"
-        code = code + self.indent() + "H5Sselect_hyperslab(h_filespace, H5S_SELECT_SET, offsets, NULL, shape, NULL);\n"
-
-        for key in self._inputs.keys():
-            code = code + self.indent() + "hid_t {0}_read_var = H5Dopen2(file_id, {0}, H5P_DEFAULT);\n".format(key)
-            # Find the type of the variable from the particle structure
-            part_elem = self._inputs[key]
-            elem_type = None
-            h5_type = None
-            if part_elem.startswith("core_part"):
-                temp_string = part_elem.replace("core_part.", "")
-                if temp_string == "position.x" or "position[0]":
-                    part_elem = "core_part.position[0]"
-                    elem_type = c_double
-                elif temp_string == "position.y" or "position[1]":
-                    part_elem = "core_part.position[1]"
-                    elem_type = c_double
-                
-                code = code + self.indent() + "config.space.nparts = num_parts;\n"elif temp_string == "position.z" or "position[2]":
-                    part_elem = "core_part.position[2]"
-                    elem_type = c_double
-                elif temp_string == "velocity.x" or "velocity[0]":
-                    part_elem = "core_part.velocity[0]"
-                    elem_type = c_double
-                elif temp_string == "velocity.y" or "velocity[1]":
-                    part_elem = "core_part.velocity[1]"
-                    elem_type = c_double
-                elif temp_string == "velocity.z" or "velocity[2]":
-                    part_elem = "core_part.velocity[2]"
-                    elem_type = c_double
-            elif part_elem.startswith("neighbour_part"):
-                pass
-            else:
-                elem_type = part_type.particle_type[part_elem]['type']
-            h5_type = HDF5_IO.type_map.get(elem_type, None)
-            if h5_type is None:
-                assert False
-            code = code + self.indent() + "{0}* {1}_temp_array = ({0}*) malloc(sizeof({0}) * num_parts);\n".format(elem_type, key)
-            code = code + self.indent() + "H5Dread({0}_read_var, {1}, memspace, filespace, H5P_DEFAULT, {0}_temp_array);\n".format(key, h5_type)
-            code = code + self.indent() + "for( int i = 0; i < num_parts; i++){\n"
+            for key in self._inputs.keys():
+                code = code + self.indent() + "hid_t {0}_test_var = H5Dopen2(file_id, \"{0}\", H5P_DEFAULT);\n".format(key)
+                code = code + self.indent() + "if( {0}_test_var < 0)".format(key) + "{\n"
+                self.increment_indent()
+                code = code + self.indent() + "printf(\"Failed to find dataset {0}\\n\");\n".format(key)
+                code = code + self.indent() + "exit(1);\n"
+                self.decrement_indent()
+                code = code + self.indent() + "}\n"
+                code = code + self.indent() + "H5Dclose({0}_test_var);\n".format(key)
+            # All of the fields are in the HDF5 file as requested, fetch the particle count.
+            code = code + self.indent() + "hid_t part_count_var = H5Dopen2(file_id, \"{0}\", H5P_DEFAULT);\n".format(list(self._inputs.keys())[0])
+            code = code + self.indent() + "hid_t space = H5Dget_space(part_count_var);\n"
+            code = code + self.indent() + "int ndims = H5Sget_simple_extent_ndims(space);\n"
+            # Can't handle multi dimensional datasets for now
+            code = code + self.indent() + "if( ndims != 1 ){\n"
             self.increment_indent()
-            code = code + self.indent() + "parts[i].{0} = {1}_temp_array[i];\n".format(part_elem, key)
+            code = code + self.indent() + "printf(\"Don't yet support multidimensional datasets.\\n\");\n".format(key)
+            code = code + self.indent() + "exit(1);\n"
             self.decrement_indent()
             code = code + self.indent() + "}\n"
-            code = code + self.indent() + "free({0}_temp_array);\n".format(key)
-            code = code + self.indent() + "H5Dclose({0}_read_var);\n".format(key)
+            # Get the num parts
+            code = code + self.indent() + "hsize_t dims[1];\n"
+            code = code + self.indent() + "H5Sget_simple_extent_dims(space, dims, NULL);\n"
+            code = code + self.indent() + "int num_parts = dims[0];\n"
 
-        # All data read in
-        code = code + "\n" + self.indent() + "H5Fclose(file_id);\n"
+            # Init the data structures
+            code = code + self.indent() + "struct part *parts = (struct part*) malloc(sizeof(struct part) * num_parts);\n"
+            code = code + self.indent() + "config->space.nparts = num_parts;\n\n"
 
-        code = code + self.indent() + "return parts;\n"
-        self.decrement_indent()
-        code = code + self.indent() + "}\n\n"
+            # Read the values from the file into the particles
+            code = code + self.indent() + "hsize_t shape[2], offsets[2];\n"
+            code = code + self.indent() + "int rank = 2;\n"
+            code = code + self.indent() + "shape[0] = num_parts;\n"
+            code = code + self.indent() + "shape[1] = 1;\n"
+            code = code + self.indent() + "offsets[0] = 0;\n"
+            code = code + self.indent() + "offsets[1] = 0;\n"
+            code = code + self.indent() + "hid_t memspace = H5Screate_simple(rank, shape, NULL);\n"
+            code = code + self.indent() + "hid_t filespace;\n"
 
-        # Create the hdf5 output function
-        code = code + "\n"
-        code = code + self.indent() + "void hdf5_output(struct part* parts, struct config_type* config, const char* filename){\n"
-        self.increment_indent()
-        # Create the HDF5 file
-        code = code + self.indent() + "hid_t file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);\n"
-        code = code + self.indent() + "if( file_id < 0 ){\n"
-        self.increment_indent()
-        code = code + self.indent() + "printf(\"Couldn't create HDF5 file\n\");\n"
-        code = code + self.indent() + "exit(1);\n"
-        self.decrement_indent()
-        code = code + self.indent() + "}\n\n"
-        # Setup dimensions of outputs
-        code = code + self.indent() + "hsize_t dims[1];\n"
-        code = code + self.indent() + "dims[0] = config->space.nparts;\n"
-        code = code + self.indent() + "hid_t dim = H5Screate_simple(1, dims, NULL);\n"
+            for key in self._inputs.keys():
+                code = code + self.indent() + "hid_t {0}_read_var = H5Dopen2(file_id, \"{0}\", H5P_DEFAULT);\n".format(key)
+                code = code + self.indent() + "filespace = H5Dget_space({0}_read_var);\n".format(key)
+                code = code + self.indent() + "H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offsets, NULL, shape, NULL);\n"
+                # Find the type of the variable from the particle structure
+                part_elem = self._inputs[key]
+                elem_type = None
+                h5_type = None
+                if part_elem.startswith("core_part"):
+                    temp_string = part_elem.replace("core_part.", "")
+                    if temp_string == "position.x" or "position[0]":
+                        part_elem = "core_part.position[0]"
+                        elem_type = c_double
+                    elif temp_string == "position.y" or "position[1]":
+                        part_elem = "core_part.position[1]"
+                        elem_type = c_double
+                    elif temp_string == "position.z" or "position[2]":
+                        part_elem = "core_part.position[2]"
+                        elem_type = c_double
+                    elif temp_string == "velocity.x" or "velocity[0]":
+                        part_elem = "core_part.velocity[0]"
+                        elem_type = c_double
+                    elif temp_string == "velocity.y" or "velocity[1]":
+                        part_elem = "core_part.velocity[1]"
+                        elem_type = c_double
+                    elif temp_string == "velocity.z" or "velocity[2]":
+                        part_elem = "core_part.velocity[2]"
+                        elem_type = c_double
+                elif part_elem.startswith("neighbour_part"):
+                    pass
+                else:
+                    elem_type = part_type.particle_type[part_elem]['type']
+                h5_type = HDF5_IO.type_map.get(elem_type, None)
+                if h5_type is None:
+                    assert False
+                elem_type = C_AOS._type_map[elem_type]
+                code = code + self.indent() + "{0}* {1}_temp_array = ({0}*) malloc(sizeof({0}) * num_parts);\n".format(elem_type, key)
+                code = code + self.indent() + "H5Dread({0}_read_var, {1}, memspace, filespace, H5P_DEFAULT, {0}_temp_array);\n".format(key, h5_type)
+                code = code + self.indent() + "for( int i = 0; i < num_parts; i++){\n"
+                self.increment_indent()
+                code = code + self.indent() + "parts[i].{0} = {1}_temp_array[i];\n".format(part_elem, key)
+                self.decrement_indent()
+                code = code + self.indent() + "}\n"
+                code = code + self.indent() + "free({0}_temp_array);\n".format(key)
+                code = code + self.indent() + "H5Dclose({0}_read_var);\n".format(key)
 
-        # Create dataset and output the requested values
-        for key in self._outputs.keys():
-            # Find the type of the variable from the particle structure
-            part_elem = self._outputs[key]
-            elem_type = None
-            h5_type = None
-            if part_elem.startswith("core_part"):
-                temp_string = part_elem.replace("core_part.", "")
-                if temp_string == "position.x" or "position[0]":
-                    part_elem = "core_part.position[0]"
-                    elem_type = c_double
-                elif temp_string == "position.y" or "position[1]":
-                    part_elem = "core_part.position[1]"
-                    elem_type = c_double
-                elif temp_string == "position.z" or "position[2]":
-                    part_elem = "core_part.position[2]"
-                    elem_type = c_double
-                elif temp_string == "velocity.x" or "velocity[0]":
-                    part_elem = "core_part.velocity[0]"
-                    elem_type = c_double
-                elif temp_string == "velocity.y" or "velocity[1]":
-                    part_elem = "core_part.velocity[1]"
-                    elem_type = c_double
-                elif temp_string == "velocity.z" or "velocity[2]":
-                    part_elem = "core_part.velocity[2]"
-                    elem_type = c_double
-            elif part_elem.startswith("neighbour_part"):
-                pass
-            else:
-                elem_type = part_type.particle_type[part_elem]['type']
-            h5_type = HDF5_IO.type_map.get(elem_type, None)
-            if h5_type is None:
-                assert False
-            code = code + self.indent() + "hid_t {0}_output_field = H5Dcreate2(file_id, {0}, {1}, dim, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);\n".format(
-                    key, h5_type)
-            # TODO Check if we successfully made the dataset
-            code = code + self.indent() + "{0}* {1}_output_array = ({0} *) malloc(sizeof({0}) * config->space.nparts);\n".format(elem_type, key)
-            code = code + self.indent() + "for( int i = 0; i < config->space.nparts; i++){\n"
-            self.increment_indent()
-            code = code + self.indent() + "{0}_output_array[i] = parts[i].{1}".format(key, part_elem)
+            # All data read in
+            code = code + "\n" + self.indent() + "H5Fclose(file_id);\n"
+
+            code = code + self.indent() + "return parts;\n"
             self.decrement_indent()
             code = code + self.indent() + "}\n\n"
-            code = code + self.indent() + "H5Dwrite({0}_output_field, {1}, H5S_ALL, H5S_ALL, H5P_DEFAULT, {0}_output_array);\n".format(key, h5_type)
-            code = code + self.indent() + "free({0}_output_array);\n".format(key)
-            code = code + self.indent() + "H5Dclose({0}_output_field);\n".format(key)
+
+        if len(self._outputs) > 0:
+            # Create the hdf5 output function
+            code = code + "\n"
+            code = code + self.indent() + "void hdf5_output(struct part* parts, struct config_type* config, const char* filename){\n"
+            self.increment_indent()
+            # Create the HDF5 file
+            code = code + self.indent() + "hid_t file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);\n"
+            code = code + self.indent() + "if( file_id < 0 ){\n"
+            self.increment_indent()
+            code = code + self.indent() + "printf(\"Couldn't create HDF5 file\\n\");\n"
+            code = code + self.indent() + "exit(1);\n"
+            self.decrement_indent()
+            code = code + self.indent() + "}\n\n"
+            # Setup dimensions of outputs
+            code = code + self.indent() + "hsize_t dims[1];\n"
+            code = code + self.indent() + "dims[0] = config->space.nparts;\n"
+            code = code + self.indent() + "hid_t dim = H5Screate_simple(1, dims, NULL);\n"
+
+            # Create dataset and output the requested values
+            for key in self._outputs.keys():
+                # Find the type of the variable from the particle structure
+                part_elem = self._outputs[key]
+                elem_type = None
+                h5_type = None
+                if part_elem.startswith("core_part"):
+                    temp_string = part_elem.replace("core_part.", "")
+                    if temp_string == "position.x" or "position[0]":
+                        part_elem = "core_part.position[0]"
+                        elem_type = c_double
+                    elif temp_string == "position.y" or "position[1]":
+                        part_elem = "core_part.position[1]"
+                        elem_type = c_double
+                    elif temp_string == "position.z" or "position[2]":
+                        part_elem = "core_part.position[2]"
+                        elem_type = c_double
+                    elif temp_string == "velocity.x" or "velocity[0]":
+                        part_elem = "core_part.velocity[0]"
+                        elem_type = c_double
+                    elif temp_string == "velocity.y" or "velocity[1]":
+                        part_elem = "core_part.velocity[1]"
+                        elem_type = c_double
+                    elif temp_string == "velocity.z" or "velocity[2]":
+                        part_elem = "core_part.velocity[2]"
+                        elem_type = c_double
+                elif part_elem.startswith("neighbour_part"):
+                    pass
+                else:
+                    elem_type = part_type.particle_type[part_elem]['type']
+                h5_type = HDF5_IO.type_map.get(elem_type, None)
+                if h5_type is None:
+                    assert False
+                elem_type = C_AOS._type_map[elem_type]
+                code = code + self.indent() + "hid_t {0}_output_field = H5Dcreate2(file_id, \"{0}\", {1}, dim, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);\n".format(
+                        key, h5_type)
+                # TODO Check if we successfully made the dataset
+                code = code + self.indent() + "{0}* {1}_output_array = ({0} *) malloc(sizeof({0}) * config->space.nparts);\n".format(elem_type, key)
+                code = code + self.indent() + "for( int i = 0; i < config->space.nparts; i++){\n"
+                self.increment_indent()
+                code = code + self.indent() + "{0}_output_array[i] = parts[i].{1};\n".format(key, part_elem)
+                self.decrement_indent()
+                code = code + self.indent() + "}\n\n"
+                code = code + self.indent() + "H5Dwrite({0}_output_field, {1}, H5S_ALL, H5S_ALL, H5P_DEFAULT, {0}_output_array);\n".format(key, h5_type)
+                code = code + self.indent() + "free({0}_output_array);\n".format(key)
+                code = code + self.indent() + "H5Dclose({0}_output_field);\n".format(key)
 
 
-        # End of output function
-        code = code + "\n" + self.indent() + "H5Fclose(file_id);\n"
-        self.decrement_indent()
-        code = code + self.indent + "}\n\n"
+            # End of output function
+            code = code + "\n" + self.indent() + "H5Fclose(file_id);\n"
+            self.decrement_indent()
+            code = code + self.indent() + "}\n\n"
 
         return code
 
@@ -249,7 +255,7 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin):
         :rtype: str
         '''
 
-        return "hdf5_output(parts, config, {filename});"
+        return f"hdf5_output(parts, config, {filename});"
 
     # FDPS_IO_Mixin functions
     def gen_code_fdps(self, part_type):
@@ -261,185 +267,191 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin):
         '''
         code = ""
 
-        # Create the hdf5_input function
-        code = code + self.indent() + "void hdf5_input(PS::ParticleSystem<FullParticle>& particle_system, config_type& config, const char *filename){\n"
-        self.increment_indent()
-        code = code + self.indent() + "hid_t file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);\n"
-        code = code + self.indent() + "if( file_id < 0 ){\n"
-        self.increment_indent()
-        code = code + self.indent() + "printf(\"Failed to open %s\", filename);\n"
-        code = code + self.indent() + "exit(1);\n"
-        self.decrement_indent()
-        code = code + self.indent() + "}\n"
-        for key in self._inputs.keys():
-            code = code + self.indent() + "hid_t {0}_test_var = H5Dopen2(file_id, {0}, H5P_DEFAULT);\n".format(key)
-            code = code + self.indent() + "if( {0}_test_var < 0){\n".format(key)
+        if len(self._inputs) > 0:
+            # Create the hdf5_input function
+            code = code + self.indent() + "void hdf5_input(PS::ParticleSystem<FullParticle>& particle_system, config_type& config, const char *filename){\n"
             self.increment_indent()
-            code = code + self.indent() + "printf(\"Failed to find dataset {0}\");\n".format(key)
+            code = code + self.indent() + "hid_t file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);\n"
+            code = code + self.indent() + "if( file_id < 0 ){\n"
+            self.increment_indent()
+            code = code + self.indent() + "printf(\"Failed to open %s\\n\", filename);\n"
             code = code + self.indent() + "exit(1);\n"
             self.decrement_indent()
             code = code + self.indent() + "}\n"
-            code = code + self.indent() + "H5Dclose({0});\n".format(key)
-        # All of the fields are in the HDF5 file as requested, fetch the particle count.
-        code = code + self.indent() + "hid_t part_count_var = H5Dopen2(file_id, {0}, H5P_DEFAULT);\n".format(self._inputs.keys()[0])
-        code = code + self.indent() + "hid_t space = H5Dget_space(part_count_var);\n"
-        code = code + self.indent() + "int ndims = H5Sget_simple_extent_ndims(space);\n"
-        # Can't handle multi dimensional datasets for now
-        code = code + self.indent() + "if( ndims != 1 ){\n"
-        self.increment_indent()
-        code = code + self.indent() + "printf(\"Don't yet support multidimensional datasets.\");\n".format(key)
-        code = code + self.indent() + "exit(1);\n"
-        self.decrement_indent()
-        code = code + self.indent() + "}\n"
-        # Get the num parts
-        code = code + self.indent() + "hsize_t[1] dims;\n"
-        code = code + self.indent() + "H5Sget_simple_extent_dims(space, dims, NULL);\n"
-        code = code + self.indent() + "int num_parts = dims[0];\n"
-       
-        # Initialise the particle system
-        code = code + self.indent() + "particle_system.initialize();\n"
-        # Single node for now.
-        code = code + self.indent() + "particle_system.setNumberOfParticleLocal(num_parts);\n"
-        code = code + self.indent() + "config.space.nparts = num_parts;\n"
-        # Setup the domain
-        code = code + self.indent() + "PS::DomainInfo dinfo;\n"
-        # Assume box sizes is setup for now.
-        code = code + self.indent() + "dinfo.initialize();\n"
-        # Assume periodic only for now.
-        code = code + self.indent() + "dinfo.setBoundaryCondition ( PS::BOUNDARY_CONDITION_PERIODIC_XYZ );\n"
-        code = code + self.indent() + 
-        '''dinfo.setPosRootDomain(PS::F64vec(config.space.box_dims.x_min,
-                                     config.space.box_dims.y_min,
-                                     config.space.box_dims.z_min),
-                          PS::F64vec(config.space.box_dims.x_max,
-                                     config.space.box_dims.y_max,
-                                     config.space.box_dims.z_max));\n\n'''
-
-        # Read the values from the file into the particles
-        code = code + self.indent() + "hsize_t shape[2], offsets[2];\n"
-        code = code + self.indent() + "int rank = 2;\n"
-        code = code + self.indent() + "shape[0] = num_parts;\n"
-        code = code + self.indent() + "shape[1] = 1;\n"
-        code = code + self.indent() + "offsets[0] = 0;\n"
-        code = code + self.indent() + "offsets[1] = 0;\n"
-        code = code + self.indent() + "hid_t memspace = H5Screate_simple(rank, shape, NULL);\n"
-        code = code + self.indent() + "hid_t filespace = H5Dget_space(h_data);\n"
-        code = code + self.indent() + "H5Sselect_hyperslab(h_filespace, H5S_SELECT_SET, offsets, NULL, shape, NULL);\n"
-        for key in self._inputs.keys():
-            code = code + self.indent() + "hid_t {0}_read_var = H5Dopen2(file_id, {0}, H5P_DEFAULT);\n".format(key)
-            # Find the type of the variable from the particle structure
-            part_elem = self._inputs[key]
-            elem_type = None
-            h5_type = None
-            if part_elem.startswith("core_part"):
-                temp_string = part_elem.replace("core_part.", "")
-                if temp_string == "position.x" or "position[0]":
-                    part_elem = "core_part.position.x"
-                    elem_type = c_double
-                elif temp_string == "position.y" or "position[1]":
-                    part_elem = "core_part.position.y"
-                    elem_type = c_double
-                elif temp_string == "position.z" or "position[2]":
-                    part_elem = "core_part.position.z"
-                    elem_type = c_double
-                elif temp_string == "velocity.x" or "velocity[0]":
-                    part_elem = "core_part.velocity[0]"
-                    elem_type = c_double
-                elif temp_string == "velocity.y" or "velocity[1]":
-                    part_elem = "core_part.velocity[1]"
-                    elem_type = c_double
-                elif temp_string == "velocity.z" or "velocity[2]":
-                    part_elem = "core_part.velocity[2]"
-                    elem_type = c_double
-            elif part_elem.startswith("neighbour_part"):
-                pass
-            else:
-                elem_type = part_type.particle_type[part_elem]['type']
-            h5_type = HDF5_IO.type_map.get(elem_type, None)
-            if h5_type is None:
-                assert False
-            code = code + self.indent() + "{0}* {1}_temp_array = ({0}*) malloc(sizeof({0}) * num_parts);\n".format(elem_type, key)
-            code = code + self.indent() + "H5Dread({0}_read_var, {1}, memspace, filespace, H5P_DEFAULT, {0}_temp_array);\n".format(key, h5_type)
-            code = code + self.indent() + "for( int i = 0; i < num_parts; i++){\n"
+            for key in self._inputs.keys():
+                code = code + self.indent() + "hid_t {0}_test_var = H5Dopen2(file_id, \"{0}\", H5P_DEFAULT);\n".format(key)
+                code = code + self.indent() + "if( {0}_test_var < 0)".format(key) + "{\n"
+                self.increment_indent()
+                code = code + self.indent() + "printf(\"Failed to find dataset {0}\\n\");\n".format(key)
+                code = code + self.indent() + "exit(1);\n"
+                self.decrement_indent()
+                code = code + self.indent() + "}\n"
+                code = code + self.indent() + "H5Dclose({0}_test_var);\n".format(key)
+            # All of the fields are in the HDF5 file as requested, fetch the particle count.
+            code = code + self.indent() + "hid_t part_count_var = H5Dopen2(file_id, \"{0}\", H5P_DEFAULT);\n".format(list(self._inputs.keys())[0])
+            code = code + self.indent() + "hid_t space = H5Dget_space(part_count_var);\n"
+            code = code + self.indent() + "int ndims = H5Sget_simple_extent_ndims(space);\n"
+            # Can't handle multi dimensional datasets for now
+            code = code + self.indent() + "if( ndims != 1 ){\n"
             self.increment_indent()
-            code = code + self.indent() + "particle_system[i].{0} = {1}_temp_array[i];\n".format(part_elem, key)
+            code = code + self.indent() + "printf(\"Don't yet support multidimensional datasets.\\n\");\n".format(key)
+            code = code + self.indent() + "exit(1);\n"
             self.decrement_indent()
             code = code + self.indent() + "}\n"
-            code = code + self.indent() + "free({0}_temp_array);\n".format(key)
-            code = code + self.indent() + "H5Dclose({0}_read_var);\n".format(key)
+            # Get the num parts
+            code = code + self.indent() + "hsize_t[1] dims;\n"
+            code = code + self.indent() + "H5Sget_simple_extent_dims(space, dims, NULL);\n"
+            code = code + self.indent() + "int num_parts = dims[0];\n"
+       
+            # Initialise the particle system
+            code = code + self.indent() + "particle_system.initialize();\n"
+            # Single node for now.
+            code = code + self.indent() + "particle_system.setNumberOfParticleLocal(num_parts);\n"
+            code = code + self.indent() + "config.space.nparts = num_parts;\n"
+            # Setup the domain
+            code = code + self.indent() + "PS::DomainInfo dinfo;\n"
+            # Assume box sizes is setup for now.
+            code = code + self.indent() + "dinfo.initialize();\n"
+            # Assume periodic only for now.
+            code = code + self.indent() + "dinfo.setBoundaryCondition ( PS::BOUNDARY_CONDITION_PERIODIC_XYZ );\n"
+            code = code + self.indent() + \
+            '''dinfo.setPosRootDomain(PS::F64vec(config.space.box_dims.x_min,
+                                         config.space.box_dims.y_min,
+                                         config.space.box_dims.z_min),
+                              PS::F64vec(config.space.box_dims.x_max,
+                                         config.space.box_dims.y_max,
+                                         config.space.box_dims.z_max));\n\n'''
 
-        # All data read in
-        code = code + "\n" + self.indent() + "H5Fclose(file_id);\n"
-        self.decrement_indent()
-        code = code + self.indent() + "}\n\n"
+            # Read the values from the file into the particles
+            code = code + self.indent() + "hsize_t shape[2], offsets[2];\n"
+            code = code + self.indent() + "int rank = 2;\n"
+            code = code + self.indent() + "shape[0] = num_parts;\n"
+            code = code + self.indent() + "shape[1] = 1;\n"
+            code = code + self.indent() + "offsets[0] = 0;\n"
+            code = code + self.indent() + "offsets[1] = 0;\n"
+            code = code + self.indent() + "hid_t memspace = H5Screate_simple(rank, shape, NULL);\n"
+            code = code + self.indent() + "hid_t filespace;\n"
+            code = code + self.indent() + "H5Sselect_hyperslab(h_filespace, H5S_SELECT_SET, offsets, NULL, shape, NULL);\n"
+            for key in self._inputs.keys():
+                code = code + self.indent() + "hid_t {0}_read_var = H5Dopen2(file_id, \"{0}\", H5P_DEFAULT);\n".format(key)
+                code = code + self.indent() + "filespace = H5Dget_space({0}_read_var);\n".format(key)
+                code = code + self.indent() + "H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offsets, NULL, shape, NULL);\n"
+                # Find the type of the variable from the particle structure
+                part_elem = self._inputs[key]
+                elem_type = None
+                h5_type = None
+                if part_elem.startswith("core_part"):
+                    temp_string = part_elem.replace("core_part.", "")
+                    if temp_string == "position.x" or "position[0]":
+                        part_elem = "core_part.position.x"
+                        elem_type = c_double
+                    elif temp_string == "position.y" or "position[1]":
+                        part_elem = "core_part.position.y"
+                        elem_type = c_double
+                    elif temp_string == "position.z" or "position[2]":
+                        part_elem = "core_part.position.z"
+                        elem_type = c_double
+                    elif temp_string == "velocity.x" or "velocity[0]":
+                        part_elem = "core_part.velocity[0]"
+                        elem_type = c_double
+                    elif temp_string == "velocity.y" or "velocity[1]":
+                        part_elem = "core_part.velocity[1]"
+                        elem_type = c_double
+                    elif temp_string == "velocity.z" or "velocity[2]":
+                        part_elem = "core_part.velocity[2]"
+                        elem_type = c_double
+                elif part_elem.startswith("neighbour_part"):
+                    pass
+                else:
+                    elem_type = part_type.particle_type[part_elem]['type']
+                h5_type = HDF5_IO.type_map.get(elem_type, None)
+                if h5_type is None:
+                    assert False
+                elem_type = FDPS._type_map[elem_type]
+                code = code + self.indent() + "{0}* {1}_temp_array = ({0}*) malloc(sizeof({0}) * num_parts);\n".format(elem_type, key)
+                code = code + self.indent() + "H5Dread({0}_read_var, {1}, memspace, filespace, H5P_DEFAULT, {0}_temp_array);\n".format(key, h5_type)
+                code = code + self.indent() + "for( int i = 0; i < num_parts; i++){\n"
+                self.increment_indent()
+                code = code + self.indent() + "particle_system[i].{0} = {1}_temp_array[i];\n".format(part_elem, key)
+                self.decrement_indent()
+                code = code + self.indent() + "}\n"
+                code = code + self.indent() + "free({0}_temp_array);\n".format(key)
+                code = code + self.indent() + "H5Dclose({0}_read_var);\n".format(key)
 
-        # Create the hdf5 output function
-        code = code + "\n"
-        code = code + self.indent() + "void hdf5_output(PS::ParticleSystem<FullParticle>& particle_system, config_type& config, const char* filename){\n"
-        self.increment_indent()
-        # Create the HDF5 file
-        code = code + self.indent() + "hid_t file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);\n"
-        code = code + self.indent() + "if( file_id < 0 ){\n"
-        self.increment_indent()
-        code = code + self.indent() + "printf(\"Couldn't create HDF5 file\n\");\n"
-        code = code + self.indent() + "exit(1);\n"
-        self.decrement_indent()
-        code = code + self.indent() + "}\n\n"
-        # Setup dimensions of outputs
-        code = code + self.indent() + "hsize_t dims[1];\n"
-        code = code + self.indent() + "dims[0] = config.space.nparts;\n"
-        code = code + self.indent() + "hid_t dim = H5Screate_simple(1, dims, NULL);\n"
-
-        # Create dataset and output the requested values
-        for key in self._outputs.keys():
-            # Find the type of the variable from the particle structure
-            part_elem = self._outputs[key]
-            elem_type = None
-            h5_type = None
-            if part_elem.startswith("core_part"):
-                temp_string = part_elem.replace("core_part.", "")
-                if temp_string == "position.x" or "position[0]":
-                    part_elem = "core_part.position.x"
-                    elem_type = c_double
-                elif temp_string == "position.y" or "position[1]":
-                    part_elem = "core_part.position.y"
-                    elem_type = c_double
-                elif temp_string == "position.z" or "position[2]":
-                    part_elem = "core_part.position.z"
-                    elem_type = c_double
-                elif temp_string == "velocity.x" or "velocity[0]":
-                    part_elem = "core_part.velocity.[0]"
-                    elem_type = c_double
-                elif temp_string == "velocity.y" or "velocity[1]":
-                    part_elem = "core_part.velocity.[1]"
-                    elem_type = c_double
-                elif temp_string == "velocity.z" or "velocity[2]":
-                    part_elem = "core_part.velocity.[2]"
-                    elem_type = c_double
-            elif part_elem.startswith("neighbour_part"):
-                pass
-            else:
-                elem_type = part_type.particle_type[part_elem]['type']
-            h5_type = HDF5_IO.type_map.get(elem_type, None)
-            if h5_type is None:
-                assert False
-            code = code + self.indent() + "hid_t {0}_output_field = H5Dcreate2(file_id, {0}, {1}, dim, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);\n".format(
-                    key, h5_type)
-            # TODO Check if we successfully made the dataset
-            code = code + self.indent() + "{0}* {1}_output_array = ({0} *) malloc(sizeof({0}) * config->space.nparts);\n".format(elem_type, key)
-            code = code + self.indent() + "for( int i = 0; i < config->space.nparts; i++){\n"
-            self.increment_indent()
-            code = code + self.indent() + "{0}_output_array[i] = parts[i].{1}".format(key, part_elem)
+            # All data read in
+            code = code + "\n" + self.indent() + "H5Fclose(file_id);\n"
             self.decrement_indent()
             code = code + self.indent() + "}\n\n"
-            code = code + self.indent() + "H5Dwrite({0}_output_field, {1}, H5S_ALL, H5S_ALL, H5P_DEFAULT, {0}_output_array);\n".format(key, h5_type)
-            code = code + self.indent() + "free({0}_output_array);\n".format(key)
-            code = code + self.indent() + "H5Dclose({0}_output_field);\n".format(key)
 
-        # End of output function
-        code = code + "\n" + self.indent() + "H5Fclose(file_id);\n"
-        self.decrement_indent()
-        code = code + self.indent + "}\n\n"
+        if len(self._outputs) > 0:
+            # Create the hdf5 output function
+            code = code + "\n"
+            code = code + self.indent() + "void hdf5_output(PS::ParticleSystem<FullParticle>& particle_system, config_type& config, const char* filename){\n"
+            self.increment_indent()
+            # Create the HDF5 file
+            code = code + self.indent() + "hid_t file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);\n"
+            code = code + self.indent() + "if( file_id < 0 ){\n"
+            self.increment_indent()
+            code = code + self.indent() + "printf(\"Couldn't create HDF5 file\\n\");\n"
+            code = code + self.indent() + "exit(1);\n"
+            self.decrement_indent()
+            code = code + self.indent() + "}\n\n"
+            # Setup dimensions of outputs
+            code = code + self.indent() + "hsize_t dims[1];\n"
+            code = code + self.indent() + "dims[0] = config.space.nparts;\n"
+            code = code + self.indent() + "hid_t dim = H5Screate_simple(1, dims, NULL);\n"
+
+            # Create dataset and output the requested values
+            for key in self._outputs.keys():
+                # Find the type of the variable from the particle structure
+                part_elem = self._outputs[key]
+                elem_type = None
+                h5_type = None
+                if part_elem.startswith("core_part"):
+                    temp_string = part_elem.replace("core_part.", "")
+                    if temp_string == "position.x" or "position[0]":
+                        part_elem = "core_part.position.x"
+                        elem_type = c_double
+                    elif temp_string == "position.y" or "position[1]":
+                        part_elem = "core_part.position.y"
+                        elem_type = c_double
+                    elif temp_string == "position.z" or "position[2]":
+                        part_elem = "core_part.position.z"
+                        elem_type = c_double
+                    elif temp_string == "velocity.x" or "velocity[0]":
+                        part_elem = "core_part.velocity.[0]"
+                        elem_type = c_double
+                    elif temp_string == "velocity.y" or "velocity[1]":
+                        part_elem = "core_part.velocity.[1]"
+                        elem_type = c_double
+                    elif temp_string == "velocity.z" or "velocity[2]":
+                        part_elem = "core_part.velocity.[2]"
+                        elem_type = c_double
+                elif part_elem.startswith("neighbour_part"):
+                    pass
+                else:
+                    elem_type = part_type.particle_type[part_elem]['type']
+                h5_type = HDF5_IO.type_map.get(elem_type, None)
+                if h5_type is None:
+                    assert False
+                elem_type = FDPS._type_map[elem_type]
+                code = code + self.indent() + "hid_t {0}_output_field = H5Dcreate2(file_id, \"{0}\", {1}, dim, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);\n".format(
+                        key, h5_type)
+                # TODO Check if we successfully made the dataset
+                code = code + self.indent() + "{0}* {1}_output_array = ({0} *) malloc(sizeof({0}) * config.space.nparts);\n".format(elem_type, key)
+                code = code + self.indent() + "for( int i = 0; i < config.space.nparts; i++){\n"
+                self.increment_indent()
+                code = code + self.indent() + "{0}_output_array[i] = particle_system[i].{1};\n".format(key, part_elem)
+                self.decrement_indent()
+                code = code + self.indent() + "}\n\n"
+                code = code + self.indent() + "H5Dwrite({0}_output_field, {1}, H5S_ALL, H5S_ALL, H5P_DEFAULT, {0}_output_array);\n".format(key, h5_type)
+                code = code + self.indent() + "free({0}_output_array);\n".format(key)
+                code = code + self.indent() + "H5Dclose({0}_output_field);\n".format(key)
+
+            # End of output function
+            code = code + "\n" + self.indent() + "H5Fclose(file_id);\n"
+            self.decrement_indent()
+            code = code + self.indent() + "}\n\n"
         return code
 
     def call_input_fdps(self, part_count, filename, current_indent=4):
@@ -451,14 +463,14 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin):
         '''
         return f"hdf5_input(particle_system, config, {filename});"
 
-   def call_output_fdps(self, part_count, filename):
+    def call_output_fdps(self, part_count, filename):
         '''
         Returns the FDPS call required to use this IO module for output.
 
         :returns: The code required to use this IO module for output.
         :rtype: str
         '''
-        return f"hdf5_output(particle_system config, {filename});"
+        return f"hdf5_output(particle_system, config, {filename});"
 
     def get_includes_fdps(self):
         '''

@@ -1,4 +1,5 @@
 #include "random_io.hpp"
+#include "part.h"
 
 void random_io(PS::ParticleSystem<FullParticle>& particle_system, config_type& config){
     //Set up a 1x1x1 cube for now
@@ -17,7 +18,7 @@ void random_io(PS::ParticleSystem<FullParticle>& particle_system, config_type& c
                            PS::F64vec(config.space.box_dims.x_max,
                                       config.space.box_dims.y_max,
                                       config.space.box_dims.z_max));
-
+    config.space.nparts = particle_system.getNumberOfParticleLocal();
     for(PS::S32 i = 0 ; i < particle_system.getNumberOfParticleLocal() ; i++){
         particle_system[i].core_part.position[0] = (double)(rand()) / (double)(RAND_MAX);
         particle_system[i].core_part.position[1] = (double)(rand()) / (double)(RAND_MAX);
