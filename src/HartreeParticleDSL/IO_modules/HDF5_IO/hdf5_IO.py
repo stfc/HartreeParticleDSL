@@ -121,22 +121,22 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin):
                 h5_type = None
                 if part_elem.startswith("core_part"):
                     temp_string = part_elem.replace("core_part.", "")
-                    if temp_string == "position.x" or "position[0]":
+                    if temp_string == "position.x" or temp_string == "position[0]":
                         part_elem = "core_part.position[0]"
                         elem_type = c_double
-                    elif temp_string == "position.y" or "position[1]":
+                    elif temp_string == "position.y" or temp_string == "position[1]":
                         part_elem = "core_part.position[1]"
                         elem_type = c_double
-                    elif temp_string == "position.z" or "position[2]":
+                    elif temp_string == "position.z" or temp_string == "position[2]":
                         part_elem = "core_part.position[2]"
                         elem_type = c_double
-                    elif temp_string == "velocity.x" or "velocity[0]":
+                    elif temp_string == "velocity.x" or temp_string == "velocity[0]":
                         part_elem = "core_part.velocity[0]"
                         elem_type = c_double
-                    elif temp_string == "velocity.y" or "velocity[1]":
+                    elif temp_string == "velocity.y" or temp_string == "velocity[1]":
                         part_elem = "core_part.velocity[1]"
                         elem_type = c_double
-                    elif temp_string == "velocity.z" or "velocity[2]":
+                    elif temp_string == "velocity.z" or temp_string == "velocity[2]":
                         part_elem = "core_part.velocity[2]"
                         elem_type = c_double
                 elif part_elem.startswith("neighbour_part"):
@@ -190,22 +190,22 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin):
                 h5_type = None
                 if part_elem.startswith("core_part"):
                     temp_string = part_elem.replace("core_part.", "")
-                    if temp_string == "position.x" or "position[0]":
+                    if temp_string == "position.x" or temp_string == "position[0]":
                         part_elem = "core_part.position[0]"
                         elem_type = c_double
-                    elif temp_string == "position.y" or "position[1]":
+                    elif temp_string == "position.y" or temp_string == "position[1]":
                         part_elem = "core_part.position[1]"
                         elem_type = c_double
-                    elif temp_string == "position.z" or "position[2]":
+                    elif temp_string == "position.z" or temp_string == "position[2]":
                         part_elem = "core_part.position[2]"
                         elem_type = c_double
-                    elif temp_string == "velocity.x" or "velocity[0]":
+                    elif temp_string == "velocity.x" or temp_string == "velocity[0]":
                         part_elem = "core_part.velocity[0]"
                         elem_type = c_double
-                    elif temp_string == "velocity.y" or "velocity[1]":
+                    elif temp_string == "velocity.y" or temp_string == "velocity[1]":
                         part_elem = "core_part.velocity[1]"
                         elem_type = c_double
-                    elif temp_string == "velocity.z" or "velocity[2]":
+                    elif temp_string == "velocity.z" or temp_string == "velocity[2]":
                         part_elem = "core_part.velocity[2]"
                         elem_type = c_double
                 elif part_elem.startswith("neighbour_part"):
@@ -342,22 +342,22 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin):
                 h5_type = None
                 if part_elem.startswith("core_part"):
                     temp_string = part_elem.replace("core_part.", "")
-                    if temp_string == "position.x" or "position[0]":
+                    if temp_string == "position.x" or temp_string == "position[0]":
                         part_elem = "core_part.position.x"
                         elem_type = c_double
-                    elif temp_string == "position.y" or "position[1]":
+                    elif temp_string == "position.y" or temp_string == "position[1]":
                         part_elem = "core_part.position.y"
                         elem_type = c_double
-                    elif temp_string == "position.z" or "position[2]":
+                    elif temp_string == "position.z" or temp_string == "position[2]":
                         part_elem = "core_part.position.z"
                         elem_type = c_double
-                    elif temp_string == "velocity.x" or "velocity[0]":
+                    elif temp_string == "velocity.x" or temp_string == "velocity[0]":
                         part_elem = "core_part.velocity[0]"
                         elem_type = c_double
-                    elif temp_string == "velocity.y" or "velocity[1]":
+                    elif temp_string == "velocity.y" or temp_string == "velocity[1]":
                         part_elem = "core_part.velocity[1]"
                         elem_type = c_double
-                    elif temp_string == "velocity.z" or "velocity[2]":
+                    elif temp_string == "velocity.z" or temp_string == "velocity[2]":
                         part_elem = "core_part.velocity[2]"
                         elem_type = c_double
                 elif part_elem.startswith("neighbour_part"):
@@ -409,23 +409,23 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin):
                 h5_type = None
                 if part_elem.startswith("core_part"):
                     temp_string = part_elem.replace("core_part.", "")
-                    if temp_string == "position.x" or "position[0]":
+                    if temp_string == "position.x" or temp_string == "position[0]":
                         part_elem = "core_part.position.x"
                         elem_type = c_double
-                    elif temp_string == "position.y" or "position[1]":
+                    elif temp_string == "position.y" or temp_string == "position[1]":
                         part_elem = "core_part.position.y"
                         elem_type = c_double
-                    elif temp_string == "position.z" or "position[2]":
+                    elif temp_string == "position.z" or temp_string == "position[2]":
                         part_elem = "core_part.position.z"
                         elem_type = c_double
-                    elif temp_string == "velocity.x" or "velocity[0]":
-                        part_elem = "core_part.velocity.[0]"
+                    elif temp_string == "velocity.x" or temp_string == "velocity[0]":
+                        part_elem = "core_part.velocity[0]"
                         elem_type = c_double
-                    elif temp_string == "velocity.y" or "velocity[1]":
-                        part_elem = "core_part.velocity.[1]"
+                    elif temp_string == "velocity.y" or temp_string == "velocity[1]":
+                        part_elem = "core_part.velocity[1]"
                         elem_type = c_double
-                    elif temp_string == "velocity.z" or "velocity[2]":
-                        part_elem = "core_part.velocity.[2]"
+                    elif temp_string == "velocity.z" or temp_string == "velocity[2]":
+                        part_elem = "core_part.velocity[2]"
                         elem_type = c_double
                 elif part_elem.startswith("neighbour_part"):
                     pass

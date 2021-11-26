@@ -195,7 +195,7 @@ class FDPS(Backend):
         if self._input_module is not None:
             input_module_header = self._input_module.gen_code_fdps(part_type)
         if input_module_header is not "":
-            print(output_module_header)
+            print(input_module_header)
         output_module_header = ""
         if self._output_module is not None:
             output_module_header = self._output_module.gen_code_fdps(part_type)
