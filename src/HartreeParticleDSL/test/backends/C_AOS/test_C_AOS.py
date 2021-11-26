@@ -65,14 +65,27 @@ def test_generateincludes():
     assert "\"part.h\"" in strin
     assert "<stdlib.h>" in strin
 
-def test_gen_headers():
+def test_gen_headers(capsys):
     '''Test the gen_headers function of C_AOS module'''
     backend = C_AOS()
     part = Particle()
+    class temp_module(IO_Module, C_AOS_IO_Mixin):
+        def __init__(self):
+            pass
+        def gen_code_c(self, part_type):
+            return "temp"
+    class temp_module1(IO_Module, C_AOS_IO_Mixin):
+        def __init__(self):
+            pass
+        def gen_code_c(self, part_type):
+            return "temp1"
     config = Config()
-    mod = Random_Particles()
-    backend.set_io_modules(mod, mod)
+    mod = temp_module()
+    mod2 = temp_module1()
+    backend.set_io_modules(mod, mod2)
     backend.gen_headers(config, part)
+    captured = capsys.readouterr()
+    assert captured.out == '''temp\ntemp1\n'''
     f_str = ""
     with open('part.h', 'r') as f:
         f_str = f.readlines()
@@ -484,3 +497,16 @@ def test_particle_access():
     backend = C_AOS()
     rval = backend.particle_access("i", "test")
     assert rval == "parts[i].test"
+
+def test_write_output():
+    backend = C_AOS()
+    class temp_module(IO_Module, C_AOS_IO_Mixin):
+        def __init__(self):
+            pass
+        def call_output_c(self, num_parts, filename):
+            return "Success"
+    a = temp_module()
+    mod = Random_Particles()
+    backend.set_io_modules(mod, a)
+    assert backend.write_output("a") == "Success\n"
+
