@@ -214,6 +214,12 @@ class Cabana(Backend):
         with open('part.h', 'w') as f:
             f.write("#ifndef PART_H\n")
             f.write("#define PART_H\n")
+            f.write("/*using MemorySpace = Kokkos::CudaSpace;*/\n")
+            f.write("using MemorySpace = Kokkos::HostSpace;\n")
+            f.write("using ExecutionSpace = Kokkos::DefaultExecutionSpace;\n")
+            f.write("using DeviceType = Kokkos::Device<Kokkos::DefaultExecutionSpace, MemorySpace>;\n")
+            f.write("using HostType = Kokkos::Device<Kokkos::Serial, Kokkos::HostSpace>;\n")
+            f.write("const int VectorLength = 16;\n\n") #This vector length should be chosen better in future
             f.write(config_output)
             f.write(part_output)
             f.write("#endif")
@@ -360,18 +366,18 @@ class Cabana(Backend):
         output = output + "enum FieldNames{ core_part_space = 0,\n"
         output = output + "                 neighbour_part_space"
         for key in particle.particle_type:
-            output = output + f",\n                 {key}"
+            if key != "core_part" and key != "neighbour_part":
+                output = output + f",\n                 {key}"
         output = output + "\n               };\n"
 
         output = output + "using DataTypes = Cabana::MemberTypes<core_part_type,\n"
         output = output + "    neighbour_part_type"
         for key in particle.particle_type:
-            output = output + ",\n    "
-            c_type = particle.particle_type[key]['type']
-            output = output + ",\n    " + c_type
+            if key != "core_part" and key != "neighbour_part":
+                c_type = particle.particle_type[key]['type']
+                output = output + ",\n    " + c_type
         output = output + ">;\n"
 
-        output = output + "const int VectorLength = 16;\n" #This vector length should be chosen better in future
         return output
 
     def gen_config(self, config):
@@ -438,7 +444,8 @@ class Cabana(Backend):
       
         # We need the particle type to be able to initialise correctly
         for key in self._particle.particle_type:
-            rval = rval + space*current_indent + f"auto {key}_slice = Cabana::slice<{key}>" + "(particle_aosoa);\n"
+            if key != "core_part" and key != "neighbour_part":
+                rval = rval + space*current_indent + f"auto {key}_slice = Cabana::slice<{key}>" + "(particle_aosoa);\n"
 
 
         # Generate the functors
