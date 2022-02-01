@@ -102,11 +102,12 @@ class Random_Particles(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin
         :returns: The code required to use this IO module for input.
         :rtype: str
         '''
+        part_count = part_count[part_count.index("=")+1:]
         indentation = " " * current_indent
         rval = f"Cabana::AoSoA<DataTypes, DeviceType, VectorLength> particle_aosoa( \"particle_list\", {part_count});\n"
         rval = rval + f"{indentation}Cabana::AoSoA<DataTypes, HostType, VectorLength> particle_aosoa_host( \"particle_list_host\", {part_count});\n"
-        rval = rval + indentation + "random_io(particle_aosoa_host, config);\n"
-        rval = rval + indentation + "Kokkos::deep_copy(particle_aosoa, particle_aosoa_host);\n"
+        rval = rval + indentation + "random_io<decltype(particle_aosoa_host)>(particle_aosoa_host, config);\n"
+        rval = rval + indentation + "Cabana::deep_copy(particle_aosoa, particle_aosoa_host);\n"
 
         return rval
 

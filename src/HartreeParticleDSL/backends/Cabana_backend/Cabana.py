@@ -30,6 +30,15 @@ class Cabana(Backend):
             "FULLCONF" : "FULLCONF" # This is a proxy type, used to handle the config type for later
             }
 
+    _type_sizes = {_type_map[c_int] : 4,
+            _type_map[c_double] : 8, 
+            _type_map[c_float] : 4,
+            _type_map[c_int64_t] : 8,
+            _type_map[c_int32_t] : 4,
+            _type_map[c_int8_t] : 1,
+            _type_map[c_bool] : 4
+            }
+
     # Variables used to manage where the cutoff radius is stored
     CONSTANT = 0
     PARTICLE = 1
@@ -267,7 +276,8 @@ class Cabana(Backend):
         '''
         space = " "
         rval = "" + space*current_indent
-        rval = rval + f"Cabana::simd_parallel_for(simd_policy, {kernel_name}, " + "\"" + kernel_name + "\");\n"
+        rval = rval + "Kokkos::deep_copy(config.config, config.config_host);\n"
+        rval = rval + space*current_indent + f"Cabana::simd_parallel_for(simd_policy, {kernel_name}, " + "\"" + kernel_name + "\");\n"
         rval = rval + space*current_indent + "Kokkos::fence();\n"
         return rval
 
@@ -316,11 +326,11 @@ class Cabana(Backend):
         '''
         # FIXME
         if dimension == "x":
-            return ".position[0]"
+            return "0"
         if dimension == "y":
-            return ".position[1]"
+            return "1"
         if dimension == "z":
-            return ".position[2]"
+            return "2"
         raise InvalidNameError("The dimension argument should be x, y, or z")
 
     def get_pointer(self, var_code, *args, **kwargs):
@@ -363,19 +373,57 @@ class Cabana(Backend):
         output = output + "    double cutoff;\n"
         output = output + "};\n\n"
 
-        output = output + "enum FieldNames{ core_part_space = 0,\n"
-        output = output + "                 neighbour_part_space"
-        for key in particle.particle_type:
+        particle.add_element("core_part_position", "double[3]")
+        particle.add_element("core_part_velocity", "double[3]")
+        particle.add_element("neighbour_part_cutoff", "double")
+
+        # Sort particle by size of element
+        sizes = []
+        for element in particle.particle_type:
+            if element == "core_part" or element == "neighbour_part":
+                sizes.append(0)
+                continue
+            c_type = particle.particle_type[element]['type']
+            is_array = particle.particle_type[element]['is_array']
+            if is_array:
+                x = c_type.index("[")
+                base_type = c_type[0:x]
+                count = 1
+                array_str = c_type[x:]
+                while array_str.find("[") >= 0:
+                    val = int(array_str[array_str.index("[")+1:array_str.index("]")])
+                    count = count * val
+                    array_str = array_str[array_str.index("]")+1:]
+                size = Cabana._type_sizes[base_type]
+                sizes.append(size * count)
+            else:
+                size = Cabana._type_sizes[c_type]
+                sizes.append(size)
+        fields = particle.particle_type.keys()
+        sorted_fields = [x for _, x in sorted(zip(sizes, fields), reverse=True)]
+
+        output = output + "enum FieldNames{"
+        first = True
+        for key in sorted_fields:
             if key != "core_part" and key != "neighbour_part":
-                output = output + f",\n                 {key}"
+                if first:
+                    output = output + f"{key} = 0"
+                    first = False
+                else:
+                    output = output + f",\n                 {key}"
         output = output + "\n               };\n"
 
-        output = output + "using DataTypes = Cabana::MemberTypes<core_part_type,\n"
-        output = output + "    neighbour_part_type"
-        for key in particle.particle_type:
+        output = output + "using DataTypes = Cabana::MemberTypes<"
+        first = True
+        for key in sorted_fields:
             if key != "core_part" and key != "neighbour_part":
-                c_type = particle.particle_type[key]['type']
-                output = output + ",\n    " + c_type
+                if first:
+                    c_type = particle.particle_type[key]['type']
+                    output = output + c_type
+                    first = False
+                else:
+                    c_type = particle.particle_type[key]['type']
+                    output = output + ",\n    " + c_type
         output = output + ">;\n"
 
         return output
@@ -391,15 +439,16 @@ class Cabana(Backend):
 
         output = output + "struct space_type{\n"
         output = output + "    boundary box_dims;\n"
-        output = output + "    int nparts;\n\n"
+        output = output + "    int nparts;\n"
+        output = output + "};\n\n"
 
         # Currently empty neiughbour config
         output = output + "struct neighbour_config_type{\n"
         output = output + "};\n\n"
 
         output = output + "struct config_view_type{\n"
-        output = output + "    space_type space;\n"
-        output = output + "    neighbour_config_type neighbour_config;\n"
+#        output = output + "    space_type space;\n"
+#        output = output + "    neighbour_config_type neighbour_config;\n"
         for key in config.config_type:
             is_array = config.config_type[key]['is_array']
             c_type = config.config_type[key]['type']
@@ -413,7 +462,7 @@ class Cabana(Backend):
         output = output + "};\n\n"
 
         output = output + "using config_struct_type = Kokkos::View<struct config_view_type*, MemorySpace>;\n"
-        output = output + "using config_stuct_host = config_struct_type::HostMirror;\n"
+        output = output + "using config_struct_host = config_struct_type::HostMirror;\n"
 
         output = output + "struct config_type{\n"
         output = output + "    config_struct_type config;\n"
@@ -435,12 +484,14 @@ class Cabana(Backend):
         rval = rval + "{\n"
         rval = rval + space*current_indent + "config_type config;\n"
         rval = rval + space*current_indent + "config.config = config_struct_type(\"config\", 1);\n"
-        rval = rval + space*current_indent + "config.config_host = Kokkos::create_mirror_view(config);\n"
+        rval = rval + space*current_indent + "config.config_host = Kokkos::create_mirror_view(config.config);\n"
         rval = rval + space*current_indent + f"{self._input_module.call_input_cabana(particle_count, filename, current_indent=current_indent)}\n"
+        rval = rval + space*current_indent + "Cabana::SimdPolicy<VectorLength, ExecutionSpace> simd_policy( 0,\n"
+        rval = rval + space*current_indent + "particle_aosoa.size());"
 
         # Need to do something with each kernel now.
-        rval = rval + space*current_indent + "auto core_part_slice = Cabana::slice<core_part_space>(particle_aosoa);\n"
-        rval = rval + space*current_indent + "auto neighbour_part_slice = Cabana::slice<neighbour_part_space>(particle_aosoa);\n"
+#        rval = rval + space*current_indent + "auto core_part_slice = Cabana::slice<core_part_space>(particle_aosoa);\n"
+#        rval = rval + space*current_indent + "auto neighbour_part_slice = Cabana::slice<neighbour_part_space>(particle_aosoa);\n"
       
         # We need the particle type to be able to initialise correctly
         for key in self._particle.particle_type:
@@ -450,11 +501,19 @@ class Cabana(Backend):
 
         # Generate the functors
         for key in self._kernel_slices.keys():
-            rval = rval + space*current_indent + f"{key}_functor {key}("
+            rval = rval + space*current_indent + f"{key}_functor"
+            slice_names = []
+            for slices in self._kernel_slices[key]:
+                slice_names.append(f"decltype({slices}_slice)")
+            if len(slice_names) > 0:
+                rval = rval + "<"
+                rval = rval + ", ".join(slice_names) + ">"
+
+            rval = rval + f" {key}("
             slice_names = []
             for slices in self._kernel_slices[key]:
                 slice_names.append(f"{slices}_slice")
-            rval = rval + ", ".join(slice_names) + ");\n"
+            rval = rval + ", ".join(slice_names) + ", config.config);\n"
         return rval
 
     def create_variable(self, c_type, name, initial_value=None, **kwargs):
@@ -546,13 +605,56 @@ class Cabana(Backend):
             if child is None:
                 raise InternalError("Attempting to access a particle with no child access")
             name = child.variable.var_name
+            if name == "core_part":
+                # If its core part we have to do something special
+                var_access = child
+                child_name = var_access.child.variable.var_name
+                name = name + "_" + child_name
+                var_access = var_access.child
+                if is_part_i:
+                    code_str = "_" + name + ".access(i, a"
+                else:
+                    pass #FIXME for pairwise we do something different
+                if child_name == "position":
+                    code_str = code_str + ", " + self.get_particle_position( var_access.child.variable.var_name)
+                if len(var_access.array_indices) > 0:
+                    for index in var_access.array_indices:
+                        if isinstance(index, str):
+                            code_str = code_str + f", {index}"
+                        if isinstance(index, variable_access):
+                            code_str = code_str + f", " + self.access_to_string(index)
+                # Nothing else can happen here
+                self._pairwise_visitor.addSlice(name)
+                self._per_part_visitor.addSlice(name)
+                self._main_visitor.addSlice(name)
+                return code_str + ")"
+            if name == "neighbour_part":
+                # If its neighbour_part we have to do something special
+                var_access = child
+                child_name = var_access.variable.var_name
+                name = name + "_" + child_name
+                var_access = var_access.child
+                if is_part_i:
+                    code_str = "_" + name + ".access(i, a"
+                else:
+                    pass #FIXME for pairwise we do something different
+                if len(var_access.array_indices) > 0:
+                    for index in var_access.array_indices:
+                        if isinstance(index, str):
+                            code_str = code_str + f", {index}"
+                        if isinstance(index, variable_access):
+                            code_str = code_str + f", " + self.access_to_string(index)
+                self._pairwise_visitor.addSlice(name)
+                self._per_part_visitor.addSlice(name)
+                self._main_visitor.addSlice(name)
+                # Nothing else can happen here
+                return code_str + ")"
             self._pairwise_visitor.addSlice(name)
             self._per_part_visitor.addSlice(name)
             self._main_visitor.addSlice(name)
-            var_access = child
             code_str = ""
             if is_part_i:
-                code_str = "_" + name + "(i, a"
+                code_str = "_" + name + ".access(i, a"
             else:
                 pass #FIXME for pairwise we do something different
             if array_access:
@@ -562,15 +664,15 @@ class Cabana(Backend):
                     if isinstance(index, variable_access):
                         code_str = code_str + f", " + self.access_to_string(index)
             code_str = code_str + ")"
-            if var_access.child is not None:
-                if var_access.variable.is_pointer and not array_access:
-                    child = var_access.child
-                    child_str = self.access_to_string(child)
-                    code_str = code_str + "->" + child_str
-                else:
-                    child = var_access.child
-                    child_str = self.access_to_string(child)
-                    code_str = code_str + "." + child_str
+#            if var_access.child is not None:
+#                if var_access.variable.is_pointer and not array_access:
+#                    child = var_access.child
+#                    child_str = self.access_to_string(child)
+#                    code_str = code_str + "->" + child_str
+#                else:
+#                    child = var_access.child
+#                    child_str = self.access_to_string(child)
+#                    code_str = code_str + "." + child_str
             return code_str
         # Do something special if its of type FULLCONF
         # FIXME Do something different if in main vs kernel?
@@ -584,7 +686,7 @@ class Cabana(Backend):
                     name = self._pairwise_visitors._config
                 code_str = "_" + name + "(0)"
             else:
-                name = "config.host_config"
+                name = "config.config_host"
                 code_str = name + "(0)"
             if array_access:
                 raise InternalError("Currently can't handle array accesses for config type in Cabana backend")

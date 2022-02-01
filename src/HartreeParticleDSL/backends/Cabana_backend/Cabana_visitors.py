@@ -37,16 +37,17 @@ class cabana_pairwise_visitor(cabana_visitor):
         self._part2 = ""
 
     def check_position(self, node):
-        rval = ""
-        if type(node.value) is ast.Attribute:
-            rval = rval + str(self.visit(node.value))
-            rval = rval + f".{node.attr}"
-        # Search for the core_part.position.[...] in the string.
-        # Upon locating it, we pull out the contents of the [ ]
-        a = re.match("core_part\([a-zA-Z0-9, ]*\).position.[a-zA-Z]*$", rval[rval.find("core_part"):])
-        if a is not None:
-            end = self._parent.get_particle_position(a.group(0)[(a.group(0).find("position.") +9 ):])
-            return rval[0:rval.find(".position")] + end
+        # Disabling check_position for now
+#        rval = ""
+#        if type(node.value) is ast.Attribute:
+#            rval = rval + str(self.visit(node.value))
+#            rval = rval + f".{node.attr}"
+#        # Search for the core_part.position.[...] in the string.
+#        # Upon locating it, we pull out the contents of the [ ]
+#        a = re.match("core_part\([a-zA-Z0-9, ]*\).position.[a-zA-Z]*$", rval[rval.find("core_part"):])
+#        if a is not None:
+#            end = self._parent.get_particle_position(a.group(0)[(a.group(0).find("position.") +9 ):])
+#            return rval[0:rval.find(".position")] + end
         return None
 
     def addSlice(self, slice_name):
@@ -90,16 +91,17 @@ class cabana_perpart_visitor(cabana_visitor):
         super().__init__(parent, indent=indent)
 
     def check_position(self, node):
-        rval = ""
-        if type(node.value) is ast.Attribute:
-            rval = rval + str(self.visit(node.value))
-            rval = rval + f".{node.attr}"
-        # Search for the core_part.position.[...] in the string.
-        # Upon locating it, we pull out the contents of the [ ]
-        a = re.match("core_part\([a-zA-Z0-9, ]*\).position.[a-zA-Z]*$", rval[rval.find("core_part"):])
-        if a is not None:
-            end = self._parent.get_particle_position(a.group(0)[(a.group(0).find("position.") +9 ):])
-            return rval[0:rval.find(".position")] + end
+        # Disabling check_position for now
+#        rval = ""
+#        if type(node.value) is ast.Attribute:
+#            rval = rval + str(self.visit(node.value))
+#            rval = rval + f".{node.attr}"
+#        # Search for the core_part.position.[...] in the string.
+#        # Upon locating it, we pull out the contents of the [ ]
+#        a = re.match("core_part\([a-zA-Z0-9, ]*\).position.[a-zA-Z]*$", rval[rval.find("core_part"):])
+#        if a is not None:
+#            end = self._parent.get_particle_position(a.group(0)[(a.group(0).find("position.") +9 ):])
+#            return rval[0:rval.find(".position")] + end
         return None
 
     def resetSlices(self):
@@ -159,7 +161,7 @@ class cabana_perpart_visitor(cabana_visitor):
 
         #FIXME Constructor
         rval = rval + "\n"
-        rval = rval + self.addIndent() + "KOKKOS_INLINE_FUNCTOR\n"
+        rval = rval + self.addIndent() + "KOKKOS_INLINE_FUNCTION\n"
         rval = rval + self.addIndent() + f" {nodename}_functor( "
         all_slices = []
         for slices in self._slices:
