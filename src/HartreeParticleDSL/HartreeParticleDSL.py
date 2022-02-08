@@ -395,17 +395,6 @@ class Particle():
             is_array = True
         self.particle_type[variable_name] = {'type' : c_type, 'is_array' : is_array}
 
-    def sort_by_size(self):
-        '''
-        Sort the particle class' elements by their sizes.
-        '''
-        sizes = []
-        for element in particle.particle_type:
-            c_type = element['type']
-            is_array = element['is_array']
-            x = c_type.index("[")
-            y = c_type.index("]")
-            varnam = varnam + c_type[x:]
 
 class Config():
     '''
