@@ -67,6 +67,8 @@ class Cabana(Backend):
         # We need to keep track of what kernels use what slices
         self._kernel_slices = {}
 
+        # Allowing global variable declaration for now
+        self._globals = {}
         # The Cabana backend needs to store the particle type reference
         self._particle = None
 
@@ -116,6 +118,18 @@ class Cabana(Backend):
         :param str type_string: The Cabana type string to use for this type
         '''
         Cabana._type_map[type_name] = type_string
+
+    def create_global_variable(self, c_type, name, initial_value):
+        '''
+        Function to create a global variable in the header file.
+
+        :param str c_type: The c_type of this variable.
+        :param str name: The name of the variable.
+        :param initial_value: The initial value of this variable
+        '''
+        if name in self._globals.keys():
+            assert False
+        self._globals[name] = (c_type, initial_value)
 
     def set_io_modules(self, input_module, output_module):
         '''
@@ -229,6 +243,12 @@ class Cabana(Backend):
             f.write("using DeviceType = Kokkos::Device<Kokkos::DefaultExecutionSpace, MemorySpace>;\n")
             f.write("using HostType = Kokkos::Device<Kokkos::Serial, Kokkos::HostSpace>;\n")
             f.write("const int VectorLength = 16;\n\n") #This vector length should be chosen better in future
+
+            for name in self._globals:
+                ctype = self._globals[name][0]
+                value = self._globals[name][1]
+                f.write("{0} {1} = {2};\n".format(ctype, name, value))
+
             f.write(config_output)
             f.write(part_output)
             f.write("#endif")
@@ -255,6 +275,9 @@ class Cabana(Backend):
         '''
         tree = kernel.get_kernel_tree()
         self._variable_scope = variable_scope()
+        for name in self._globals:
+            ctype = self._globals[name][0]
+            self._variable_scope.add_variable(name, ctype, False)
         if isinstance(kernel, kernels.perpart_kernel_wrapper):
             print(self._per_part_visitor.visit(tree))
         elif isinstance(kernel, kernels.pairwise_kernel_wrapper):
@@ -304,10 +327,9 @@ class Cabana(Backend):
         TODO: We could check the field exists
         '''
         # Remove any extra " from the field from passing through the DSL
-        assert False
         # FIXME
         field = field.replace('"', '')
-        return None
+        return field + "_slice(" + index + ")"
 
     def get_particle_position(self, dimension):
         '''

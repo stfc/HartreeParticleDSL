@@ -485,7 +485,7 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
         includes.append("\"hdf5.h\"")
         return includes
 
-    def gen_code_cabana(self):
+    def gen_code_cabana(self, part_type):
         '''
         Returns the Cabana code required for this IO module.
 

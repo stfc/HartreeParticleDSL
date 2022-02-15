@@ -94,7 +94,7 @@ class c_visitor(baseVisitor):
         rval = " ( "
         rval = rval + str(self.visit(node.left))
         rval = rval + self.visit(node.ops[0])
-        rval = rval + self.visit(node.comparators[0])
+        rval = rval + str(self.visit(node.comparators[0]))
         rval = rval + " ) "
         return rval
 
@@ -132,6 +132,15 @@ class c_visitor(baseVisitor):
     # For pre-python 3.8
     def visit_Num(self, node):
         return f"{node.n}"
+
+    def visit_NameConstant(self, node):
+        if str(node.value) == "True":
+            return "true"
+        elif str(node.value) == "False":
+            return "false"
+
+    def visit_Break(self, node):
+        return self.addIndent() + "break;\n"
 
     def visit_Constant(self, node):
         rval = ""
@@ -179,7 +188,7 @@ class c_visitor(baseVisitor):
             rval = rval + self.addIndent()
         self.elseIf = False
         rval = rval + "if( "
-        rval = rval + self.visit(node.test)
+        rval = rval + str(self.visit(node.test))
         rval = rval + " ){\n"
         self.incrementIndent()
         for child in node.body:

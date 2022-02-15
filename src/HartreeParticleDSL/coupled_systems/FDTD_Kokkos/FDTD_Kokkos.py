@@ -46,7 +46,7 @@ class FDTD_Kokkos(force_solver):
     def call_init_grid(self, current_indent=0, indent=0):
         assert self.dimensionality == 1
         in_str = " " * current_indent
-        code = in_str + "config.field.nx = " + self.ncells + ";\n"
+        code = in_str + "config.field.nx = " + str(self.ncells) + ";\n"
         code = code + in_str + "config.field.ng = 4;\n"
         code = code + in_str + "kokkos_fdtd_initialize_1D(config.field, config.field.nx, config.field.ng);\n"
         code = code + in_str + "update_e_field_functor _efield_func(config.field, config.field.nx);\n"
@@ -146,7 +146,7 @@ class FDTD_Kokkos(force_solver):
         code = code + in_str*2 + backend.get_pointer("bx_part") + ", " + backend.get_pointer("by_part") + ",\n"
         code = code + in_str*2 + backend.get_pointer("bz_part") + ", cell_x_r, " + backend.get_pointer("cell_x1") + ",\n"
         code = code + in_str*2 + "gx, hx, _field.ex, _field.ey, _field.ez, _field.bx, _field.by, _field.bz,\n"
-        code = code _ in_str*2 + "idt, idx, dtco2, idtf, idxf, _nx, fcx, fcy, _field.ng);\n"
+        code = code + in_str*2 + "idt, idx, dtco2, idtf, idxf, _nx, fcx, fcy, _field.ng);\n"
         return code
 
     def gather_forces_to_grid(self, delta_x, part_vy, part_vz, current_indent=0, indent=0):
