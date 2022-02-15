@@ -146,6 +146,10 @@ class c_visitor(baseVisitor):
         rval = ""
         if type(node.value) is str:
             rval = rval + f"\"{node.value}\""
+        elif str(node.value) == "True":
+            rval = rval + "true"
+        elif str(node.value) == "False":
+            rval = rval + "false"
         else:
             rval = rval + f"{node.value}"
         return rval
