@@ -35,7 +35,28 @@ class FDTD_Kokkos(force_solver):
         self.z_bc_min = z_bc_min
         self.interpolator = TOPHAT
         get_backend().add_type("FDTD_field", "FDTD_field")
-        config_type.add_element("field", "FDTD_field")
+#        config_type.add_element("field", "FDTD_field")
+        get_backend().add_structure("FDTD_field", "field")
+
+        self._includes = []
+        self._includes.append("\"FDTD_field.hpp\"")
+        self._includes.append("\"FDTD_init.hpp\"")
+        self._includes.append("\"FDTD_boundaries.hpp\"")
+        self._includes.append("\"FDTD_interpolation.hpp\"")
+        self._includes.append("\"FDTD_step.hpp\"")
+        self._includes.append("\"FDTD_init_cabana.hpp\"")
+        self._includes.append("\"FDTD_IO_HDF5.hpp\"")
+
+        self._includes_header = []
+        self._includes_header.append("\"FDTD_field.hpp\"")
+
+
+
+    def get_includes(self):
+        return self._includes
+
+    def get_includes_header(self):
+        return self._includes_header
 
     def set_interpolator(self, interpolator):
         if interpolator != TOPHAT:
@@ -46,39 +67,59 @@ class FDTD_Kokkos(force_solver):
     def call_init_grid(self, current_indent=0, indent=0):
         assert self.dimensionality == 1
         in_str = " " * current_indent
-        code = in_str + "config.field.nx = " + str(self.ncells) + ";\n"
-        code = code + in_str + "config.field.ng = 4;\n"
-        code = code + in_str + "kokkos_fdtd_initialize_1D(config.field, config.field.nx, config.field.ng);\n"
-        code = code + in_str + "update_e_field_functor _efield_func(config.field, config.field.nx);\n"
-        code = code + in_str + "update_b_field_functor _bfield_func(config.field, config.field.nx);\n"
-        code = code + in_str + "auto _rp = Kokkos::RangePolicy<>(0, config.field.nx + 2 * config.field.ng);\n"
+        code = in_str + "field.nx = " + str(self.ncells) + ";\n"
+        code = code + in_str + "field.ng = 4;\n"
+        code = code + in_str + "kokkos_fdtd_initialize_1D(field, field.nx, field.ng);\n"
+        code = code + in_str + "update_e_field_functor _efield_func(field, field.nx);\n"
+        code = code + in_str + "update_b_field_functor _bfield_func(field, field.nx);\n"
+        code = code + in_str + "auto _rp = Kokkos::RangePolicy<>(0, field.nx + 2 * field.ng);\n"
         return code
 
     def setup_testcase(self, current_indent=0, indent=0):
         in_str = " " * current_indent
-        code = in_str + "kokkos_fdtd_initialize_example_1D(config.field, config.field.nx, config.field.ng);\n"
+        code = in_str + "kokkos_fdtd_initialize_example_1D(field, field.nx, field.ng);\n"
+        code = code + in_str + "fdtd_init_particles<decltype(particle_aosoa_host)>(particle_aosoa_host, config, field);\n"
+        code = code + in_str + "Cabana::deep_copy(particle_aosoa, particle_aosoa_host);\n"
+        code = code + in_str + "Kokkos::deep_copy(config.config, config.config_host);\n"
         return code
 
     def call_cleanup_grid(self, current_indent=0, indent=0):
         in_str = " " * current_indent
-        code = in_str + "kokkos_fdtd_cleanup_1D(config.field);\n"
+        code = in_str + "kokkos_fdtd_cleanup_1D(config);\n"
         return code
 
     def call_eb_fields_first_halfstep(self, current_indent=0, indent=0):
         in_str = " " * current_indent
-        code = in_str + "update_eb_fields_half_1D(config.field, config.field.nx, config.field.ng, config.dt, config.dx,\n"
+        code = in_str + "update_eb_fields_half_1D(field, field.nx, field.ng, config.config_host(0).dt, config.config_host(0).dx,\n"
         code = code + in_str + "                         _efield_func, _bfield_func, _rp);\n"
         return code
 
     def call_eb_fields_final_halfstep(self, current_indent=0, indent=0):
         in_str = " " * current_indent
-        code = in_str + "update_eb_fields_final_1D(config.field, config.field.nx, config.field.ng, config.dt, config.dx,\n"
+        code = in_str + "update_eb_fields_final_1D(field, field.nx, field.ng, config.config_host(0).dt, config.config_host(0).dx,\n"
         code = code + in_str + "                          _efield_func, _bfield_func, _rp);\n"
         return code
 
     def call_reset_current(self, current_indent=0, indent=0):
         in_str = " " * current_indent
-        code = code + in_str + "current_start(config.field, config.field.nx, config.field.ng);\n"
+        code = in_str + "current_start(field, field.nx, field.ng);\n"
+        return code
+
+    def call_finish_current(self, current_indent=0, indent=0):
+        in_str = " " * current_indent
+        code = in_str + "current_finish(field.jx, field.jy, field.jz,\n"
+        code = code + in_str + "               field.nx, field.ng);\n"
+        return code
+
+    def output_grid(self, filename, variable=None, current_indent=0, indent=0):
+        code = "{\n        "
+        if variable is not None:
+            code = code + "char filename[300];\n"
+            code = code + "        sprintf(filename, \"" + f"{filename}%.4d.hdf5" + "\", " + f"{variable});\n        "
+        else:
+            code = code + "char filename[300]" + f" = \"{filename}\";\n"
+        code = code + f"        grid_hdf5_output( field, filename);\n"
+        code = code + "        }\n"
         return code
 
     def call_interpolate_to_particles(self, part_weight, part_charge, part_mass,
@@ -100,8 +141,8 @@ class FDTD_Kokkos(force_solver):
         code = code + f"{in_str}" + backend.create_variable("c_double", "dto2", f"{dt} / 2.0")
         code = code + f"{in_str}" + backend.create_variable("c_double", "dtco2", f"c * dto2")
         code = code + f"{in_str}" + backend.create_variable("c_double", "dtfac", f"0.5 * {dt}")
-        code = code + f"{in_str}" + backend.create_variable("c_double", "idft", "idt")
-        code = code + f"{in_str}" + backend.create_variable("c_double", "idxt", "idx")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "idtf", "idt")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "idxf", "idx")
         # Can't yet create ararys with create_variable calls.
         code = code + f"{in_str}{double_type} gxarray[4] = " + "{0.0, 0.0, 0., 0.};\n"
         code = code + f"{in_str}{double_type} hxarray[4] = " + "{0.0, 0.0, 0.0, 0.0};\n"
@@ -120,10 +161,13 @@ class FDTD_Kokkos(force_solver):
         code = code + f"{in_str}" + backend.create_variable("c_double", "cmratio", "part_q * dtfac * ipart_mc")
         code = code + f"{in_str}" + backend.create_variable("c_double", "ccmratio", "c * cmratio")
         code = code + in_str + "//Copy out the particle properties\n"
-        code = code + f"{in_str}" + backend.create_variable("c_double", "part_x",  backend.get_particle_access("part1", backend.get_particle_position("x")) + " - config.field->x_grid_min_local")
-        code = code + f"{in_str}" + backend.create_variable("c_double", "part_ux", backend.get_particle_access("part1", part_momentum_x))
-        code = code + f"{in_str}" + backend.create_variable("c_double", "part_uy", backend.get_particle_access("part1", part_momentum_y))
-        code = code + f"{in_str}" + backend.create_variable("c_double", "part_uz", backend.get_particle_access("part1", part_momentum_z))
+        code = code + f"{in_str}" + backend.create_variable("c_double", "part_x",  backend.get_particle_access("part1", backend.get_particle_position("x")) + " - field.field.x_grid_min_local")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "part_p_x", backend.get_particle_access("part1", part_momentum_x))
+        code = code + f"{in_str}" + backend.create_variable("c_double", "part_p_y", backend.get_particle_access("part1", part_momentum_y))
+        code = code + f"{in_str}" + backend.create_variable("c_double", "part_p_z", backend.get_particle_access("part1", part_momentum_z))
+        code = code + f"{in_str}" + backend.create_variable("c_double", "part_ux", backend.get_particle_access("part1", part_momentum_x)  + "* ipart_mc")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "part_uy", backend.get_particle_access("part1", part_momentum_y)  + "* ipart_mc")
+        code = code + f"{in_str}" + backend.create_variable("c_double", "part_uz", backend.get_particle_access("part1", part_momentum_z)  + "* ipart_mc")
         code = code + in_str + "//Calculate v(t) from p(t)\n"
         code = code + f"{in_str}" + backend.create_variable("c_double", "gamma_rel", "sqrtf(part_ux*part_ux + part_uy*part_uy + part_uz*part_uz + 1.0)")
         code = code + f"{in_str}" + backend.create_variable("c_double", "root", "dtco2 / gamma_rel") + "\n"
@@ -145,8 +189,8 @@ class FDTD_Kokkos(force_solver):
         code = code + in_str*2 + backend.get_pointer("ey_part") + ", " + backend.get_pointer("ez_part") + ",\n"
         code = code + in_str*2 + backend.get_pointer("bx_part") + ", " + backend.get_pointer("by_part") + ",\n"
         code = code + in_str*2 + backend.get_pointer("bz_part") + ", cell_x_r, " + backend.get_pointer("cell_x1") + ",\n"
-        code = code + in_str*2 + "gx, hx, _field.ex, _field.ey, _field.ez, _field.bx, _field.by, _field.bz,\n"
-        code = code + in_str*2 + "idt, idx, dtco2, idtf, idxf, _nx, fcx, fcy, _field.ng);\n"
+        code = code + in_str*2 + "gx, hx, field.ex, field.ey, field.ez, field.bx, field.by, field.bz,\n"
+        code = code + in_str*2 + "idt, idx, dtco2, idtf, idxf, field.nx, fcx, fcy, field.ng);\n"
         return code
 
     def gather_forces_to_grid(self, delta_x, part_vy, part_vz, current_indent=0, indent=0):
@@ -159,8 +203,8 @@ class FDTD_Kokkos(force_solver):
         #Remove excess " from strings
         in_str = " " * current_indent
         code = f"\n{in_str}//Gathering forces to grid\n"
-        code = code + f"{in_str}part_x = " + backend.get_particle_access("part1", backend.get_particle_position("x")) + " - config.field->x_grid_min_local;\n"
+        code = code + f"{in_str}part_x = " + backend.get_particle_access("part1", backend.get_particle_position("x")) + " - field.field.x_grid_min_local;\n"
         code = code + f"{in_str}GatherForcesToGrid_1D(part_weight, part_q, part_x, {delta_x},\n"
-        code = code + f"{in_str}{in_str}" + f"cell_x1, _field.jx, _field.jy, _field.jz, idt, {part_vy}, {part_vz}, idx, dtco2, idtf, idxf,\n"
-        code = code + f"{in_str}{in_str}" + "_nx, fcx, fcy, _field.ng);\n"
+        code = code + f"{in_str}{in_str}" + f"cell_x1, gx, hx, field.jx, field.jy, field.jz, idt, {part_vy}, {part_vz}, idx, dtco2, idtf, idxf,\n"
+        code = code + f"{in_str}{in_str}" + "field.nx, fcx, fcy, field.ng);\n"
         return code 

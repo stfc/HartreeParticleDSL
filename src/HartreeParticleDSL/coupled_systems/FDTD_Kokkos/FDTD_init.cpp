@@ -1,8 +1,8 @@
 #include "FDTD_init.hpp"
+#include "part.h"
 
-void kokkos_fdtd_initialize_1D(struct FDTD_field &field, int nx, int ng){
+void kokkos_fdtd_initialize_1D(FDTD_field &field, int nx, int ng){
     // Assuming kokkos is initialized
-    field.field = field_struct_type("field", 1);
     field.ex = field_type("ex", nx + 2*ng);
     field.ey = field_type("ey", nx + 2*ng);
     field.ez = field_type("ez", nx + 2*ng);
@@ -15,7 +15,7 @@ void kokkos_fdtd_initialize_1D(struct FDTD_field &field, int nx, int ng){
 
 }
 
-void kokkos_fdtd_cleanup_1D(struct FDTD_field &field){
+void kokkos_fdtd_cleanup_1D(FDTD_field &field){
 
 }
 
@@ -58,7 +58,7 @@ struct init_j_arrays_functor{                                                   
     }
 };
 
-void kokkos_fdtd_initialize_example_1D(struct FDTD_field &field, int nx, int ng){
+void kokkos_fdtd_initialize_example_1D(FDTD_field &field, int nx, int ng){
     
         // Create host mirrors for initialisation
         auto ex = Kokkos::create_mirror_view(field.ex);
@@ -78,15 +78,14 @@ void kokkos_fdtd_initialize_example_1D(struct FDTD_field &field, int nx, int ng)
                              init_eb);
         Kokkos::parallel_for("Init j arrays", Kokkos::RangePolicy<Kokkos::OpenMP>(0,nx + 2*ng),
                              init_j);
-        auto field_struct = Kokkos::create_mirror_view(field.field);
-        field_struct(0).field_order = 2;
-        field_struct(0).fng = (double)(field_struct(0).field_order) / 2.0;
-        if (field_struct(0).field_order == 2){
-            field_struct(0).cfl = 1.0;
-        }else if(field_struct(0).field_order == 4){
-            field_struct(0).cfl = 6.0/7.0;
+        field.field.field_order = 2;
+        field.field.fng = (double)(field.field.field_order) / 2.0;
+        if (field.field.field_order == 2){
+            field.field.cfl = 1.0;
+        }else if(field.field.field_order == 4){
+            field.field.cfl = 6.0/7.0;
         }else{
-            field_struct(0).cfl = 120.0/149.0;
+            field.field.cfl = 120.0/149.0;
         }
         Kokkos::fence();
         Kokkos::deep_copy(field.ex, ex);
@@ -98,6 +97,5 @@ void kokkos_fdtd_initialize_example_1D(struct FDTD_field &field, int nx, int ng)
         Kokkos::deep_copy(field.jx, jx);
         Kokkos::deep_copy(field.jy, jy);
         Kokkos::deep_copy(field.jz, jz);
-        Kokkos::deep_copy(field.field, field_struct);
 
 }

@@ -23,7 +23,7 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
         self._inputs = {}
         self._outputs = {}
         self._indent = indent
-        self._current_indent = self._indent
+        self._current_indent = 0
 
     def add_input(self, hdf_input, particle_input):
         self._inputs[hdf_input] = particle_input
@@ -523,6 +523,7 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
             code = code + self.indent() + "printf(\"Don't yet support multidimensional datasets.\\n\");\n".format(key)
             code = code + self.indent() + "exit(1);\n"
             self.decrement_indent()
+            code = code + self.indent() + "}\n"
             # Get the num parts
             code = code + self.indent() + "hsize_t[1] dims;\n"
             code = code + self.indent() + "H5Sget_simple_extent_dims(space, dims, NULL);\n"
@@ -585,12 +586,12 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
                 if h5_type is None:
                     assert False
                 elem_type = Cabana._type_map[elem_type]
-                code = code + self.indent() + "auto {0}_slice = Cabana::slice<{0}>(parts_host);\n".format(key)
+                code = code + self.indent() + "auto {0}_slice = Cabana::slice<{1}>(parts_host);\n".format(key, part_elem)
                 code = code + self.indent() + "{0}* {1}_temp_array = ({0}*) malloc(sizeof({0}) * num_parts);\n".format(elem_type, key)
                 code = code + self.indent() + "H5Dread({0}_read_var, {1}, memspace, filespace, H5P_DEFAULT, {0}_temp_array);\n".format(key, h5_type)
                 code = code + self.indent() + "for( int i = 0; i < num_parts; i++){\n"
                 self.increment_indent()
-                code = code + self.indent() + "{0}_slice(i, {2}) = {1}_temp_array[i];\n".format(part_elem, key, part_indexing)
+                code = code + self.indent() + "{0}_slice(i{2}) = {1}_temp_array[i];\n".format(key, key, part_indexing)
                 self.decrement_indent()
                 code = code + self.indent() + "}\n"
                 code = code + self.indent() + "free({0}_temp_array);\n".format(key)
@@ -605,7 +606,7 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
         if len(self._outputs) > 0:
             # Create the hdf5 output function
             code = code + "\n"
-            code = code + self.indent() + "void hdf5_output(Cabana::AoSoA<DataTypes, HostType, VectorLength> particle_aosoa, config_type& config, const char* filename){\n"
+            code = code + self.indent() + "template <class aosoa_class> void hdf5_output(aosoa_class particle_aosoa, config_type& config, const char* filename){\n"
             self.increment_indent()
             # Create the HDF5 file
             code = code + self.indent() + "hid_t file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);\n"
@@ -655,10 +656,13 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
                         elem_type = c_double
                 elif part_elem.startswith("neighbour_part"):
                     pass
+                else:
+                    elem_type = part_type.particle_type[part_elem]['type']
                 h5_type = HDF5_IO.type_map.get(elem_type, None)
                 if h5_type is None:
+                    print(part_elem, elem_type, h5_type)
                     assert False
-                elem_type = FDPS._type_map[elem_type]
+                elem_type = Cabana._type_map[elem_type]
                 code = code + self.indent() + "hid_t {0}_output_field = H5Dcreate2(file_id, \"{0}\", {1}, dim, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);\n".format(
                         key, h5_type)
                 # TODO Check if we successfully made the dataset
@@ -666,7 +670,7 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
                 code = code + self.indent() + "{0}* {1}_output_array = ({0} *) malloc(sizeof({0}) * particle_aosoa.size());\n".format(elem_type, key)
                 code = code + self.indent() + "for( int i = 0; i < particle_aosoa.size(); i++){\n"
                 self.increment_indent()
-                code = code + self.indent() + "auto part = particle_aosoa.getTuple(i);"
+                code = code + self.indent() + "auto part = particle_aosoa.getTuple(i);\n"
                 code = code + self.indent() + "{0}_output_array[i] = Cabana::get<{1}>(part{2});\n".format(key, part_elem, part_indexing)
                 self.decrement_indent()
                 code = code + self.indent() + "}\n\n"
@@ -695,14 +699,23 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
 
         return ""
 
-    def call_output_cabana(self, part_count, filename):
+    def call_output_cabana(self, part_count, filename, variable=None):
         '''
         Returns the Cabana call required to use this IO module for output.
 
         :returns: The code required to use this IO module for output.
         :rtype: str
         '''
-        return f"hdf5_output(particle_aosoa, config, {filename});"
+        code = "{\n"
+        if variable is not None:
+            code = code + "char filename[300];\n"
+            code = code + "        sprintf(filename, \"" + f"{filename}%.4d.hdf5" + "\", " + f"{variable});\n        "
+        else:
+            code = code + "char filename[300]" + f" = \"{filename}\";\n"
+        code = code + "Cabana::deep_copy(particle_aosoa_host, particle_aosoa);\n"
+        code = code + f"        hdf5_output<decltype(particle_aosoa_host)>(particle_aosoa_host, config, filename);"
+        code = code + "        }\n"
+        return code
 
     def get_includes_cabana(self):
         '''

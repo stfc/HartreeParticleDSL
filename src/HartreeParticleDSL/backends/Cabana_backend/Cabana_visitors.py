@@ -126,6 +126,8 @@ class cabana_perpart_visitor(cabana_visitor):
         # Reset slices required for this run
         self._parent.in_kernel_code = True
         self.resetSlices()
+        for structure in self._parent._structures:
+            self._parent.variable_scope.add_variable(structure, self._parent._structures[structure], False)
         arglist = self.visit(node.args)
 
         # The main body will be double incremented
@@ -158,6 +160,8 @@ class cabana_perpart_visitor(cabana_visitor):
         all_slices = []
         for slices in self._slices:
             rval = rval + self.addIndent() + slices.upper() + " _" + slices + ";\n"
+        for structure in self._parent._structures:
+            rval = rval + self.addIndent() + self._parent._structures[structure] + " " + structure + ";\n"
 
         #FIXME Constructor
         rval = rval + "\n"
@@ -167,14 +171,32 @@ class cabana_perpart_visitor(cabana_visitor):
         for slices in self._slices:
             all_slices.append(slices.upper() + " " + slices)
         all_slices.append("config_struct_type " + self._config)
+        for structure in self._parent._structures:
+            all_slices.append(self._parent._structures[structure] + " " + structure.upper())
         classes = ", ".join(all_slices)
         rval = rval + classes + ") :\n"
         all_slices = []
         for slices in self._slices:
             all_slices.append("_" + slices + "(" + slices + ")")
+        for structure in self._parent._structures:
+            all_slices.append(structure + "(" + structure.upper() + ")")
         classes = ", ".join(all_slices)
         rval = rval + self.addIndent() + classes
         rval = rval + ", _" + f"{self._config}({self._config}) " + "{}\n"
+
+        # If we should update the structures defined in the parents we need a function to
+        # enable this
+        if len(self._parent._structures) > 0:
+            rval = rval + self.addIndent() + "void update_structs("
+            all_structs = []
+            for struct in self._parent._structures:
+                all_structs.append(self._parent._structures[struct] + " " + struct.upper())
+            rval = rval + ", ".join(all_structs) + "){\n"
+            self.incrementIndent()
+            for struct in self._parent._structures:
+                rval = rval + self.addIndent() + struct + " = " + struct.upper() + ";\n"
+            self.decrementIndent()
+            rval = rval + self.addIndent() + "}\n"
 
         rval = rval + "\n"
         rval = rval + self.addIndent() + "void operator()(const int i, const int a) const{\n"

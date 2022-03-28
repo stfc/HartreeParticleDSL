@@ -188,6 +188,10 @@ class FDPS(Backend):
         with open('part.h', 'w') as f:
             f.write("#ifndef PART_H\n")
             f.write("#define PART_H\n")
+            for coupled_system in self._coupled_systems:
+                extra_includes = coupled_system.get_includes()
+                for include in extra_includes:
+                    f.write(f"#include {include}\n")
             f.write(config_output)
             f.write(part_output)
             f.write("#endif")
@@ -506,6 +510,9 @@ class FDPS(Backend):
                                        "or subclasses. Found {0}".format(
                                            type(coupled_system).__name__))
         self._coupled_systems.append(coupled_system)
+        extra_includes = coupled_system.get_includes()
+        for include in extra_includes:
+            self._includes.append(include)
 
     def write_output(self, filename, **kwargs):
         '''

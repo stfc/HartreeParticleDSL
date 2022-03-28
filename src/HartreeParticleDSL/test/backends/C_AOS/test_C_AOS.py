@@ -297,6 +297,9 @@ class coupler_test(base_coupler):
     def b_function(self, arg):
         return arg
 
+    def get_includes(self):
+        return []
+
 def test_add_coupler():
     '''Test the add_coupler function of C_AOS'''
     backend = C_AOS()

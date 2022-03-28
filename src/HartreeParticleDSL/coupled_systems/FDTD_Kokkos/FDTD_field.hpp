@@ -18,11 +18,8 @@ struct field{
     double x_grid_max_local;
 };
 
-using field_struct_type = Kokkos::View<struct field*, MemorySpace>;
-using field_struct_host = field_struct_type::HostMirror;
-
 struct FDTD_field{
-    field_struct_type field;
+    struct field field;
     field_type ex;
     field_type ey;
     field_type ez;

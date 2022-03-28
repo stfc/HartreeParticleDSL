@@ -11,7 +11,8 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import InvalidNameError, \
 from HartreeParticleDSL.c_types import c_int, c_double, c_float, c_int64_t, \
                                        c_int32_t, c_int8_t, c_bool
 from HartreeParticleDSL.language_utils.variable_scope import variable_scope, \
-                                                             variable_access
+                                                             variable_access, \
+                                                             variable
 
 class Cabana(Backend):
     '''
@@ -71,6 +72,13 @@ class Cabana(Backend):
         self._globals = {}
         # The Cabana backend needs to store the particle type reference
         self._particle = None
+
+        self._structures = {}
+
+    def add_structure(self, structure_type, structure_name):
+        if structure_type not in  Cabana._type_map.keys():
+            assert False
+        self._structures[structure_name] = structure_type
 
     def add_kernel_slice(self, kernel_name, kernel_slice):
         '''
@@ -237,6 +245,12 @@ class Cabana(Backend):
         with open('part.h', 'w') as f:
             f.write("#ifndef PART_H\n")
             f.write("#define PART_H\n")
+            f.write("#include <Kokkos_Core.hpp>\n")
+            f.write("#include <Cabana_Core.hpp>\n")
+            for coupled_system in self._coupled_systems:
+                extra_includes = coupled_system.get_includes_header()
+                for include in extra_includes:
+                    f.write(f"#include {include}\n")
             f.write("/*using MemorySpace = Kokkos::CudaSpace;*/\n")
             f.write("using MemorySpace = Kokkos::HostSpace;\n")
             f.write("using ExecutionSpace = Kokkos::DefaultExecutionSpace;\n")
@@ -245,7 +259,7 @@ class Cabana(Backend):
             f.write("const int VectorLength = 16;\n\n") #This vector length should be chosen better in future
 
             for name in self._globals:
-                ctype = self._globals[name][0]
+                ctype = Cabana._type_map[self._globals[name][0]]
                 value = self._globals[name][1]
                 f.write("{0} {1} = {2};\n".format(ctype, name, value))
 
@@ -256,14 +270,16 @@ class Cabana(Backend):
         if self._input_module is not None:
             input_module_header = self._input_module.gen_code_cabana(part_type) #FIXME
         if input_module_header is not "":
-            # Do something later
-            pass
+            print(input_module_header)
+            print("\n")
+
         output_module_header = ""
         if self._output_module is not None:
             output_module_header = self._output_module.gen_code_cabana(part_type) #FIXME
         if output_module_header is not "":
             # Do something later
-            pass
+            print(output_module_header)
+            print("\n")
 
     def gen_kernel(self, kernel):
         '''
@@ -300,6 +316,13 @@ class Cabana(Backend):
         space = " "
         rval = "" + space*current_indent
         rval = rval + "Kokkos::deep_copy(config.config, config.config_host);\n"
+        # If we have external structures make sure they're copied to the functor as well
+        if len(self._structures) > 0:
+            rval = rval + space*current_indent + f"{kernel_name}.update_structs("
+            struct_list = []
+            for struct in self._structures:
+                struct_list.append(struct)
+            rval = rval + ", ".join(struct_list) + ");\n"
         rval = rval + space*current_indent + f"Cabana::simd_parallel_for(simd_policy, {kernel_name}, " + "\"" + kernel_name + "\");\n"
         rval = rval + space*current_indent + "Kokkos::fence();\n"
         return rval
@@ -329,7 +352,37 @@ class Cabana(Backend):
         # Remove any extra " from the field from passing through the DSL
         # FIXME
         field = field.replace('"', '')
-        return field + "_slice(" + index + ")"
+        
+        # Remove all the array indices and do something with them
+        extra_indices = ""
+        arrays = re.findall(r"\[[0-9*]*\]", field)
+        if arrays is not None:
+            for ind in arrays:
+                field = field.replace(ind, "")
+                ind = ind.replace("[", "")
+                ind = ind.replace("]", "")
+                extra_indices = extra_indices + ", " + ind
+
+        # Create a variable access is probably the only sane way to do this.
+        self._pairwise_visitor.addSlice(field)
+        self._per_part_visitor.addSlice(field)
+        self._main_visitor.addSlice(field)
+        assert index == "part1" # FIXME Not handling part2 accesses for pairwise yet.
+
+        return "_" + field + ".access(i, a" + extra_indices + ")"
+
+    def _get_particle_position_internal(self, dimension):
+        '''
+        Returns the index corresponding to a dimension accessed.
+        For Cabana, x -> 0, y-> 1, z->2
+        '''
+        if dimension == "x":
+            return "0"
+        if dimension == "y":
+            return "1"
+        if dimension == "z":
+            return "2"
+        raise InvalidNameError("The dimension argument should be x, y, or z")
 
     def get_particle_position(self, dimension):
         '''
@@ -348,11 +401,11 @@ class Cabana(Backend):
         '''
         # FIXME
         if dimension == "x":
-            return "0"
+            return "core_part_position[0]"
         if dimension == "y":
-            return "1"
+            return "core_part_position[1]"
         if dimension == "z":
-            return "2"
+            return "core_part_position[2]"
         raise InvalidNameError("The dimension argument should be x, y, or z")
 
     def get_pointer(self, var_code, *args, **kwargs):
@@ -508,9 +561,13 @@ class Cabana(Backend):
         rval = rval + space*current_indent + "config.config = config_struct_type(\"config\", 1);\n"
         rval = rval + space*current_indent + "config.config_host = Kokkos::create_mirror_view(config.config);\n"
         rval = rval + space*current_indent + f"{self._input_module.call_input_cabana(particle_count, filename, current_indent=current_indent)}\n"
-        rval = rval + space*current_indent + "Cabana::SimdPolicy<VectorLength, ExecutionSpace> simd_policy( 0,\n"
-        rval = rval + space*current_indent + "particle_aosoa.size());"
+        rval = rval + space*current_indent + "Cabana::SimdPolicy<VectorLength, ExecutionSpace> simd_policy( 0, particle_aosoa.size());\n"
 
+        self.variable_scope = variable_scope()
+        for struct in self._structures.keys():
+            # Add this to the variable scope with a special c_type.
+            self.variable_scope.add_variable(struct, self._structures[struct], False)
+            rval = rval + space*current_indent + self._structures[struct] + " " + struct + ";\n"
         # Need to do something with each kernel now.
 #        rval = rval + space*current_indent + "auto core_part_slice = Cabana::slice<core_part_space>(particle_aosoa);\n"
 #        rval = rval + space*current_indent + "auto neighbour_part_slice = Cabana::slice<neighbour_part_space>(particle_aosoa);\n"
@@ -535,7 +592,13 @@ class Cabana(Backend):
             slice_names = []
             for slices in self._kernel_slices[key]:
                 slice_names.append(f"{slices}_slice")
-            rval = rval + ", ".join(slice_names) + ", config.config);\n"
+            rval = rval + ", ".join(slice_names) + ", config.config"
+            slice_names = []
+            for struct in self._structures.keys():
+                slice_names.append(struct)
+            if len(slice_names) > 0:
+                rval = rval + ","
+            rval = rval + ", ".join(slice_names) + ");\n"
         return rval
 
     def create_variable(self, c_type, name, initial_value=None, **kwargs):
@@ -638,7 +701,7 @@ class Cabana(Backend):
                 else:
                     pass #FIXME for pairwise we do something different
                 if child_name == "position":
-                    code_str = code_str + ", " + self.get_particle_position( var_access.child.variable.var_name)
+                    code_str = code_str + ", " + self._get_particle_position_internal( var_access.child.variable.var_name)
                 if len(var_access.array_indices) > 0:
                     for index in var_access.array_indices:
                         if isinstance(index, str):
@@ -680,21 +743,28 @@ class Cabana(Backend):
             else:
                 pass #FIXME for pairwise we do something different
             if array_access:
+                print(name, var_access.array_indices)
                 for index in var_access.array_indices:
                     if isinstance(index, str):
                         code_str = code_str + f", {index}"
                     if isinstance(index, variable_access):
                         code_str = code_str + f", " + self.access_to_string(index)
-            code_str = code_str + ")"
-#            if var_access.child is not None:
+            if var_access.child is not None:
 #                if var_access.variable.is_pointer and not array_access:
 #                    child = var_access.child
 #                    child_str = self.access_to_string(child)
 #                    code_str = code_str + "->" + child_str
+                if len(var_access.child.array_indices) > 0:
+                    for index in var_access.child.array_indices:
+                        if isinstance(index, str):
+                            code_str = code_str + f", {index}"
+                        if isinstance(index, variable_access):
+                            code_str = code_str + f", " + self.access_to_string(index)
 #                else:
 #                    child = var_access.child
 #                    child_str = self.access_to_string(child)
 #                    code_str = code_str + "." + child_str
+            code_str = code_str + ")"
             return code_str
         # Do something special if its of type FULLCONF
         # FIXME Do something different if in main vs kernel?
@@ -763,3 +833,18 @@ class Cabana(Backend):
                                        "or subclasses. Found {0}".format(
                                            type(coupled_system).__name__))
         self._coupled_systems.append(coupled_system)
+        extra_includes = coupled_system.get_includes()
+        for include in extra_includes:
+            self._includes.append(include)
+
+    def write_output(self, filename, variable=None, **kwargs):
+        '''
+        Generates the code to write a file output using the selected output module.
+
+        :param str filename: The filename to write the file to.
+
+        '''
+        current_indent = kwargs.get("current_indent", 0)
+        code = " " * current_indent
+        code = code + self._output_module.call_output_cabana(0, filename, variable) + "\n"
+        return code

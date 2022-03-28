@@ -62,7 +62,7 @@ void GatherForcesToGrid_1D(double part_weight, double part_q,
                         field_type jx, field_type jy, field_type jz,
                         double idt, double part_vy, double part_vz,
                         double idx, double dtco2, double idtf, double idxf,
-                        int nx, int id, double fcx, double fcy, int jng){
+                        int nx, double fcx, double fcy, int jng){
 
     //Move particle to t + 1.5dt;
     part_x = part_x + delta_x;
