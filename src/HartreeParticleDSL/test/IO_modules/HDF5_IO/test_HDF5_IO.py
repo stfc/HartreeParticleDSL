@@ -1,6 +1,7 @@
 import HartreeParticleDSL.IO_modules.HDF5_IO.hdf5_IO as hdf5_IO
 import pytest
 from HartreeParticleDSL.HartreeParticleDSL import Particle
+from HartreeParticleDSL.HartreeParticleDSLExceptions import UnsupportedCodeError
 
 def test_hdf5_init():
     a = hdf5_IO.HDF5_IO(indent=8)
@@ -299,16 +300,26 @@ void hdf5_output(struct part* parts, struct config_type* config, const char* fil
 '''
     assert x == correct
 
-def test_call_input_c():
+def test_call_input_cabana():
     a = hdf5_IO.HDF5_IO()
-    x = a.call_input_c(1000, "\"myfile.hdf5\"")
+    x = a.call_input_cabana(1000, "\"myfile.hdf5\"")
     correct = "hdf5_input(\"myfile.hdf5\", config);"
+    correct = '''/* Create structures of size 1 to initialise, the HDF5 function will resize them */
+    Cabana::AoSoA<DataTypes, DeviceType, VectorLength> particle_aosoa( "particle_list", 1);
+    Cabana::AoSoA<DataTypes, HostType, VectorLength> particle_aosoa_host( "particle_list_host", 1);
+    hdf5_input<decltype(particle_aosoa), decltype(particle_aosoa_host)>(particle_aosoa, particle_aosoa_host, config, "myfile.hdf5");
+'''
     assert x == correct
 
-def test_call_output_c():
+def test_call_output_cabana():
     a = hdf5_IO.HDF5_IO()
-    x = a.call_output_c(1000, "\"myfile.hdf5\"")
-    correct = "hdf5_output(parts, config, \"myfile.hdf5\");"
+    x = a.call_output_cabana(1000, "\"myfile.hdf5\"")
+    correct = '''{
+char filename[300] = ""myfile.hdf5"";
+Cabana::deep_copy(particle_aosoa_host, particle_aosoa);
+        hdf5_output<decltype(particle_aosoa_host)>(particle_aosoa_host, config, filename);
+}
+'''
     assert x == correct
 
 def test_gen_code_fdps():
@@ -478,6 +489,17 @@ def test_gen_code_fdps():
 
 '''
     assert x == correct
+    a = hdf5_IO.HDF5_IO()
+    a.add_output("neighbour_part", "neighbour_part.potato")
+    with pytest.raises(UnsupportedCodeError) as excinfo:
+        x = a.gen_code_c(part)
+    assert "neighbour_part.potato element not supported in HDF5 IO." in str(excinfo.value)
+
+    a = hdf5_IO.HDF5_IO()
+    a.add_input("neighbour_part", "neighbour_part.potato")
+    with pytest.raises(UnsupportedCodeError) as excinfo:
+        x = a.gen_code_c(part)
+    assert "neighbour_part.potato element not supported in HDF5 IO." in str(excinfo.value)
 
 def test_call_input_c():
     a = hdf5_IO.HDF5_IO()
@@ -757,6 +779,18 @@ template <class aosoa_class> void hdf5_output(aosoa_class particle_aosoa, config
 
 '''
     assert correct == x
+    a = hdf5_IO.HDF5_IO()
+    a.add_output("neighbour_part", "neighbour_part.potato")
+    with pytest.raises(UnsupportedCodeError) as excinfo:
+        x = a.gen_code_cabana(part)
+    assert "neighbour_part.potato element not supported in HDF5 IO." in str(excinfo.value)
+
+    a = hdf5_IO.HDF5_IO()
+    a.add_input("neighbour_part", "neighbour_part.potato")
+    with pytest.raises(UnsupportedCodeError) as excinfo:
+        x = a.gen_code_cabana(part)
+    assert "neighbour_part.potato element not supported in HDF5 IO." in str(excinfo.value)
+
 
 def test_gen_code_fdps():
     a = hdf5_IO.HDF5_IO()
@@ -1018,3 +1052,27 @@ void hdf5_output(PS::ParticleSystem<FullParticle>& particle_system, config_type&
 
 '''
     assert correct == x
+    a = hdf5_IO.HDF5_IO()
+    a.add_output("neighbour_part", "neighbour_part.potato")
+    with pytest.raises(UnsupportedCodeError) as excinfo:
+        x = a.gen_code_fdps(part)
+    assert "neighbour_part.potato element not supported in HDF5 IO." in str(excinfo.value)
+
+    a = hdf5_IO.HDF5_IO()
+    a.add_input("neighbour_part", "neighbour_part.potato")
+    with pytest.raises(UnsupportedCodeError) as excinfo:
+        x = a.gen_code_fdps(part)
+    assert "neighbour_part.potato element not supported in HDF5 IO." in str(excinfo.value)
+
+
+def test_call_input_fdps():
+    a = hdf5_IO.HDF5_IO()
+    x = a.call_input_fdps(1000, "\"myfile.hdf5\"")
+    correct = "hdf5_input(particle_system, config, \"myfile.hdf5\");"
+    assert x == correct
+
+def test_call_output_fdps():
+    a = hdf5_IO.HDF5_IO()
+    x = a.call_output_fdps(1000, "\"myfile.hdf5\"")
+    correct = "hdf5_output(particle_system, config, \"myfile.hdf5\");"
+    assert x == correct

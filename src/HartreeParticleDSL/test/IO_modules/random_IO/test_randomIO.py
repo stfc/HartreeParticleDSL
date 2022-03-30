@@ -17,3 +17,42 @@ def test_getincludes_c():
     includes = mod.get_includes_c()
     assert "<stdlib.h>" in includes
     assert "\"random_io.h\"" in includes
+
+def test_getincludes_fdps():
+    mod = Random_Particles()
+    includes = mod.get_includes_fdps()
+    assert "\"random_io.hpp\"" in includes
+
+def test_getincludes_cabana():
+    mod = Random_Particles()
+    includes = mod.get_includes_cabana()
+    assert "\"random_io_cabana.hpp\"" in includes
+
+def test_gencode_fdps():
+    mod = Random_Particles()
+    assert mod.gen_code_fdps(None) == ""
+
+def test_call_input_fdps():
+    mod = Random_Particles()
+    x = mod.call_input_fdps(123, "test.file")
+    correct = '''PS::ParticleSystem<FullParticle> particle_system;
+    particle_system.initialize();
+    particle_system.setNumberOfParticleLocal(123);
+    random_io( particle_system, config);
+'''
+    assert x == correct
+
+def test_gencode_cabana():
+    mod = Random_Particles()
+    assert mod.gen_code_cabana(None) == ""
+
+def test_call_input_cabana():
+    mod = Random_Particles()
+    x = mod.call_input_cabana(part_count=123, filename="blah")
+    correct = '''Cabana::AoSoA<DataTypes, DeviceType, VectorLength> particle_aosoa( \"particle_list\", 123);
+    Cabana::AoSoA<DataTypes, HostType, VectorLength> particle_aosoa_host( \"particle_list_host\", 123);
+    random_io<decltype(particle_aosoa_host)>(particle_aosoa_host, config);
+    Cabana::deep_copy(particle_aosoa, particle_aosoa_host);
+'''
+    assert x == correct
+

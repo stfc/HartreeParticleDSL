@@ -152,7 +152,7 @@ class cabana_perpart_visitor(cabana_visitor):
         for slices in self._slices:
             all_slices.append("class " + slices.upper())
         classes = ", ".join(all_slices)
-        rval = rval + classes + "> \n"
+        rval = rval + classes + " >\n"
         rval = rval + f"struct {nodename}_functor" + "{\n"
         self.incrementIndent()
         #FIXME variables

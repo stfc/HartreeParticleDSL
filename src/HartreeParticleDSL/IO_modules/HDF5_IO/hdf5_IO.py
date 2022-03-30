@@ -7,6 +7,7 @@ from HartreeParticleDSL.backends.FDPS_backend.FDPS import FDPS
 from HartreeParticleDSL.backends.FDPS_backend.FDPS_IO_Mixin import FDPS_IO_Mixin
 from HartreeParticleDSL.backends.Cabana_backend.Cabana import Cabana
 from HartreeParticleDSL.backends.Cabana_backend.Cabana_IO_Mixin import Cabana_IO_Mixin
+from HartreeParticleDSL.HartreeParticleDSLExceptions import UnsupportedCodeError
 
 class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
     '''Implementation of the HDF5 IO Module'''
@@ -147,7 +148,7 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
                     elem_type = part_type.particle_type[part_elem]['type']
                 h5_type = HDF5_IO.type_map.get(elem_type, None)
                 if h5_type is None:
-                    assert False
+                    raise UnsupportedCodeError(f"{part_elem} element not supported in HDF5 IO.")
                 elem_type = C_AOS._type_map[elem_type]
                 code = code + self.indent() + "{0}* {1}_temp_array = ({0}*) malloc(sizeof({0}) * num_parts);\n".format(elem_type, key)
                 code = code + self.indent() + "H5Dread({0}_read_var, {1}, memspace, filespace, H5P_DEFAULT, {0}_temp_array);\n".format(key, h5_type)
@@ -216,7 +217,7 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
                     elem_type = part_type.particle_type[part_elem]['type']
                 h5_type = HDF5_IO.type_map.get(elem_type, None)
                 if h5_type is None:
-                    assert False
+                    raise UnsupportedCodeError(f"{part_elem} element not supported in HDF5 IO.")
                 elem_type = C_AOS._type_map[elem_type]
                 code = code + self.indent() + "hid_t {0}_output_field = H5Dcreate2(file_id, \"{0}\", {1}, dim, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);\n".format(
                         key, h5_type)
@@ -368,7 +369,7 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
                     elem_type = part_type.particle_type[part_elem]['type']
                 h5_type = HDF5_IO.type_map.get(elem_type, None)
                 if h5_type is None:
-                    assert False
+                    raise UnsupportedCodeError(f"{part_elem} element not supported in HDF5 IO.")
                 elem_type = FDPS._type_map[elem_type]
                 code = code + self.indent() + "{0}* {1}_temp_array = ({0}*) malloc(sizeof({0}) * num_parts);\n".format(elem_type, key)
                 code = code + self.indent() + "H5Dread({0}_read_var, {1}, memspace, filespace, H5P_DEFAULT, {0}_temp_array);\n".format(key, h5_type)
@@ -435,7 +436,7 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
                     elem_type = part_type.particle_type[part_elem]['type']
                 h5_type = HDF5_IO.type_map.get(elem_type, None)
                 if h5_type is None:
-                    assert False
+                    raise UnsupportedCodeError(f"{part_elem} element not supported in HDF5 IO.")
                 elem_type = FDPS._type_map[elem_type]
                 code = code + self.indent() + "hid_t {0}_output_field = H5Dcreate2(file_id, \"{0}\", {1}, dim, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);\n".format(
                         key, h5_type)
@@ -584,7 +585,7 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
                     elem_type = part_type.particle_type[part_elem]['type']
                 h5_type = HDF5_IO.type_map.get(elem_type, None)
                 if h5_type is None:
-                    assert False
+                    raise UnsupportedCodeError(f"{part_elem} element not supported in HDF5 IO.")
                 elem_type = Cabana._type_map[elem_type]
                 code = code + self.indent() + "auto {0}_slice = Cabana::slice<{1}>(parts_host);\n".format(key, part_elem)
                 code = code + self.indent() + "{0}* {1}_temp_array = ({0}*) malloc(sizeof({0}) * num_parts);\n".format(elem_type, key)
@@ -660,8 +661,7 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
                     elem_type = part_type.particle_type[part_elem]['type']
                 h5_type = HDF5_IO.type_map.get(elem_type, None)
                 if h5_type is None:
-                    print(part_elem, elem_type, h5_type)
-                    assert False
+                    raise UnsupportedCodeError(f"{part_elem} element not supported in HDF5 IO.")
                 elem_type = Cabana._type_map[elem_type]
                 code = code + self.indent() + "hid_t {0}_output_field = H5Dcreate2(file_id, \"{0}\", {1}, dim, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);\n".format(
                         key, h5_type)
@@ -697,7 +697,7 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
         rval = rval + indentation + f"Cabana::AoSoA<DataTypes, HostType, VectorLength> particle_aosoa_host( \"particle_list_host\", 1);\n"
         rval = rval + indentation + f"hdf5_input<decltype(particle_aosoa), decltype(particle_aosoa_host)>(particle_aosoa, particle_aosoa_host, config, {filename});\n"
 
-        return ""
+        return rval
 
     def call_output_cabana(self, part_count, filename, variable=None):
         '''
@@ -713,8 +713,8 @@ class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
         else:
             code = code + "char filename[300]" + f" = \"{filename}\";\n"
         code = code + "Cabana::deep_copy(particle_aosoa_host, particle_aosoa);\n"
-        code = code + f"        hdf5_output<decltype(particle_aosoa_host)>(particle_aosoa_host, config, filename);"
-        code = code + "        }\n"
+        code = code + f"        hdf5_output<decltype(particle_aosoa_host)>(particle_aosoa_host, config, filename);\n"
+        code = code + "}\n"
         return code
 
     def get_includes_cabana(self):

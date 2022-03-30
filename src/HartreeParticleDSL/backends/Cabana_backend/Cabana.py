@@ -743,7 +743,6 @@ class Cabana(Backend):
             else:
                 pass #FIXME for pairwise we do something different
             if array_access:
-                print(name, var_access.array_indices)
                 for index in var_access.array_indices:
                     if isinstance(index, str):
                         code_str = code_str + f", {index}"
