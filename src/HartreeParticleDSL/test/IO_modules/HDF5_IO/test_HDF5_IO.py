@@ -310,17 +310,40 @@ def test_call_input_cabana():
     hdf5_input<decltype(particle_aosoa), decltype(particle_aosoa_host)>(particle_aosoa, particle_aosoa_host, config, "myfile.hdf5");
 '''
     assert x == correct
+    x = a.call_input_cabana(part_count="part_count=1000", filename="\"myfile.hdf5\"")
+    correct = "hdf5_input(\"myfile.hdf5\", config);"
+    correct = '''/* Create structures of size 1 to initialise, the HDF5 function will resize them */
+    Cabana::AoSoA<DataTypes, DeviceType, VectorLength> particle_aosoa( "particle_list", 1);
+    Cabana::AoSoA<DataTypes, HostType, VectorLength> particle_aosoa_host( "particle_list_host", 1);
+    hdf5_input<decltype(particle_aosoa), decltype(particle_aosoa_host)>(particle_aosoa, particle_aosoa_host, config, "myfile.hdf5");
+'''
+    assert x == correct
 
 def test_call_output_cabana():
     a = hdf5_IO.HDF5_IO()
-    x = a.call_output_cabana(1000, "\"myfile.hdf5\"")
+    x = a.call_output_cabana(1000, "myfile", variable="a")
     correct = '''{
-char filename[300] = ""myfile.hdf5"";
+char filename[300];
+        sprintf(filename, \"myfile%.4d.hdf5\", a);
+        Cabana::deep_copy(particle_aosoa_host, particle_aosoa);
+        hdf5_output<decltype(particle_aosoa_host)>(particle_aosoa_host, config, filename);
+}
+'''
+    assert x == correct
+    x = a.call_output_cabana(1000, "myfile.hdf5")
+    correct = '''{
+char filename[300] = "myfile.hdf5";
 Cabana::deep_copy(particle_aosoa_host, particle_aosoa);
         hdf5_output<decltype(particle_aosoa_host)>(particle_aosoa_host, config, filename);
 }
 '''
     assert x == correct
+
+def test_get_includes_cabana():
+    a = hdf5_IO.HDF5_IO()
+    x = a.get_includes_cabana()
+    assert "\"hdf5.h\"" in x
+    
 
 def test_gen_code_fdps():
     a = hdf5_IO.HDF5_IO()
