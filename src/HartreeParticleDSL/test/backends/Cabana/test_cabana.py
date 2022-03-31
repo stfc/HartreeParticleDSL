@@ -79,14 +79,27 @@ def test_gen_headers(capsys):
     # TODO
     pass
 
+def kern(part1, part2, r2, config):
+    create_variable(c_double, a, 2.0)
+    part1.a = part1.a + 2.0
+
 def kern2(part, config):
     create_variable(c_double, a, 2.0)
     part.a = part.a + 2.0
 
-def test_gen_perpart_kernel(capsys):
-    '''Test the gen_kernel function of Cabana module for a perpart kernel'''
+def test_gen_pairwise_kernel(capsys):
     _HartreeParticleDSL.the_instance = None
     backend = Cabana()
+    HartreeParticleDSL.set_backend(backend)
+    kernel = kernels.pairwise_interaction(kern)
+    with pytest.raises(UnsupportedCodeError) as excinfo:
+        backend.gen_kernel(kernel)
+    assert "Cabana doesn't yet support pairwise operations" in str(excinfo.value)
+
+def test_gen_perpart_kernel(capsys):
+    '''Test the gen_kernel function of Cabana module for a perpart kernel'''
+    backend = Cabana()
+    backend.add_structure("c_int", "add")
     HartreeParticleDSL.set_backend(backend)
     kernel = kernels.perpart_interaction(kern2)
     backend.gen_kernel(kernel)
@@ -95,10 +108,14 @@ def test_gen_perpart_kernel(capsys):
 struct kern2_functor{
     config_struct_type _config;
     A _a;
+    c_int add;
 
     KOKKOS_INLINE_FUNCTION
-     kern2_functor( A a, config_struct_type config) :
-    _a(a), _config(config) {}
+     kern2_functor( A a, config_struct_type config, c_int ADD) :
+    _a(a), add(ADD), _config(config) {}
+    void update_structs(c_int ADD){
+        add = ADD;
+    }
 
     void operator()(const int i, const int a) const{
         double a = 2.0;
@@ -381,6 +398,8 @@ def test_get_particle_access():
     assert rval == "_field.access(i, a)"
     rval = backend.get_particle_access("part1", "\"field\"")
     assert rval == "_field.access(i, a)"
+    rval = backend.get_particle_access("part1", "field[0]")
+    assert rval == "_field.access(i, a, 0)"
 
 def test_per_particle_loop_start():
     backend = Cabana()
@@ -398,3 +417,36 @@ def test_write_output():
     mod = Random_Particles()
     backend.set_io_modules(mod, a)
     assert backend.write_output("a") == "Success\n"
+
+def test_add_structure():
+    backend = Cabana()
+    backend.add_structure("c_int", "structu")
+    assert len(backend._structures) == 1
+    assert backend._structures["structu"] == "c_int"
+    with pytest.raises(UnsupportedTypeError) as excinfo:
+        backend.add_structure("Nothing", "name")
+    assert "Cabana backend doesn't support Nothing" in str(excinfo.value)
+
+def test_in_kernel_code():
+    backend = Cabana()
+    assert backend.in_kernel_code is False
+    backend.in_kernel_code = True
+    assert backend.in_kernel_code is True
+
+def test_create_global_variable():
+    backend = Cabana()
+    backend.create_global_variable("c_int", "hello", "0")
+    assert backend._globals["hello"] == ("c_int", "0")
+    with pytest.raises(InvalidNameError) as excinfo:
+        backend.create_global_variable("c_int", "hello", "0")
+    assert "hello already declared as a global variable." in str(excinfo.value)
+
+def test_get_particle_position_internal():
+    backend = Cabana()
+    assert "0" == backend._get_particle_position_internal("x")
+    assert "1" == backend._get_particle_position_internal("y")
+    assert "2" == backend._get_particle_position_internal("z")
+    with pytest.raises(InvalidNameError) as excinfo:
+        backend._get_particle_position_internal("asdfasdf")
+    assert "The dimension argument should be x, y, or z" in str(excinfo.value)
+

@@ -77,7 +77,8 @@ class Cabana(Backend):
 
     def add_structure(self, structure_type, structure_name):
         if structure_type not in  Cabana._type_map.keys():
-            assert False
+            raise UnsupportedTypeError("Cabana backend doesn't support {0}"
+            " as a type for structure.".format(structure_type))
         self._structures[structure_name] = structure_type
 
     def add_kernel_slice(self, kernel_name, kernel_slice):
@@ -136,7 +137,7 @@ class Cabana(Backend):
         :param initial_value: The initial value of this variable
         '''
         if name in self._globals.keys():
-            assert False
+            raise InvalidNameError(f"{name} already declared as a global variable.")
         self._globals[name] = (c_type, initial_value)
 
     def set_io_modules(self, input_module, output_module):
