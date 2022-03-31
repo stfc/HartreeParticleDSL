@@ -414,7 +414,7 @@ class coupler_test(base_coupler):
         return arg
 
     def get_includes(self):
-        return []
+        return ["a"]
 
 def test_add_coupler():
     '''Test the add_coupler function of FDPS'''
@@ -426,6 +426,7 @@ def test_add_coupler():
         backend.add_coupler(32)
     assert ("Can only couple to base_coupler classes or "
             "subclasses. Found int") in str(excinfo.value)
+    assert "a" in backend._includes
 
 def test_call_language_function_coupled_system():
     '''Test the coupled system functionality'''

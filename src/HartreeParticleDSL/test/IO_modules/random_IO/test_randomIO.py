@@ -56,3 +56,10 @@ def test_call_input_cabana():
 '''
     assert x == correct
 
+    x = mod.call_input_cabana(part_count="part_count=123", filename="blah")
+    correct = '''Cabana::AoSoA<DataTypes, DeviceType, VectorLength> particle_aosoa( \"particle_list\", 123);
+    Cabana::AoSoA<DataTypes, HostType, VectorLength> particle_aosoa_host( \"particle_list_host\", 123);
+    random_io<decltype(particle_aosoa_host)>(particle_aosoa_host, config);
+    Cabana::deep_copy(particle_aosoa, particle_aosoa_host);
+'''
+    assert x == correct

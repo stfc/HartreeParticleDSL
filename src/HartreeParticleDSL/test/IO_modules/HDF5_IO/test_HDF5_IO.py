@@ -299,6 +299,17 @@ void hdf5_output(struct part* parts, struct config_type* config, const char* fil
 
 '''
     assert x == correct
+    a = hdf5_IO.HDF5_IO()
+    a.add_output("neighbour_part", "neighbour_part.potato")
+    with pytest.raises(UnsupportedCodeError) as excinfo:
+        x = a.gen_code_c(part)
+    assert "neighbour_part.potato element not supported in HDF5 IO." in str(excinfo.value)
+
+    a = hdf5_IO.HDF5_IO()
+    a.add_input("neighbour_part", "neighbour_part.potato")
+    with pytest.raises(UnsupportedCodeError) as excinfo:
+        x = a.gen_code_c(part)
+    assert "neighbour_part.potato element not supported in HDF5 IO." in str(excinfo.value)
 
 def test_call_input_cabana():
     a = hdf5_IO.HDF5_IO()
@@ -512,17 +523,6 @@ def test_gen_code_fdps():
 
 '''
     assert x == correct
-    a = hdf5_IO.HDF5_IO()
-    a.add_output("neighbour_part", "neighbour_part.potato")
-    with pytest.raises(UnsupportedCodeError) as excinfo:
-        x = a.gen_code_c(part)
-    assert "neighbour_part.potato element not supported in HDF5 IO." in str(excinfo.value)
-
-    a = hdf5_IO.HDF5_IO()
-    a.add_input("neighbour_part", "neighbour_part.potato")
-    with pytest.raises(UnsupportedCodeError) as excinfo:
-        x = a.gen_code_c(part)
-    assert "neighbour_part.potato element not supported in HDF5 IO." in str(excinfo.value)
 
 def test_call_input_c():
     a = hdf5_IO.HDF5_IO()
