@@ -610,6 +610,8 @@ def test_access_to_string():
     child_access = variable_access(variable("temp", "c_int", False))
     part1_access.child = child_access
     assert backend.access_to_string(part1_access) == "_temp.access(i, a)"
+    part1_access.add_array_index("0")
+    assert backend.access_to_string(part1_access) == "_temp.access(i, a, 0)"
     # Neighbour_part child access
     part1_access = variable_access(backend.variable_scope.get_variable("part1"))
     child_access = variable_access(variable("neighbour_part", "UNKNOWN", False))
@@ -634,6 +636,8 @@ def test_access_to_string():
 
     subchild_access.add_array_index("0")
     assert backend.access_to_string(part1_access) == "_core_part_not_position.access(i, a, 0)"
+    subchild_access.add_array_index(variable_access(variable("z", "UNKNOWN", False)))
+    assert backend.access_to_string(part1_access) == "_core_part_not_position.access(i, a, 0, z)"
 
     part1_access = variable_access(backend.variable_scope.get_variable("part1"))
     child_access = variable_access(variable("core_part", "UNKNOWN", False))
@@ -674,6 +678,8 @@ def test_access_to_string():
     # Normal variable array access
     var1_access.add_array_index("z")
     assert backend.access_to_string(var1_access) == "var1[z]"
+    var1_access.add_array_index(variable_access(variable("x", "c_int", False)))
+    assert backend.access_to_string(var1_access) == "var1[z][x]"
 
     # Normal pointer access
     var1_access = variable_access(variable("var1", "c_int", True))
