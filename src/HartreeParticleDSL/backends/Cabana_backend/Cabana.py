@@ -103,6 +103,10 @@ class Cabana(Backend):
     def variable_scope(self):
         return self._variable_scope
 
+    @variable_scope.setter
+    def variable_scope(self, variable_scope):
+        self._variable_scope = variable_scope
+
     def disable_variable_checks(self):
         '''
         Disables validity checking when creating strings
@@ -717,7 +721,7 @@ class Cabana(Backend):
             if name == "neighbour_part":
                 # If its neighbour_part we have to do something special
                 var_access = child
-                child_name = var_access.variable.var_name
+                child_name = var_access.child.variable.var_name
                 name = name + "_" + child_name
                 var_access = var_access.child
                 if is_part_i:
@@ -775,7 +779,7 @@ class Cabana(Backend):
                 if self._pairwise_visitor._config == "":
                     name = self._per_part_visitor._config
                 else:
-                    name = self._pairwise_visitors._config
+                    name = self._pairwise_visitor._config
                 code_str = "_" + name + "(0)"
             else:
                 name = "config.config_host"

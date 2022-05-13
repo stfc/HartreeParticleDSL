@@ -76,8 +76,70 @@ def test_generateincludes():
     assert "<cstdio>" in strin
 
 def test_gen_headers(capsys):
-    # TODO
-    pass
+    backend = Cabana()
+    part = Particle()
+    config = Config()
+    mod = Random_Particles()
+    backend.set_io_modules(mod, mod)
+    backend.gen_headers(config, part)
+    f_str = ""
+    with open('part.h', 'r') as f:
+        f_str = f.readlines()
+    f_str = "".join(f_str)
+    correct = '''#ifndef PART_H
+#define PART_H
+#include <Kokkos_Core.hpp>
+#include <Cabana_Core.hpp>
+/*using MemorySpace = Kokkos::CudaSpace;*/
+using MemorySpace = Kokkos::HostSpace;
+using ExecutionSpace = Kokkos::DefaultExecutionSpace;
+using DeviceType = Kokkos::Device<Kokkos::DefaultExecutionSpace, MemorySpace>;
+using HostType = Kokkos::Device<Kokkos::Serial, Kokkos::HostSpace>;
+const int VectorLength = 16;
+
+struct boundary{
+    double x_min, x_max;
+    double y_min, y_max;
+    double z_min, z_max;
+};
+
+struct space_type{
+    boundary box_dims;
+    int nparts;
+};
+
+struct neighbour_config_type{
+};
+
+struct config_view_type{
+        struct space_type space;
+        struct neighbour_config_type neighbour_config;
+};
+
+using config_struct_type = Kokkos::View<struct config_view_type*, MemorySpace>;
+using config_struct_host = config_struct_type::HostMirror;
+struct config_type{
+    config_struct_type config;
+    config_struct_host config_host;
+};
+struct core_part_type{
+    double position[3];
+    double velocity[3];
+};
+
+struct neighbour_part_type{
+    double cutoff;
+};
+
+enum FieldNames{core_part_velocity = 0,
+                 core_part_position,
+                 neighbour_part_cutoff
+               };
+using DataTypes = Cabana::MemberTypes<double[3],
+    double[3],
+    double>;
+#endif'''
+    assert f_str == correct
 
 def kern(part1, part2, r2, config):
     create_variable(c_double, a, 2.0)
@@ -85,7 +147,7 @@ def kern(part1, part2, r2, config):
 
 def kern2(part, config):
     create_variable(c_double, a, 2.0)
-    part.a = part.a + 2.0
+    part.a = part.a + 2.0 + hello
 
 def test_gen_pairwise_kernel(capsys):
     _HartreeParticleDSL.the_instance = None
@@ -100,6 +162,7 @@ def test_gen_perpart_kernel(capsys):
     '''Test the gen_kernel function of Cabana module for a perpart kernel'''
     backend = Cabana()
     backend.add_structure("c_int", "add")
+    backend.create_global_variable("c_int", "hello", "0")
     HartreeParticleDSL.set_backend(backend)
     kernel = kernels.perpart_interaction(kern2)
     backend.gen_kernel(kernel)
@@ -119,13 +182,13 @@ struct kern2_functor{
 
     void operator()(const int i, const int a) const{
         double a = 2.0;
-        _a.access(i, a) = ( _a.access(i, a) + 2.0 );
+        _a.access(i, a) = ( ( _a.access(i, a) + 2.0 ) + hello );
 
     }
 };
 
 '''
-    assert correct in captured.out
+    assert correct == captured.out
 
 def main():
     create_variable(c_int, a, 0)
@@ -150,14 +213,25 @@ def test_print_main(capsys):
 def test_gen_invoke_perpart():
     '''Test the gen_invoke function of Cabana for perpart kernel'''
     backend = Cabana()
+    backend.add_structure("c_int", "my_struct")
     out = backend.gen_invoke("kern2", 0, 1, kernels.perpart_kernel_wrapper)
     correct = ''' /* INVOKE generated for kern2 */
 Kokkos::deep_copy(config.config, config.config_host);
+kern2.update_structs(my_struct);
 Cabana::simd_parallel_for(simd_policy, kern2, "kern2");
 Kokkos::fence();
 /* End of INVOKE generated for kern2 */
 '''
     assert correct in out
+
+def test_gen_invoke_pairwise():
+    ''' Test the gen_invoke function of Cabana throws an exception for
+    non perpart kernels'''
+    backend = Cabana()
+    with pytest.raises(NotImplementedError) as excinfo:
+        backend.gen_invoke("kern2", 0, 1, kernels.pairwise_kernel_wrapper)
+    assert "gen_invoke not yet implemented" in str(excinfo.value)
+
 
 def test_initialisation_code(capsys):
     '''Test the initialisation_code function of Cabana'''
@@ -450,3 +524,99 @@ def test_get_particle_position_internal():
         backend._get_particle_position_internal("asdfasdf")
     assert "The dimension argument should be x, y, or z" in str(excinfo.value)
 
+def test_initialise():
+    mod = Random_Particles()
+    backend = Cabana()
+    part = Particle()
+    config = Config()
+    backend.set_io_modules(mod, mod)
+    backend.gen_particle(part)
+    backend.gen_config(config)
+    out = backend.initialise(123, "myfile", 4)
+    correct = '''    Kokkos::ScopeGuard scope_guard(argc, argv);
+{
+    config_type config;
+    config.config = config_struct_type("config", 1);
+    config.config_host = Kokkos::create_mirror_view(config.config);
+    Cabana::AoSoA<DataTypes, DeviceType, VectorLength> particle_aosoa( "particle_list", 123);
+    Cabana::AoSoA<DataTypes, HostType, VectorLength> particle_aosoa_host( "particle_list_host", 123);
+    random_io<decltype(particle_aosoa_host)>(particle_aosoa_host, config);
+    Cabana::deep_copy(particle_aosoa, particle_aosoa_host);
+
+    Cabana::SimdPolicy<VectorLength, ExecutionSpace> simd_policy( 0, particle_aosoa.size());
+    auto core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);
+    auto core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
+    auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);'''
+    assert correct in out
+
+def test_access_to_string():
+    '''Test the access_to_string method of the Cabana backend'''
+    backend = Cabana()
+    HartreeParticleDSL.set_backend(backend)
+    backend.variable_scope.add_variable("var1", "c_double", True)
+    backend.variable_scope.add_variable("var2", "c_double", False)
+    backend.variable_scope.add_variable("part2", "FULLPART", False)
+    # Work around for no part_i set.
+    backend.variable_scope.add_variable("", "FULLPART", False)
+
+    part2_access = variable_access(backend.variable_scope.get_variable("part2"))
+    with pytest.raises(InternalError) as excinfo:
+        backend.access_to_string(part2_access)
+    assert "Attempting to access a particle other than part i" in str(excinfo.value)
+    part2_access = variable_access(backend.variable_scope.get_variable(""))
+    with pytest.raises(InternalError) as excinfo:
+        backend.access_to_string(part2_access)
+    assert "Attempting to access a particle with no child access" in str(excinfo.value)
+   
+    # Child of Fullpart access
+    backend._pairwise_visitor._part1 = "part1"
+    backend.variable_scope.add_variable("part1", "FULLPART", False)
+    part1_access = variable_access(backend.variable_scope.get_variable("part1"))
+    child_access = variable_access(variable("temp", "c_int", False))
+    part1_access.child = child_access
+    assert backend.access_to_string(part1_access) == "_temp.access(i, a)"
+    # Neighbour_part child access
+    part1_access = variable_access(backend.variable_scope.get_variable("part1"))
+    child_access = variable_access(variable("neighbour_part", "UNKNOWN", False))
+    subchild_access = variable_access(variable("thing", "UNKNOWN", False))
+    child_access.child = subchild_access
+    part1_access.child = child_access
+    assert backend.access_to_string(part1_access) == "_neighbour_part_thing.access(i, a)"
+    # Array access of child
+    subchild_access.add_array_index("2")
+    assert backend.access_to_string(part1_access) == "_neighbour_part_thing.access(i, a, 2)"
+    # Multi array access of child
+    subchild_access.add_array_index("3")
+    assert backend.access_to_string(part1_access) == "_neighbour_part_thing.access(i, a, 2, 3)"
+
+
+    #TODO FULLCONF access
+    backend.variable_scope.add_variable("config", "FULLCONF", False)
+    backend._per_part_visitor._config = "conf"
+    conf_access = variable_access(backend.variable_scope.get_variable("config"))
+    conf_access.child = variable_access(variable("a", "UNKNOWN", False))
+    assert backend.access_to_string(conf_access) == "config.config_host(0).a"
+
+    backend._in_kernel_code = True
+    assert backend.access_to_string(conf_access) == "_conf(0).a"
+
+    backend._pairwise_visitor._config = "confi"
+    assert backend.access_to_string(conf_access) == "_confi(0).a"
+
+    backend.variable_scope.add_variable("config2", "FULLCONF", True)
+    conf_access2= variable_access(backend.variable_scope.get_variable("config2"))
+    conf_access2.child = variable_access(variable("a", "UNKNOWN", False))
+    assert backend.access_to_string(conf_access2) == "_confi(0)->a"
+
+    conf_access.add_array_index("z")
+    with pytest.raises(InternalError) as excinfo:
+        backend.access_to_string(conf_access)
+    assert "Currently can't handle array accesses for config type in Cabana backend" in str(excinfo.value)
+
+    # Normal variable access
+    var1_access = variable_access(backend.variable_scope.get_variable("var1"))
+    v1 = backend.access_to_string(var1_access)
+    assert v1 == "var1"
+    # Normal variable array access
+    var1_access.add_array_index("z")
+    assert backend.access_to_string(var1_access) == "var1[z]"
