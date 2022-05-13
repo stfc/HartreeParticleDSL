@@ -2,6 +2,7 @@ from HartreeParticleDSL.backends.Cabana_backend.Cabana_visitors import *
 from HartreeParticleDSL.backends.Cabana_backend.Cabana import *
 from HartreeParticleDSL.IO_modules.base_IO_module.IO_module import IO_Module
 from HartreeParticleDSL.IO_modules.random_IO.random_IO import *
+from HartreeParticleDSL.backends.Cabana_backend.Cabana_IO_Mixin import Cabana_IO_Mixin
 from HartreeParticleDSL.IO_modules.IO_Exceptions import *
 from HartreeParticleDSL.HartreeParticleDSLExceptions import *
 from HartreeParticleDSL.HartreeParticleDSL import Particle, Config, _HartreeParticleDSL
@@ -75,13 +76,41 @@ def test_generateincludes():
     assert "<cmath>" in strin
     assert "<cstdio>" in strin
 
+class coupler_test2(base_coupler):
+    def __init__(self):
+        pass
+
+    def a_function(self):
+        return "test_string"
+
+    def b_function(self, arg):
+        return arg
+
+    def get_includes(self):
+        return ["a"]
+
+    def get_includes_header(self):
+        return ["a"]
+
+class dummy_module(IO_Module, Cabana_IO_Mixin):
+
+    def __init__(self):
+        pass
+
+    def gen_code_cabana(self, part):
+        return "hello"
+
 def test_gen_headers(capsys):
     backend = Cabana()
     part = Particle()
     config = Config()
-    mod = Random_Particles()
+    coupler = coupler_test2()
+    backend.add_coupler(coupler)
+    mod = dummy_module()
     backend.set_io_modules(mod, mod)
+    backend.create_global_variable("c_int", "hello", "0")
     backend.gen_headers(config, part)
+    assert "hello\n\n\nhello" in capsys.readouterr().out
     f_str = ""
     with open('part.h', 'r') as f:
         f_str = f.readlines()
@@ -90,6 +119,7 @@ def test_gen_headers(capsys):
 #define PART_H
 #include <Kokkos_Core.hpp>
 #include <Cabana_Core.hpp>
+#include a
 /*using MemorySpace = Kokkos::CudaSpace;*/
 using MemorySpace = Kokkos::HostSpace;
 using ExecutionSpace = Kokkos::DefaultExecutionSpace;
@@ -97,6 +127,7 @@ using DeviceType = Kokkos::Device<Kokkos::DefaultExecutionSpace, MemorySpace>;
 using HostType = Kokkos::Device<Kokkos::Serial, Kokkos::HostSpace>;
 const int VectorLength = 16;
 
+int hello = 0;
 struct boundary{
     double x_min, x_max;
     double y_min, y_max;
@@ -532,6 +563,8 @@ def test_initialise():
     backend.set_io_modules(mod, mod)
     backend.gen_particle(part)
     backend.gen_config(config)
+    backend.add_structure("c_int", "mystruct")
+    backend._kernel_slices["slice1"] = ["s1", "s2"]
     out = backend.initialise(123, "myfile", 4)
     correct = '''    Kokkos::ScopeGuard scope_guard(argc, argv);
 {
@@ -544,9 +577,11 @@ def test_initialise():
     Cabana::deep_copy(particle_aosoa, particle_aosoa_host);
 
     Cabana::SimdPolicy<VectorLength, ExecutionSpace> simd_policy( 0, particle_aosoa.size());
+    c_int mystruct;
     auto core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);
     auto core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
-    auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);'''
+    auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
+    slice1_functor<decltype(s1_slice), decltype(s2_slice)> slice1(s1_slice, s2_slice, config.config,mystruct);'''
     assert correct in out
 
 def test_access_to_string():
@@ -586,11 +621,30 @@ def test_access_to_string():
     subchild_access.add_array_index("2")
     assert backend.access_to_string(part1_access) == "_neighbour_part_thing.access(i, a, 2)"
     # Multi array access of child
-    subchild_access.add_array_index("3")
-    assert backend.access_to_string(part1_access) == "_neighbour_part_thing.access(i, a, 2, 3)"
+    subchild_access.add_array_index(variable_access(variable("z", "UNKNOWN", False)))
+    assert backend.access_to_string(part1_access) == "_neighbour_part_thing.access(i, a, 2, z)"
 
+    # Core_part child access
+    part1_access = variable_access(backend.variable_scope.get_variable("part1"))
+    child_access = variable_access(variable("core_part", "UNKNOWN", False))
+    subchild_access = variable_access(variable("not_position", "UNKNOWN", False))
+    child_access.child = subchild_access
+    part1_access.child = child_access
+    assert backend.access_to_string(part1_access) == "_core_part_not_position.access(i, a)"
 
-    #TODO FULLCONF access
+    subchild_access.add_array_index("0")
+    assert backend.access_to_string(part1_access) == "_core_part_not_position.access(i, a, 0)"
+
+    part1_access = variable_access(backend.variable_scope.get_variable("part1"))
+    child_access = variable_access(variable("core_part", "UNKNOWN", False))
+    subchild_access = variable_access(variable("position", "UNKNOWN", False))
+    position_child_access = variable_access(variable("y", "UNKNOWN", False))
+    subchild_access.child = position_child_access
+    child_access.child = subchild_access
+    part1_access.child = child_access
+    assert backend.access_to_string(part1_access) == "_core_part_position.access(i, a, 1)"
+
+    # FULLCONF access
     backend.variable_scope.add_variable("config", "FULLCONF", False)
     backend._per_part_visitor._config = "conf"
     conf_access = variable_access(backend.variable_scope.get_variable("config"))
@@ -620,3 +674,16 @@ def test_access_to_string():
     # Normal variable array access
     var1_access.add_array_index("z")
     assert backend.access_to_string(var1_access) == "var1[z]"
+
+    # Normal pointer access
+    var1_access = variable_access(variable("var1", "c_int", True))
+    child = variable_access(variable("a", "UNKNOWN", False))
+    var1_access.child = child
+    assert backend.access_to_string(var1_access) == "var1->a"
+
+
+    # Validity check
+    invalid_access = variable_access(variable("a", "not_a_type", False))
+    with pytest.raises(UnsupportedTypeError) as excinfo:
+        backend.access_to_string(invalid_access, check_valid=True)
+    assert "Accessing a variable of type not_a_type which is not supported by Cabana backend. Variable name is a" in str(excinfo.value)
