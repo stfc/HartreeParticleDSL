@@ -31,6 +31,7 @@ def test_base_backend():
     a.get_particle_access(None, None)
     a.add_coupler(None)
     a.add_type(None, None)
+    a.write_output(None)
 
 
 def test_base_visitors():

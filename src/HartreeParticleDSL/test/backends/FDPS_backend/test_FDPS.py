@@ -1,5 +1,6 @@
 from HartreeParticleDSL.IO_modules.base_IO_module.IO_module import IO_Module
 from HartreeParticleDSL.IO_modules.random_IO.random_IO import *
+from HartreeParticleDSL.IO_modules.HDF5_IO.hdf5_IO import *
 from HartreeParticleDSL.IO_modules.IO_Exceptions import *
 from HartreeParticleDSL.HartreeParticleDSLExceptions import *
 from HartreeParticleDSL.HartreeParticleDSL import Particle, Config, _HartreeParticleDSL, \
@@ -442,3 +443,13 @@ def test_call_language_function_coupled_system():
     assert rval == "thing.thing2"
     rval = backend.call_language_function("unknown_func")
     assert rval == "unknown_func(  );\n"
+
+def test_fdps_write_output():
+    '''Test the write_output function of the FDPS backend'''
+    backend = FDPS()
+    io_mod = HDF5_IO()
+    backend.set_io_modules(io_mod, io_mod)
+    res = backend.write_output("\"abc.def\"")
+    correct = '''hdf5_output(particle_system, config, "abc.def");
+'''
+    assert correct == res
