@@ -612,6 +612,14 @@ def test_access_to_string():
     assert backend.access_to_string(part1_access) == "_temp.access(i, a)"
     part1_access.add_array_index("0")
     assert backend.access_to_string(part1_access) == "_temp.access(i, a, 0)"
+    part1_access.add_array_index(variable_access(variable("z", "UNKNOWN", False)))
+    assert backend.access_to_string(part1_access) == "_temp.access(i, a, 0, z)"
+
+    child_access.add_array_index("0")
+    assert backend.access_to_string(part1_access) == "_temp.access(i, a, 0, z, 0)"
+    child_access.add_array_index(variable_access(variable("a", "UNKNOWN", False)))
+    assert backend.access_to_string(part1_access) == "_temp.access(i, a, 0, z, 0, a)"
+
     # Neighbour_part child access
     part1_access = variable_access(backend.variable_scope.get_variable("part1"))
     child_access = variable_access(variable("neighbour_part", "UNKNOWN", False))

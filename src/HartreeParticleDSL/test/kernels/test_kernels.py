@@ -12,7 +12,9 @@ def test_main_function_wrapper():
     assert mfw.get_kernel_tree() is a
 
 def main():
+    create_variable(c_int, "a")
     a = a + 1
+
 def test_main_declaration_function():
     parser = main_declaration(main)
     assert isinstance(parser, main_function_wrapper)
