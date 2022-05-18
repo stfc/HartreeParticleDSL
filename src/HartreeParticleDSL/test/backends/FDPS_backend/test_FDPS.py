@@ -82,13 +82,29 @@ def test_generate_include():
     assert "<particle_simulator.hpp>" in strin
     assert "\"part.h\"" in strin
 
-def test_gen_headers():
+
+def test_gen_headers(capsys):
     ''' Tests the gen_headers module of the FDPS backend'''
+    class dummy_io_module_fdps(FDPS_IO_Mixin):
+        def __init__(self):
+            pass
+    
+        def gen_code_fdps(self, particle):
+            return "x"
+
+    class dummy_io_module_fdps2(FDPS_IO_Mixin):
+        def __init__(self):
+            pass
+    
+        def gen_code_fdps(self, particle):
+            return "y"
+
     backend = FDPS()
     part = Particle()
     config = Config()
-    mod = Random_Particles()
-    backend.set_io_modules(mod, mod)
+    mod = dummy_io_module_fdps()
+    mod2 = dummy_io_module_fdps2()
+    backend.set_io_modules(mod, mod2)
     backend.add_coupler(coupler_test())
     backend.gen_headers(config, part)
     f_str = ""
@@ -142,6 +158,9 @@ def test_gen_headers():
     assert f_str[45] == '\n'
     assert f_str[46] == '#endif'
     os.remove("part.h")
+
+    captured = capsys.readouterr()
+    assert "x\ny\n" == captured.out
 
 def kern(part1, part2, r2, config):
     part1.a = part1.a + 2.0
