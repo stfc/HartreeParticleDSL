@@ -14,6 +14,19 @@ import os
 import inspect
 import ast
 
+class coupler_test(base_coupler):
+    def __init__(self):
+        pass
+
+    def a_function(self):
+        return "test_string"
+
+    def b_function(self, arg):
+        return arg
+
+    def get_includes(self):
+        return ["a"]
+
 def test_set_io_modules():
     ''' Tests the set_io_modules function of the FDPS backend'''
     mod = Random_Particles()
@@ -75,56 +88,58 @@ def test_gen_headers():
     config = Config()
     mod = Random_Particles()
     backend.set_io_modules(mod, mod)
+    backend.add_coupler(coupler_test())
     backend.gen_headers(config, part)
     f_str = ""
     with open('part.h', 'r') as f:
         f_str = f.readlines()
     assert f_str[0] == '#ifndef PART_H\n'
     assert f_str[1] == '#define PART_H\n'
-    assert f_str[2] == 'struct boundary{\n'
-    assert f_str[3] == '    PS::F64 x_min, x_max;\n'
-    assert f_str[4] == '    PS::F64 y_min, y_max;\n'
-    assert f_str[5] == '    PS::F64 z_min, z_max;\n'
-    assert f_str[6] == '};\n'
-    assert f_str[7] == '\n'
-    assert f_str[8] == 'struct space_type{\n'
-    assert f_str[9] == '    boundary box_dims;\n'
-    assert f_str[10] == '    PS::S32 nparts;\n'
-    assert f_str[11] == '};\n'
-    assert f_str[12] == '\n'
-    assert f_str[13] == 'struct neighbour_config_type{\n'
-    assert f_str[14] == '};\n'
-    assert f_str[15] == '\n'
-    assert f_str[16] == 'class config_type{\n'
-    assert f_str[17] == '    public:\n'
-    assert f_str[18] == '        struct space_type space;\n'
-    assert f_str[19] == '        struct neighbour_config_type neighbour_config;\n'
-    assert f_str[20] == '};\n'
-    assert f_str[21] == '\n'
-    assert f_str[22] == 'struct core_part_type{\n'
-    assert f_str[23] == '    PS::F64vec position;\n'
-    assert f_str[24] == '    PS::F64 velocity[3];\n'
-    assert f_str[25] == '};\n'
-    assert f_str[26] == '\n'
-    assert f_str[27] == 'struct neighbour_part_type{\n'
-    assert f_str[28] == '    PS::F64 cutoff;\n'
-    assert f_str[29] == '};\n'
-    assert f_str[30] == '\n'
-    assert f_str[31] == 'class FullParticle{\n'
-    assert f_str[32] == '    public:\n'
-    assert f_str[33] == '        struct core_part_type core_part;\n'
-    assert f_str[34] == '        struct neighbour_part_type neighbour_part;\n'
-    assert f_str[35] == '        PS::F64vec getPos(){\n'
-    assert f_str[36] == '            return this->core_part.position;\n'
-    assert f_str[37] == '        }\n'
-    assert f_str[38] == '        void setPos(const PS::F64vec pos_new){\n'
-    assert f_str[39] == '            this->core_part.position = pos_new;\n'
-    assert f_str[40] == '        }\n'
-    assert f_str[41] == '        void clear(){\n'
-    assert f_str[42] == '        }\n'
-    assert f_str[43] == '};\n'
-    assert f_str[44] == '\n'
-    assert f_str[45] == '#endif'
+    assert f_str[2] == "#include a\n"
+    assert f_str[3] == 'struct boundary{\n'
+    assert f_str[4] == '    PS::F64 x_min, x_max;\n'
+    assert f_str[5] == '    PS::F64 y_min, y_max;\n'
+    assert f_str[6] == '    PS::F64 z_min, z_max;\n'
+    assert f_str[7] == '};\n'
+    assert f_str[8] == '\n'
+    assert f_str[9] == 'struct space_type{\n'
+    assert f_str[10] == '    boundary box_dims;\n'
+    assert f_str[11] == '    PS::S32 nparts;\n'
+    assert f_str[12] == '};\n'
+    assert f_str[13] == '\n'
+    assert f_str[14] == 'struct neighbour_config_type{\n'
+    assert f_str[15] == '};\n'
+    assert f_str[16] == '\n'
+    assert f_str[17] == 'class config_type{\n'
+    assert f_str[18] == '    public:\n'
+    assert f_str[19] == '        struct space_type space;\n'
+    assert f_str[20] == '        struct neighbour_config_type neighbour_config;\n'
+    assert f_str[21] == '};\n'
+    assert f_str[22] == '\n'
+    assert f_str[23] == 'struct core_part_type{\n'
+    assert f_str[24] == '    PS::F64vec position;\n'
+    assert f_str[25] == '    PS::F64 velocity[3];\n'
+    assert f_str[26] == '};\n'
+    assert f_str[27] == '\n'
+    assert f_str[28] == 'struct neighbour_part_type{\n'
+    assert f_str[29] == '    PS::F64 cutoff;\n'
+    assert f_str[30] == '};\n'
+    assert f_str[31] == '\n'
+    assert f_str[32] == 'class FullParticle{\n'
+    assert f_str[33] == '    public:\n'
+    assert f_str[34] == '        struct core_part_type core_part;\n'
+    assert f_str[35] == '        struct neighbour_part_type neighbour_part;\n'
+    assert f_str[36] == '        PS::F64vec getPos(){\n'
+    assert f_str[37] == '            return this->core_part.position;\n'
+    assert f_str[38] == '        }\n'
+    assert f_str[39] == '        void setPos(const PS::F64vec pos_new){\n'
+    assert f_str[40] == '            this->core_part.position = pos_new;\n'
+    assert f_str[41] == '        }\n'
+    assert f_str[42] == '        void clear(){\n'
+    assert f_str[43] == '        }\n'
+    assert f_str[44] == '};\n'
+    assert f_str[45] == '\n'
+    assert f_str[46] == '#endif'
     os.remove("part.h")
 
 def kern(part1, part2, r2, config):
@@ -403,15 +418,6 @@ def test_get_particle_access():
     rval = backend.get_particle_access("part1", "field")
     assert rval == "part1.field"
 
-class coupler_test(base_coupler):
-    def __init__(self):
-        pass
-
-    def a_function(self):
-        return "test_string"
-
-    def b_function(self, arg):
-        return arg
 
 def test_add_coupler():
     '''Test the add_coupler function of FDPS'''
@@ -423,6 +429,7 @@ def test_add_coupler():
         backend.add_coupler(32)
     assert ("Can only couple to base_coupler classes or "
             "subclasses. Found int") in str(excinfo.value)
+    assert "a" in backend._includes
 
 def test_call_language_function_coupled_system():
     '''Test the coupled system functionality'''

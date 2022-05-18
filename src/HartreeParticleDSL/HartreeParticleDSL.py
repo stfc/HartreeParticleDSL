@@ -395,6 +395,7 @@ class Particle():
             is_array = True
         self.particle_type[variable_name] = {'type' : c_type, 'is_array' : is_array}
 
+
 class Config():
     '''
         Config class used in HartreeParticleDSL.

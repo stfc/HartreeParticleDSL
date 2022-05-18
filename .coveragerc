@@ -1,0 +1,6 @@
+
+[report]
+exclude_lines = 
+    @kernels.perpart_interaction
+    import HartreeParticleDSL.kernel_types.kernels as kernels
+    from HartreeParticleDSL.c_types import c_double

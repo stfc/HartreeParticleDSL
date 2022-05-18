@@ -40,6 +40,34 @@ def test_c_visitor_visit_str():
     out = v.visit(c)
     assert "b = x.yz" in out
 
+def test_c_visitor_visit_NameConstant():
+    aos = C_AOS()
+    aos.disable_variable_checks()
+    HartreeParticleDSL.set_backend(aos)
+    v = c_visitor(aos)
+    def a():
+        b = False
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    out = v.visit(c)
+    assert "b = false;" in out
+    def z():
+        b = True
+    c = ast.parse(textwrap.dedent(inspect.getsource(z)))
+    out = v.visit(c)
+    assert "b = true;" in out
+
+def test_c_visitor_visit_Break():
+    aos = C_AOS()
+    aos.disable_variable_checks()
+    HartreeParticleDSL.set_backend(aos)
+    v = c_visitor(aos)
+    def a():
+        while(True):
+            break
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    out = v.visit(c)
+    assert "break;" in out
+
 def test_c_visitor_visit_int():
     '''Test the visit_int function in c_visitor'''
     aos = C_AOS()

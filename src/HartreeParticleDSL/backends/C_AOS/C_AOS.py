@@ -635,6 +635,9 @@ class C_AOS(Backend):
                                        "or subclasses. Found {0}".format(
                                            type(coupled_system).__name__))
         self._coupled_systems.append(coupled_system)
+        extra_includes = coupled_system.get_includes()
+        for include in extra_includes:
+            self._includes.append(include)
 
     def write_output(self, filename, **kwargs):
         ''' 

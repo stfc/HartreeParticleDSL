@@ -297,6 +297,9 @@ class coupler_test(base_coupler):
     def b_function(self, arg):
         return arg
 
+    def get_includes(self):
+        return ["\"test.h\""]
+
 def test_add_coupler():
     '''Test the add_coupler function of C_AOS'''
     backend = C_AOS()
@@ -313,12 +316,14 @@ def test_call_language_function_coupled_system():
     backend = C_AOS()
     coupler = coupler_test()
     backend.add_coupler(coupler)
+    assert "\"test.h\"" in backend._includes
     rval = backend.call_language_function("a_function")
     assert rval == "test_string"
     rval = backend.call_language_function("b_function", "thing->thing2")
     assert rval == "thing->thing2"
     rval = backend.call_language_function("unknown_func")
     assert rval == "unknown_func(  );\n"
+    
 
 
 def test_get_particle_position():
