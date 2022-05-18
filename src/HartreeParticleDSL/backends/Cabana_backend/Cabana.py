@@ -703,8 +703,8 @@ class Cabana(Backend):
                 var_access = var_access.child
                 if is_part_i:
                     code_str = "_" + name + ".access(i, a"
-                else:
-                    pass #FIXME for pairwise we do something different
+                #else:
+                #    pass #FIXME for pairwise we do something different
                 if child_name == "position":
                     code_str = code_str + ", " + self._get_particle_position_internal( var_access.child.variable.var_name)
                 if len(var_access.array_indices) > 0:
@@ -726,8 +726,8 @@ class Cabana(Backend):
                 var_access = var_access.child
                 if is_part_i:
                     code_str = "_" + name + ".access(i, a"
-                else:
-                    pass #FIXME for pairwise we do something different
+                #else:
+                #    pass #FIXME for pairwise we do something different
                 if len(var_access.array_indices) > 0:
                     for index in var_access.array_indices:
                         if isinstance(index, str):
@@ -745,8 +745,8 @@ class Cabana(Backend):
             code_str = ""
             if is_part_i:
                 code_str = "_" + name + ".access(i, a"
-            else:
-                pass #FIXME for pairwise we do something different
+            #else:
+            #    pass #FIXME for pairwise we do something different
             if array_access:
                 for index in var_access.array_indices:
                     if isinstance(index, str):

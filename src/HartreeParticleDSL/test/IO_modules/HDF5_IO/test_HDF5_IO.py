@@ -354,7 +354,11 @@ def test_get_includes_cabana():
     a = hdf5_IO.HDF5_IO()
     x = a.get_includes_cabana()
     assert "\"hdf5.h\"" in x
-    
+   
+def test_get_includes_fdps():
+    a = hdf5_IO.HDF5_IO()
+    x = a.get_includes_fdps()
+    assert "\"hdf5.h\"" in x
 
 def test_gen_code_fdps():
     a = hdf5_IO.HDF5_IO()
