@@ -24,3 +24,9 @@ class InternalError(Exception):
 
 class NoBackendError(Exception):
     pass
+
+class BackendError(Exception):
+    pass
+
+class CoupledSystemError(Exception):
+    pass

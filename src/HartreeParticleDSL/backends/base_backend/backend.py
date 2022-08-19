@@ -1,4 +1,5 @@
 from abc import ABCMeta
+from HartreeParticleDSL.HartreeParticleDSLExceptions import BackendError
 
 class Backend(metaclass=ABCMeta):
     CONSTANT = 0
@@ -84,3 +85,7 @@ class Backend(metaclass=ABCMeta):
 
     def write_output(self, filename):
         pass
+
+    def MPI_allowed(self, MPI_status):
+        if MPI_status == true:
+            raise BackendError(f"{type(self)} cannot handle MPI yet. Disable MPI or try another backend to use MPI.")

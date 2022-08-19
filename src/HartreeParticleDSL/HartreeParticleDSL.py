@@ -39,6 +39,8 @@ class _HartreeParticleDSL():
         self._includes.append("\"part.h\"")
         self._STARTDIR = os.getcwd()
         self._outdir = "."
+        # Default MPI status is disabled
+        self._MPI_status = False
         _HartreeParticleDSL.the_instance = self
 
     def get_instance():
@@ -138,6 +140,8 @@ class _HartreeParticleDSL():
 
         At the moment this is just output to standard out.
         '''
+        # Check the backend supports the MPI status
+        self._backend.MPI_allowed(self._MPI_status)
         # Add the io module information to the backend chosen just in case
         self._backend.set_io_modules(self._input_module, self._output_module)
 
@@ -222,6 +226,23 @@ class _HartreeParticleDSL():
         if not os.path.exists(directory):
             os.mkdir(directory)
         os.chdir(directory)
+
+    def set_MPI_status(self, MPI_status):
+        '''
+        Sets the MPI status for HartreeParticleDSL.
+
+        :param bool MPI_status: The MPI status to set.
+        '''
+        self._MPI_status = MPI_status
+
+    def get_MPI_status(self, MPI_status):
+        '''
+        Gets the MPI status for HartreeParticleDSL.
+
+        :returns: The MPI status.
+        :rtype: bool
+        '''
+        return self._MPI_status
 
 def set_particle_type(part):
     '''
@@ -362,6 +383,29 @@ def set_output_dir(directory):
     :param str directory: The directory to use for output by HartreeParticleDSL.
     '''
     _HartreeParticleDSL.get_instance().set_output_dir(directory)
+
+def enable_MPI():
+    '''
+    Enables MPI for HartreeParticleDSL. At code_gen time backends are allowed
+    to refuse to generate code if MPI is enabled.
+    '''
+    _HartreeParticleDSL.get_instance().set_MPI_status(True)
+
+def disable_MPI():
+    '''
+    Switches off MPI for HartreeParticleDSL.
+    '''
+    _HartreeParticleDSL.get_instance().set_MPI_status(False)
+
+def get_MPI_status():
+    '''
+    Retrieves the MPI Status of the DSL (on or off).
+
+    :returns: The MPI status of the DSL.
+    :rtype: bool
+    '''
+    return _HartreeParticleDSL.get_instance().get_MPI_status()
+
 
 class Particle():
     '''Particle class used in HartreeParticleDSL'''

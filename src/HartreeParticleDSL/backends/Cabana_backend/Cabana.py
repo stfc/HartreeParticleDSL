@@ -852,3 +852,12 @@ class Cabana(Backend):
         code = " " * current_indent
         code = code + self._output_module.call_output_cabana(0, filename, variable) + "\n"
         return code
+
+    def MPI_allowed(self, MPI_status):
+        '''
+        Cabana backend MPI support is a work in progress.
+        '''
+        for cs in self._coupled_systems:
+            cs.MPI_allowed(MPI_status)
+        if MPI_status:
+            raise BackendError(f"{type(self)} cannot handle MPI yet. Disable MPI or try another backend to use MPI.")
