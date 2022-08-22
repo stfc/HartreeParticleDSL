@@ -24,3 +24,6 @@ class InternalError(Exception):
 
 class NoBackendError(Exception):
     pass
+
+class IRGenerationError(Exception):
+    pass
