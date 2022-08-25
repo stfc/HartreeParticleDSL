@@ -8,7 +8,7 @@ class Body(Node):
     number of Statement nodes.
 
     :param children: List of Nodes to be contained in this Body region.
-    :type children: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.Node.
+    :type children: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.Node`
     '''
 
     def __init__(self, children=None: List[Node]) -> None:
@@ -33,3 +33,15 @@ class Body(Node):
         if isinstance(child, Statement):
             return True
         return False
+
+    def node_str(self) -> str:
+        '''
+        :returns: a text description of this assignment
+        :rtype: str
+        '''
+        nodestr = f"Body[\n"
+        indices = []
+        for i in self.children:
+            nodestr += f"    {i.node_str()}\n"
+        nodestr +="] End Body"
+        return nodestr

@@ -46,3 +46,11 @@ class Reference(DataNode, metaclass=ABCMeta):
         :rtype: bool
         '''
         return False
+
+    def node_str(self) -> str:
+        '''
+        :returns: a text description of this node
+        :rtype: str
+        '''
+        nodestr = f"Reference[{self.name}]"
+        return nodestr

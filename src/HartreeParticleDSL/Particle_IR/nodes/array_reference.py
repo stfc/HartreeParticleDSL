@@ -37,3 +37,15 @@ class ArrayReference(ArrayMixin, Reference):
                             f"Got {type(symbol)} as input.")
         self._symbol = symbol
 
+    def node_str(self) -> str:
+        '''
+        :returns: a text description of this assignment
+        :rtype: str
+        '''
+        nodestr = f"ArrayReference[{self.symbol.name}: ("
+        indices = []
+        for i in self.children:
+            indices.append(i.node_str())
+        indices_str = ", ".join(indices)
+        nodestr = nodestr + f"{indices_str})]"
+        return nodestr

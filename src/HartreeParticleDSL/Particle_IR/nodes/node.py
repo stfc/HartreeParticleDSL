@@ -235,7 +235,6 @@ class Node:
         :returns: the string representation of this node.
         :rtype: str
         '''
-        # TODO Expand
         return self.node_str()
 
     @property

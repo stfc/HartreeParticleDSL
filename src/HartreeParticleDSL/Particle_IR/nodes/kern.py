@@ -20,6 +20,14 @@ class Kern(Node, metaclass=ABCMeta):
         # Specialisations of this class will need argument lists
         self._arguments = []
 
+    @property
+    def body(self) -> Body:
+        '''
+        :returns: The body of this Kernel.
+        :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.body.Body`
+        '''
+        return self.children[0]
+
     @classmethod
     def _validate_child(position: int, child: Node) -> bool:
         '''
@@ -38,3 +46,11 @@ class Kern(Node, metaclass=ABCMeta):
         if position == 0 and isinstance(child, Body):
             return True
         return False
+
+    def node_str(self) -> str:
+        '''
+        :returns: a text description of this assignment
+        :rtype: str
+        '''
+        nodestr = type(self).__name__ + f"[{self._arguments}: {self.children[0].node_str}]"
+        return nodestr

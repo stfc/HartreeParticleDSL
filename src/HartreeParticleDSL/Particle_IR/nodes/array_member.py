@@ -18,3 +18,16 @@ class ArrayMember(ArrayMixin, Member):
 
         for index in indices:
             self.addchild(index)
+
+    def node_str(self) -> str:
+        '''
+        :returns: a text description of this assignment
+        :rtype: str
+        '''
+        nodestr = f"ArrayMember[{self.name}: ("
+        indices = []
+        for i in self.children:
+            indices.append(i.node_str())
+        indices_str = ", ".join(indices)
+        nodestr = nodestr + f"{indices_str})]"
+        return nodestr

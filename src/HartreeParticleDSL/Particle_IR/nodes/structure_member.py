@@ -35,3 +35,11 @@ class StructureMember(Member):
         :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.member.Member`
         '''
         return self.children[0]
+
+    def node_str(self) -> str:
+        '''
+        :returns: a text description of this node
+        :rtype: str
+        '''
+        nodestr = f"StructureMember[{self.name}: {self.member.node_str}]"
+        return nodestr
