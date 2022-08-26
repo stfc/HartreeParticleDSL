@@ -13,7 +13,7 @@ class StructureSymbol(Symbol):
     :type kwargs: unwrapped dict.
     '''
 
-    def __init__(self, name: str, datatype : StructureType, **kwargs):
+    def __init__(self, name: str, datatype : StructureType, **kwargs) -> None:
         self._datatype = None
         super().__init__(name, **kwargs)
         self.datatype = datatype
@@ -40,8 +40,8 @@ class StructureSymbol(Symbol):
         # TODO
         if not isinstance(value, StructureType):
             raise TypeError(
-                    f" The datatype of a {type(self)} must be specified "
-                    f" using a StructureType but got {type(value)}")
+                    f"The datatype of a {type(self)} must be specified "
+                    f"using a StructureType but got {type(value)}.")
         self._datatype = value
 
     # Handle arraytypes

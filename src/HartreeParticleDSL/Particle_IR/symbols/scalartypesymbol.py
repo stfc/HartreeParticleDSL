@@ -40,6 +40,6 @@ class ScalarTypeSymbol(Symbol):
         # TODO
         if not isinstance(value, ScalarType):
             raise TypeError(
-                    f" The datatype of a {type(self)} must be specified "
-                    f" using a ScalarType but got {type(value)}")
+                    f"The datatype of a {type(self)} must be specified "
+                    f"using a ScalarType but got {type(value)}.")
         self._datatype = value

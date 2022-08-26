@@ -40,6 +40,6 @@ class ArraySymbol(Symbol):
         # TODO
         if not isinstance(value, ArrayType):
             raise TypeError(
-                    f" The datatype of a {type(self)} must be specified "
-                    f" using a ArrayType but got {type(value)}")
+                    f"The datatype of a {type(self)} must be specified "
+                    f"using an ArrayType but got {type(value)}.")
         self._datatype = value

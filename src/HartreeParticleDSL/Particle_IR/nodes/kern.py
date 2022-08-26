@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from abc import ABCMeta
+from typing import List
 from HartreeParticleDSL.Particle_IR.nodes.node import Node
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
 
@@ -10,15 +13,27 @@ class Kern(Node, metaclass=ABCMeta):
     :type children: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.Node.
     '''
 
-    def __init__(self, children=None: List[Node]) -> None:
-        super.__init__(children=children)
+    def __init__(self, children: List[Node]=None) -> None:
+        super().__init__(children=children)
 
         # If no children were specified, we need to add the Body of this Kern
-        if len(children=0):
+        if not children or len(children)==0:
             self.addchild(Body())
 
         # Specialisations of this class will need argument lists
         self._arguments = []
+
+        # Add a symbol table
+        from HartreeParticleDSL.Particle_IR.symbols.symboltable import SymbolTable
+        self._symbol_table = SymbolTable(kern=self)
+
+    @property
+    def symbol_table(self) -> SymbolTable:
+        '''
+        :returns: The symbol table for this Kernel.
+        :rtype: :py:class:`HartreeParticleDSL.Particle_IR.symbols.symbol_table.SymbolTable`
+        '''
+        return self._symbol_table
 
     @property
     def body(self) -> Body:
@@ -28,7 +43,7 @@ class Kern(Node, metaclass=ABCMeta):
         '''
         return self.children[0]
 
-    @classmethod
+    @staticmethod
     def _validate_child(position: int, child: Node) -> bool:
         '''
         Determines whether a given position and node are valid as a child

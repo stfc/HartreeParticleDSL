@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 from abc import ABCMeta
+from enum import Enum
+from HartreeParticleDSL.Particle_IR.nodes.node import Node
 
 class Symbol(metaclass=ABCMeta):
     '''
@@ -23,9 +27,7 @@ class Symbol(metaclass=ABCMeta):
         LOCAL=1
         GLOBAL=2
 
-    DEFAULT_VISIBILITY = Visibility.LOCAL
-
-    def __init__(self, name: str, visibility=DEFAULT_VISIBILITY: Visibility)
+    def __init__(self, name: str, visibility: Visibility=Visibility.LOCAL) -> None:
         if not isinstance(name, str):
             raise TypeError(f"{type(self)} 'name' attribute should be of type str"
                             f" but {type(name)} found.")
@@ -61,7 +63,7 @@ class Symbol(metaclass=ABCMeta):
         :returns: the name of this Symbol.
         :rtype: str
         '''
-        return self.name
+        return self._name
 
     def find_symbol_table(self, node: Node) -> SymbolTable:
         '''

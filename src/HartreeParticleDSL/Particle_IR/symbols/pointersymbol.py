@@ -2,7 +2,7 @@
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import PointerType
 
-class ArraySymbol(Symbol):
+class PointerSymbol(Symbol):
     '''
     Class for those symbols that are to a Structure Type.
 
@@ -40,6 +40,6 @@ class ArraySymbol(Symbol):
         # TODO
         if not isinstance(value, PointerType):
             raise TypeError(
-                    f" The datatype of a {type(self)} must be specified "
-                    f" using a PointerType but got {type(value)}")
+                    f"The datatype of a {type(self)} must be specified "
+                    f"using a PointerType but got {type(value)}.")
         self._datatype = value

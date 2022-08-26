@@ -3,10 +3,10 @@ from collections import OrderedDict
 import inspect
 from typing import Union, Dict
 
-from HartreeParticleDSL.HartreeParticleDSL import HartreeParticleDSL
+import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import DataType
-from HartreeParticleDSL.Particle_IR.nodes import Kern
+from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
 
 
@@ -33,15 +33,14 @@ class SymbolTable():
         # Store if we're a global symbol table.
         self._is_global = False
 
-        if not isinstance(kern, (HartreeParticleDSL, Kern)):
+        if not isinstance(kern, (HartreeParticleDSL._HartreeParticleDSL, Kern)):
             raise TypeError("Argument 'kern' should be of type "
                             "HartreeParticleDSL or Kern, but instead got "
                             f"{type(kern)}.")
         
-        if isinstance(kern, HartreeParticleDSL):
+        if isinstance(kern, HartreeParticleDSL._HartreeParticleDSL):
             self._is_global = True
 
-        kern.add_symbol_table(self)
         self._kern = kern
 
     def is_empty(self) -> bool:
@@ -75,8 +74,8 @@ class SymbolTable():
         :raises TypeError: if the new_symbol argument is not a symbol.
         :raises IRGenerationError: if the symbol table already contains a symbol of this name.
         '''
-        if not isintance(new_symbol, Symbol):
-            raise InternalError(f"Symbol {new_symbol} is not a symbol, but "
+        if not isinstance(new_symbol, Symbol):
+            raise IRGenerationError(f"Symbol {new_symbol} is not a symbol, but "
                                 f"{type(new_symbol)}.")
     
         if new_symbol.name in self._symbols:
@@ -113,7 +112,8 @@ class SymbolTable():
             visibility = Symbol.Visibility.GLOBAL
     
         symbol = symbol_type(name=name, datatype=datatype, visibility=visibility)
-    
+        self.add(symbol)
+
         return symbol
 
     def lookup(self, name: str) -> Union[Symbol, NoneType]:
@@ -156,7 +156,7 @@ class SymbolTable():
             if sym.datatype != datatype:
                 raise IRGenerationError(f"Found a symbol with specified name {name}, but "
                                         f"it had datatype {sym.datatype} which doesn't "
-                                        f"match requested datatype {datattype}.")
+                                        f"match requested datatype {datatype}.")
             return sym
         return self.new_symbol(name=name, datatype=datatype, symbol_type=symbol_type)
 

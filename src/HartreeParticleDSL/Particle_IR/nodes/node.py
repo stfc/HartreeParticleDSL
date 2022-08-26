@@ -156,7 +156,7 @@ class ChildrenList(list):
         self._del_parent_link(item)
         super().remove(item)
 
-    def pop(self, index=-1: int) -> Node:
+    def pop(self, index: int=-1) -> Node:
         '''
         Extends list pop method with children node validation.
 
@@ -185,10 +185,11 @@ class Node:
 
     START_POSITION = 0
 
-    def __init__(self, children=None: List[Node]):
+    def __init__(self, children: List[Node]=None):
         self._children = ChildrenList(self, self._validate_child)
         if children:
             self._children.extend(children)
+        self._parent=None
 
     @staticmethod
     def _validate_child(position: int, child: Node) -> bool:
@@ -253,7 +254,7 @@ class Node:
             my_depth += 1
         return my_depth
 
-    def view(self, depth=0:int, indent = "    ": str, _index=None: Union[int, None]) -> str:
+    def view(self, depth:int=0, indent: str= "    ", _index: Union[int, None]=None) -> str:
         '''
         Output a human readable description of the current node and all of its descendents as a string.
 
@@ -284,10 +285,10 @@ class Node:
         children_result_list = []
         for idx, node in enumerate(self._children):
             children_result_list.append( node.view(depth=depth+1, _index=idx, colour=colour, indent=indent))
-        result = result += "".join(children_result_list)
+        result = result + "".join(children_result_list)
         return result
 
-    def addchild(self, child: Node, index=None: Union[None, int]) -> None:
+    def addchild(self, child: Node, index: Union[None, int]=None) -> None:
         '''
         Adds the supplied node as a child of this node( at position index if supplied).
         The suppled node must not have an existing parent.
@@ -336,7 +337,7 @@ class Node:
 
         return position
 
-    def _find_position(self, children: list[Node], position=None: Union[None, int]) -> Tuple[bool,int]:
+    def _find_position(self, children: list[Node], position: Union[None, int]=None) -> Tuple[bool,int]:
         '''
         Recurse through the tree dewpth first returning position of self
         if found.
@@ -388,7 +389,7 @@ class Node:
             return False
         return self.parent is node_2.parent
 
-    def walk(self, t_type: Union[Tuple[type[Any]], type[Any]], stop_type=None: Union[None, Tuple[type[Any]], type[Any]]) -> List[Node]:
+    def walk(self, t_type: Union[Tuple[type[Any]], type[Any]], stop_type: Union[None, Tuple[type[Any]], type[Any]]=None) -> List[Node]:
         '''
         Recurse through the PIR tree and return all objects that are an instance of
         t_type, which is either a single class or a tuple of classes.
@@ -409,14 +410,14 @@ class Node:
         if isinstance(self, t_Type):
             local_list.append(self)
 
-       if stop_type and isinstance(self, stop_type):
-           return local_list
-       for child in self.children:
-           local_list += child.walk(t_type, stop_type)
+        if stop_type and isinstance(self, stop_type):
+            return local_list
+        for child in self.children:
+            local_list += child.walk(t_type, stop_type)
         return local_list
 
-    def ancestor(self, t_type: Union[Tuple[type[Any]], type[Any]], excluding=None: Union[None, Tuple[type[Any]], type[Any]],
-            include_self=False : bool, limit=None: Union[None, Node]) -> Union[Node, None]:
+    def ancestor(self, t_type: Union[Tuple[type[Any]], type[Any]], excluding: Union[None, Tuple[type[Any]], type[Any]]=None,
+            include_self: bool=False, limit: Union[None, Node]=None) -> Union[Node, None]:
         '''
         Search back up the tree and find an ancestor that is an instance of the supplied type.
         Return it if found, else return None.

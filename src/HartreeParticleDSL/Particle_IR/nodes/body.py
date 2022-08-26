@@ -11,7 +11,7 @@ class Body(Node):
     :type children: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.Node`
     '''
 
-    def __init__(self, children=None: List[Node]) -> None:
+    def __init__(self, children: List[Node]=None) -> None:
         super().__init__(children=children)
 
     @staticmethod

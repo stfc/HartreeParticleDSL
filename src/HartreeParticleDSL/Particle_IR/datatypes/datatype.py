@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import abc
 from abc import ABCMeta
 from collections import OrderedDict
 from enum import Enum
 import inspect
 from typing import Union, Dict, List
+from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 
 class DataType(metaclass=ABCMeta):
     '''Abstract base class from which all types are derived.'''
@@ -40,7 +42,7 @@ class ScalarType(DataType):
         Enumeration of the different intrinsic scalar datatypes supported by ParticleIR.
         '''
         INTEGER = 1
-        REAL = 2
+        FLOAT = 2
         BOOLEAN = 3
 
     class Precision(Enum):
@@ -58,8 +60,8 @@ class ScalarType(DataType):
                 f"but found {type(intrinsic)}.")
         if not isinstance(precision, (int, ScalarType.Precision)):
             raise TypeError(
-                f"Expecetd 'precision' to be of type ScalarType.Precision or int "
-                f" but found {type(precision)}.")
+                f"Expected 'precision' to be of type ScalarType.Precision or int "
+                f"but found {type(precision)}.")
 
 
         self._intrinsic = intrinsic
@@ -73,6 +75,7 @@ class ScalarType(DataType):
         '''
         return self._intrinsic
 
+    @property
     def precision(self) -> Union[Precision, int]:
         ''''
         :returns: the precision used by this scalar type.
@@ -89,7 +92,7 @@ class ScalarType(DataType):
         if isinstance(self.precision, ScalarType.Precision):
             precision = self.precision.name
         else:
-            precision = f"{precision}"
+            precision = f"{self.precision}"
         return f"Scalar<{self.intrinsic.name}, {precision}>"
 
 class StructureType(DataType):
@@ -109,8 +112,8 @@ class StructureType(DataType):
         comp_strs = []
         for comp in self._components.keys():
             comp_strs.append(f"({comp}: {self._components[comp]})")
-        comp_str = ",".join(comp_strs)
-        s = s + comp_str
+        comp_str = ", ".join(comp_strs)
+        s = s + comp_str + ">"
         return s
 
     @property
@@ -138,6 +141,9 @@ class StructureType(DataType):
         if not isinstance(typ, DataType):
             raise TypeError(f"Expected typ argument to be a DataType but got "
                             f"{type(typ)}.")
+        if name in self._components.keys():
+            raise IRGenerationError("names in a StructureType must be unique "
+                                    f"but provided duplicate {name}.")
         self._components[name] = typ
 
     @staticmethod
@@ -157,8 +163,7 @@ class StructureType(DataType):
         for component in components:
             if len(component) != 2:
                 raise TypeError("Each component must be specified using a 2-tuple "
-                                f"of (name, type) but found a typle with {len(component)} "
-                                f" members: {component}")
+                                f"of (name, type) but found: {component}")
             stype.add(component[0], component[1])
         return stype
 
@@ -183,7 +188,7 @@ class PointerType(DataType):
     def __init__(self, datatype: DataType) -> None:
         if not isinstance(datatype, DataType):
             raise TypeError("Attempted to make a PointerType with datatype "
-                            f" of type {type(datatype)} instead of a DataType")
+                            f"of type {type(datatype)} instead of a DataType.")
         self._datatype = datatype
 
     def __str__(self) -> str:
@@ -214,14 +219,19 @@ class ArrayType(DataType):
         DYNAMIC = 1
 
     def __init__(self, datatype: DataType, shape: List[Union[int, Extent]]) -> None:
+        if not isinstance(datatype, DataType):
+            raise TypeError("Attempted to make an ArrayType with datatype "
+                            f"of type {type(datatype)} instead of a DataType.")
+        self._datatype = datatype
+
         self._shape = []
-        if not isinstance(shape, list):
-            raise TypeError("shape argument needs to be a list of int/Extents but found "
+        if not isinstance(shape, list) or len(shape) < 1:
+            raise TypeError("shape argument needs to be a nonempty list of int/Extents but found "
                             f"{type(shape)}.")
         for child in shape:
-            if not isinstance(child, (int, Extent)):
+            if not isinstance(child, (int, ArrayType.Extent)):
                 raise TypeError("Each member of the shape argument needs to be an int "
-                                f"or Extend but found {type(child)}.")
+                                f"or Extent but found {type(child)}.")
             self._shape.append(child)
 
     @property
@@ -248,10 +258,11 @@ class ArrayType(DataType):
         return f"ArrayType<{self._datatype}: [{dim_string}]>"
 
 # Create common datatype
-FLOAT_TYPE = ScalarType(ScalarType.Intrinsic.REAL, ScalarType.Precision.SINGLE)
-DOUBLE_TYPE = ScalarType(ScalarType.Intrinsic.REAL, ScalarType.Precision.DOUBLE)
+FLOAT_TYPE = ScalarType(ScalarType.Intrinsic.FLOAT, ScalarType.Precision.SINGLE)
+DOUBLE_TYPE = ScalarType(ScalarType.Intrinsic.FLOAT, ScalarType.Precision.DOUBLE)
 
 INT_TYPE = ScalarType(ScalarType.Intrinsic.INTEGER, ScalarType.Precision.SINGLE)
+LONG_LONG_TYPE = ScalarType(ScalarType.Intrinsic.INTEGER, ScalarType.Precision.DOUBLE)
 INT32_TYPE = ScalarType(ScalarType.Intrinsic.INTEGER, 32)
 INT64_TYPE = ScalarType(ScalarType.Intrinsic.INTEGER, 64)
 INT8_TYPE = ScalarType(ScalarType.Intrinsic.INTEGER, 8)
