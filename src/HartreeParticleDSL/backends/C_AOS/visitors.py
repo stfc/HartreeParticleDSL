@@ -26,7 +26,8 @@ class c_visitor(baseVisitor):
         rval = " " * self._currentIndent
         return rval
 
-    def visit_Str(self, node):
+    # Leaving to support pre-3.8 version of Python, no longer covered
+    def visit_Str(self, node): # pragma: no cover
         return f"\"{node.s}\""
 
     def visit_str(self, node):
@@ -129,11 +130,11 @@ class c_visitor(baseVisitor):
         childless.child = attr
         return var
 
-    # For pre-python 3.8
-    def visit_Num(self, node):
+    # For pre-python 3.8 - no longer covered
+    def visit_Num(self, node): # pragma: no cover
         return f"{node.n}"
 
-    def visit_NameConstant(self, node):
+    def visit_NameConstant(self, node): # pragma: no cover
         if str(node.value) == "True":
             return "true"
         elif str(node.value) == "False":
@@ -256,7 +257,8 @@ class c_visitor(baseVisitor):
             rval = rval + self.visit(a)
         return rval
 
-    def visit_Index(self, node):
+    # Pre 3.9, no longer covered
+    def visit_Index(self, node): # pragma: no cover
         return self.visit(node.value)
 
     def visit_Subscript(self, node):
