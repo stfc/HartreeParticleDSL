@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import List, Union
+
 from HartreeParticleDSL.Particle_IR.nodes.node import DataNode, Node
 from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
 
@@ -9,7 +13,7 @@ class Assignment(Statement):
     :param children: List of Nodes to be contained in this Assignment region.
     :type children: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.Node`
     '''
-    def __init__(self, children=None: List[Node]) -> None:
+    def __init__(self, children: Union[List[Node], None]=None) -> None:
         super().__init__(children=children)
 
     @staticmethod
@@ -60,10 +64,10 @@ class Assignment(Statement):
         :returns: An assignment node representing the lhs and rhs provided.
         :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.assignment.Assignment`
         '''
-       assign = Assignment()
-       assign.addchild(lhs)
-       assign.addchild(rhs)
-       return assign
+        assign = Assignment()
+        assign.addchild(lhs)
+        assign.addchild(rhs)
+        return assign
 
     def node_str(self) -> str:
         '''

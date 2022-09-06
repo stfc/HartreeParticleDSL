@@ -13,7 +13,7 @@ class Member(Node):
         self._name = name
 
     @property
-    def name(self) -> name:
+    def name(self) -> str:
         '''
         :returns: the name of this member.
         :rtype: str
@@ -27,3 +27,10 @@ class Member(Node):
         :rtype: bool
         '''
         return False
+
+    def node_str(self) -> str:
+        '''
+        :returns: a string representation of this node.
+        :rtype: str
+        '''
+        return f"Member[{self.name}]"

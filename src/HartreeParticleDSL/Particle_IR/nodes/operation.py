@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from abc import ABCMeta
-import Enum
+from enum import Enum
+from typing import List
 
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 from HartreeParticleDSL.Particle_IR.nodes.node import DataNode, Node
@@ -20,7 +23,7 @@ class Operation(DataNode, metaclass=ABCMeta):
         super().__init__()
 
         if not isinstance(operator, self.Operator):
-            raise TypeError(f"{type(self)} expects an operator of type "
+            raise TypeError(f"{type(self).__name__} expects an operator of type "
                             f"{self.Operator} but received type "
                             f"{type(operator)}.")
         self._operator = operator
@@ -29,7 +32,7 @@ class Operation(DataNode, metaclass=ABCMeta):
     def operator(self) -> object:
         return self._operator
 
-class BinaryOperator(Operation):
+class BinaryOperation(Operation):
     '''
     Class representing a BinaryOperation. Has exactly two children to represent
     the two sides of the operation.
@@ -68,7 +71,7 @@ class BinaryOperator(Operation):
         :returns: The new binary operation node.
         :rtype: py:class:`HartreeParticleDSL.Particle_IR.nodes.BinaryOperator
         '''
-        op = BinaryOperator(operator=operator)
+        op = BinaryOperation(operator=operator)
         if len(children) != 2:
             raise IRGenerationError(f"Attempting to create a BinaryOperation with "
                                     f"wrong number of children. Was provided "
@@ -102,7 +105,14 @@ class BinaryOperator(Operation):
             return True
         return False
 
-class UnaryOperation
+    def node_str(self) -> str:
+        '''
+        :returns: a string representation of this node.
+        :rtype: str
+        '''
+        return f"BinaryOperation[{self.operator}: ({self.children[0]}, {self.children[1]})]"
+
+class UnaryOperation(Operation):
     '''
     Class representing a UnaryOperation. Has exactly one child.
     '''
@@ -111,6 +121,7 @@ class UnaryOperation
         UNARYSUB=1
         LOGICAL_NOT=2
 
+    Operator = UnaryOp
 
     @staticmethod
     def _validate_child(position: int, child: Node) -> bool:
@@ -143,7 +154,7 @@ class UnaryOperation
         :returns: The new binary operation node.
         :rtype: py:class:`HartreeParticleDSL.Particle_IR.nodes.BinaryOperator
         '''
-        op = BinaryOperator(operator=operator)
+        op = UnaryOperation(operator=operator)
         if not isinstance(child, DataNode):
             raise IRGenerationError(f"Attempting to create a UnaryOperation "
                                     f"but provided child is {type(child)} "
@@ -151,5 +162,12 @@ class UnaryOperation
 
         op.addchild(child)
         return op
+
+    def node_str(self) -> str:
+        '''
+        :returns: a string representation of this node.
+        :rtype: str
+        '''
+        return f"UnaryOperation[{self.operator}: {self.children[0]}]"
 
 #TODO Do we need an N-ary class for general operations?

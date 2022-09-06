@@ -22,6 +22,10 @@ class ArrayReference(ArrayMixin, Reference):
         for index in indices:
             self.addchild(index)
 
+    @property
+    def symbol(self) -> ArraySymbol:
+        return super().symbol
+
     @symbol.setter
     def symbol(self, symbol: ArraySymbol) -> None:
         '''

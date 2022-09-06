@@ -19,7 +19,6 @@ class Reference(DataNode, metaclass=ABCMeta):
         '''
         return self._symbol
 
-    @abstractmethod
     @symbol.setter
     def symbol(self, symbol: Symbol) -> None:
         '''
@@ -29,7 +28,7 @@ class Reference(DataNode, metaclass=ABCMeta):
         :param symbol: The symbol to make this symbol refer to.
         :type symbol: :py:class:`HartreeParticleDSL.Particle_IR.symbols.symbol.Symbol`
         '''
-            self._symbol = symbol
+        self._symbol = symbol
 
     @property
     def name(self) -> str:
@@ -52,5 +51,5 @@ class Reference(DataNode, metaclass=ABCMeta):
         :returns: a text description of this node
         :rtype: str
         '''
-        nodestr = f"Reference[{self.name}]"
+        nodestr = f"{type(self).__name__}[{self.name}]"
         return nodestr

@@ -67,5 +67,9 @@ class Kern(Node, metaclass=ABCMeta):
         :returns: a text description of this assignment
         :rtype: str
         '''
-        nodestr = type(self).__name__ + f"[{self._arguments}: {self.children[0].node_str}]"
+        arg_strings = []
+        for x in self._arguments:
+            arg_strings.append(x.node_str())
+        arg_string = ", ".join(arg_strings)
+        nodestr = type(self).__name__ + f"[{arg_string}: {self.children[0].node_str()}]"
         return nodestr

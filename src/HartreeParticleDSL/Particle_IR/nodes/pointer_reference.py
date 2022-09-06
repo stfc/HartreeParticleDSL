@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
 from HartreeParticleDSL.Particle_IR.symbols.pointersymbol import PointerSymbol
 
@@ -13,7 +15,11 @@ class PointerReference(Reference):
     def __init__(self, symbol: PointerSymbol) -> None:
         super().__init__()
         self.symbol = symbol
-    
+   
+    @property
+    def symbol(self) -> Symbol:
+        return super().symbol
+
     @symbol.setter
     def symbol(self, symbol: PointerSymbol) -> None:
         '''

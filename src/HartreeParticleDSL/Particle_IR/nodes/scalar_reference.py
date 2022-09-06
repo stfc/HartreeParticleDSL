@@ -13,7 +13,11 @@ class ScalarReference(Reference):
     def __init__(self, symbol: ScalarTypeSymbol) -> None:
         super().__init__()
         self.symbol = symbol
-    
+ 
+    @property
+    def symbol(self) -> ScalarTypeSymbol:
+        return super().symbol
+
     @symbol.setter
     def symbol(self, symbol: ScalarTypeSymbol) -> None:
         '''

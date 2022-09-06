@@ -51,7 +51,7 @@ class ChildrenList(list):
         if item.parent is not None:
             raise IRGenerationError(f"Item '{item}' can't be added as child of "
                 f"'{self._node_reference}' because it is not an orphan. It already "
-                f" has a '{item.parent}' as a parent.")
+                f"has a '{item.parent}' as a parent.")
 
     def _set_parent_link(self, node: Node) -> None:
         '''
@@ -64,7 +64,7 @@ class ChildrenList(list):
         node._parent = self._node_reference
 
     @staticmethod
-    def del_parent_link(node: Node) -> None:
+    def _del_parent_link(node: Node) -> None:
         '''
         Delete parent connection of the given node.
 
@@ -98,7 +98,7 @@ class ChildrenList(list):
         self._check_is_orphan(item)
         self._del_parent_link(self[index])
         super().__setitem__(index, item)
-        self.set_parent_link(item)
+        self._set_parent_link(item)
 
     def insert(self, index: int, item: Node) -> None:
         '''
@@ -126,7 +126,7 @@ class ChildrenList(list):
         '''
         for index, item in enumerate(items):
             self._validate_item(len(self) + index, item)
-            self._checkk_is_orphan(item)
+            self._check_is_orphan(item)
         super().extend(items)
         for item in items:
             self._set_parent_link(item)
@@ -141,7 +141,7 @@ class ChildrenList(list):
         positiveindex = index if index >= 0 else len(self) - index
         for position in range(positiveindex + 1, len(self)):
             self._validate_item(position-1, self[position])
-        self._del_parent_list(self[index])
+        self._del_parent_link(self[index])
         super().__delitem__(index)
 
     def remove(self, item: Node) -> None:
@@ -284,7 +284,7 @@ class Node:
             result = f"{full_indent}{_index}: {description}\n"
         children_result_list = []
         for idx, node in enumerate(self._children):
-            children_result_list.append( node.view(depth=depth+1, _index=idx, colour=colour, indent=indent))
+            children_result_list.append( node.view(depth=depth+1, _index=idx, indent=indent))
         result = result + "".join(children_result_list)
         return result
 
@@ -339,7 +339,7 @@ class Node:
 
     def _find_position(self, children: list[Node], position: Union[None, int]=None) -> Tuple[bool,int]:
         '''
-        Recurse through the tree dewpth first returning position of self
+        Recurse through the tree depth first returning position of self
         if found.
 
         :param children: list of Nodes that are children of a Node.
@@ -396,7 +396,7 @@ class Node:
 
         The recursion is stopped in a section of the tree if an instance of 'stop_type' is found.
 
-        :param t_type: the class(es) for which the isntance are collected.
+        :param t_type: the class(es) for which the instance are collected.
         :type t_type: type | Tuple[type,...]
         :param stop_type: class(es at which recurtion is halted (optional).
         :type stop_type: Options[type | Tuple[type,...]]
@@ -407,7 +407,7 @@ class Node:
         '''
 
         local_list = []
-        if isinstance(self, t_Type):
+        if isinstance(self, t_type):
             local_list.append(self)
 
         if stop_type and isinstance(self, stop_type):
@@ -441,7 +441,7 @@ class Node:
         if include_self:
             myparent = self
         else:
-            mypatrent = self.parent
+            myparent = self.parent
 
         if excluding is not None:
             if isinstance(excluding, type):

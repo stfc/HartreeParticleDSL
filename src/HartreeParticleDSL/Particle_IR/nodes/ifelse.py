@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import List
 
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
@@ -62,7 +63,7 @@ class IfElseBlock(Statement):
         body2 = Body()
         for child in ifbody:
             body1.addchild(child)
-        for child in elsebody
+        for child in elsebody:
             body2.addchild(child)
         ifblock.addchild(condition)
         ifblock.addchild(body1)
@@ -129,3 +130,14 @@ class IfElseBlock(Statement):
              isinstance(self.elsebody.children[0], IfElseBlock)):
             return True
         return False
+
+    def node_str(self) -> str:
+        '''
+        :returns: a string representation of this node.
+        :rtype: str
+        '''
+        val = f"IfElseBlock[{self.condition}:\n"
+        val = val + f"{self.ifbody}\n"
+        val = val + f"{self.elsebody}\n"
+        val = val + "]"
+        return val

@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import List
+
 from HartreeParticleDSL.Particle_IR.nodes.node import DataNode
 from HartreeParticleDSL.Particle_IR.nodes.array_mixin import ArrayMixin
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
@@ -13,7 +17,7 @@ class ArrayMember(ArrayMixin, Member):
     :type indices: list of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.DataNode`
     '''
 
-    def __init__(self, name, indices):
+    def __init__(self, name: str, indices: List[DataNode]) -> None:
         super().__init__(name=name)
 
         for index in indices:

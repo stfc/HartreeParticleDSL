@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
 from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
@@ -11,9 +13,13 @@ class ParticlePositionReference(Reference):
     :param int dimension: The dimension of the particle position accessed in this node.
     '''
     def __init__(self, symbol: StructureSymbol, dimension: int) -> None:
-        super.__init__()
+        super().__init__()
         self.symbol = symbol
         self.dimension = dimension
+
+    @property
+    def symbol(self) -> ScalarTypeSymbol:
+        return super().symbol
 
     @symbol.setter
     def symbol(self, symbol: StructureSymbol) -> None:
@@ -48,7 +54,7 @@ class ParticlePositionReference(Reference):
         :raises TypeError: if the member is not the correct type.
         '''
         if not isinstance(dimension, int):
-            raise TypeError("Attempted to make a ParticlePositionReference with a non-int dimension. "
+            raise TypeError("Attempted to make a ParticlePositionReference with a non-int dimension."
                             f" Got {type(dimension)} as input.")
         self._dimension = dimension
 

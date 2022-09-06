@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import List
 
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
@@ -18,7 +19,7 @@ class Loop(Statement):
     def __init__(self, variable: Symbol) -> None:
         super().__init__()
         if not isinstance(variable, Symbol):
-            raise IRGenerationError(f"Loop variable needs to be a symbol but "
+            raise TypeError(f"Loop variable needs to be a symbol but "
                                     f"got {type(variable)}.")
         self._variable = variable
 
@@ -134,6 +135,6 @@ class Loop(Statement):
         :rtype: str
         '''
         my_str = (f"Loop[ ({self.start_expr.node_str()}, {self.stop_expr.node_str()} "
-                 f"{self.step_expr.node_str()}): {self.children[4].node_str()}\n]")
+                 f"{self.step_expr.node_str()}): {self.children[3].node_str()}\n]")
         return my_str
 

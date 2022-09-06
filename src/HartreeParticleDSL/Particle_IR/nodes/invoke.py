@@ -1,10 +1,11 @@
+from __future__ import annotations
 from typing import List, Union
 
 from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
 from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
-from HartreeParticleDSL.Particle_IR.nodes.kernels import Main
+from HartreeParticleDSL.Particle_IR.nodes.kernels import MainKernel
 
-def Invoke(Statement):
+class Invoke(Statement):
     '''
     Dictates an Invoke call in Particle_IR.
 
@@ -23,7 +24,7 @@ def Invoke(Statement):
         :return: whether the given child and position are valid for this node.
         :rtype: bool
         '''
-        if isinstance(child, Kern) and not isinstance(child, Main):
+        if isinstance(child, Kern) and not isinstance(child, MainKernel):
             return True
         return False
 

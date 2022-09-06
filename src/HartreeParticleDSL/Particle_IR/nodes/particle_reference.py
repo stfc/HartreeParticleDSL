@@ -1,3 +1,4 @@
+from __future__ import annotations
 from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
 from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
@@ -12,9 +13,13 @@ class ParticleReference(Reference):
     :type member: :py:class:`HartreeParticleDSL.Particle_IR.nodes.member.Member`
     '''
     def __init__(self, symbol: StructureSymbol, member: Member) -> None:
-        super.__init__()
+        super().__init__()
         self.symbol = symbol
         self.member = member
+
+    @property
+    def symbol(self) -> ScalarTypeSymbol:
+        return super().symbol
 
     @symbol.setter
     def symbol(self, symbol: StructureSymbol) -> None:
@@ -51,7 +56,7 @@ class ParticleReference(Reference):
         '''
         if not isinstance(member, Member):
             raise TypeError("Attempted to make a ParticleReference with a non-Member access. "
-                            f" Got {type(member)} as input.")
+                            f"Got {type(member)} as input.")
         self._member = member
 
     def node_str(self) -> str:
@@ -59,5 +64,5 @@ class ParticleReference(Reference):
         :returns: a text description of this node
         :rtype: str
         '''
-        nodestr = f"ParticleReference[{self.symbol.name}: {self.member.node_str}]"
+        nodestr = f"ParticleReference[{self.symbol.name}: {self.member.node_str()}]"
         return nodestr
