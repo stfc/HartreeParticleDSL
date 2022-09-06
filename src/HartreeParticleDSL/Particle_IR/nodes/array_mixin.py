@@ -32,7 +32,6 @@ class ArrayMixin(metaclass=ABCMeta):
         '''
         return True
 
-
     @property
     def indices(self) -> List[DataNode]:
         '''
