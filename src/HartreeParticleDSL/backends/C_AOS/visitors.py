@@ -137,7 +137,7 @@ class c_visitor(baseVisitor):
     def visit_NameConstant(self, node): # pragma: no cover
         if str(node.value) == "True":
             return "true"
-        elif str(node.value) == "False":
+        elif str(node.value) == "False": #pragma: no cover
             return "false"
 
     def visit_Break(self, node):
