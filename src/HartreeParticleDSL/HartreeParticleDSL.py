@@ -41,6 +41,7 @@ class _HartreeParticleDSL():
         self._outdir = "."
         _HartreeParticleDSL.the_instance = self
 
+    @staticmethod
     def get_instance():
         '''
         Helper function used to get the instance of _HartreeParticleDSL

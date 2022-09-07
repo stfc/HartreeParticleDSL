@@ -53,7 +53,7 @@ class Symbol(metaclass=ABCMeta):
         '''
         if not isinstance(value, Symbol.Visibility):
             raise TypeError(f"{type(self)} visibility attribute should be of type "
-                            f" Particle_IR.symbols.Symbol.Visibility but got {type(value)}.")
+                            f"Particle_IR.symbols.Symbol.Visibility but got {type(value)}.")
 
         self._visibility = value
 
@@ -83,4 +83,4 @@ class Symbol(metaclass=ABCMeta):
                             f"Particle_IR.nodes.Node but got {type(node)}.")
 
         #TODO If/When needed
-        assert False
+        raise NotImplementedError()
