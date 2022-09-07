@@ -115,6 +115,7 @@ def test_array_type():
     assert mytype.shape[1] == myshape[1]
 
     str_rep = "ArrayType<Scalar<INTEGER, DOUBLE>: [32, *]>"
+    assert str(mytype) == str_rep
 
 def test_inbuilt_types():
     # TODO

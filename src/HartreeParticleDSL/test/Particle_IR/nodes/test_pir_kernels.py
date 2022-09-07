@@ -114,6 +114,7 @@ def test_perpart_arguments_setter():
     pk1.arguments = [arg1, arg2]
     assert pk1.arguments[0] is arg1
     assert pk1.arguments[1] is arg2
+    assert pk1.arguments == [arg1, arg2]
 
 def test_perpart_create():
     sym = ScalarTypeSymbol("x", INT_TYPE)

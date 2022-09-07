@@ -57,7 +57,7 @@ class IfElseBlock(Statement):
         '''
         if not isinstance(condition, Node):
             raise TypeError(f"The condition input needs to be a Node, but "
-                            f"found {type(condition)}")
+                            f"found {type(condition)}.")
         ifblock = IfElseBlock()
         body1 = Body()
         body2 = Body()

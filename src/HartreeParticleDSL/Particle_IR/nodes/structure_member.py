@@ -26,7 +26,7 @@ class StructureMember(Member):
         :return: whether the given child and position are valid for this node.
         :rtype: bool
         '''
-        return (position == 0 and isisntance(child, Member))
+        return (position == 0 and isinstance(child, Member))
 
     @property
     def member(self) -> Member:
@@ -41,5 +41,5 @@ class StructureMember(Member):
         :returns: a text description of this node
         :rtype: str
         '''
-        nodestr = f"StructureMember[{self.name}: {self.member.node_str}]"
+        nodestr = f"StructureMember[{self.name}: {self.member.node_str()}]"
         return nodestr

@@ -31,4 +31,6 @@ class ScalarReference(Reference):
         if not isinstance(symbol, ScalarTypeSymbol):
             raise TypeError("Attempted to make a ScalarReference to a non-ScalarTypeSymbol. "
                             f"Got {type(symbol)} as input.")
-        self._symbol = symbol
+        # Weird workaround to use the parent setter. See
+        # https://stackoverflow.com/questions/1021464/how-to-call-a-property-of-the-base-class-if-this-property-is-being-overwritten-i
+        super(ScalarReference, self.__class__).symbol.fset(self, symbol)

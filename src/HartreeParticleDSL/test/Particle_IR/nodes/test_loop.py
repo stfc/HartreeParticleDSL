@@ -16,6 +16,11 @@ def test_loop_init():
        x = Loop("not symbol")
     assert ("Loop variable needs to be a symbol but got <class 'str'>." 
             in str(excinfo.value))
+    sym = ScalarTypeSymbol("x", INT_TYPE)
+    x = Loop(sym)
+    with pytest.raises(IRGenerationError) as excinfo:
+        x._check_completeness()
+    assert "Loop node should have 4 children but found 0" in str(excinfo.value)
 
 def test_loop_validate_child():
     sym = ScalarTypeSymbol("x", INT_TYPE)

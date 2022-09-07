@@ -254,7 +254,7 @@ class ArrayType(DataType):
                 dims.append("*")
             else:
                 dims.append(f"{dimension}")
-        dim_string = ",".join(dims)
+        dim_string = ", ".join(dims)
         return f"ArrayType<{self._datatype}: [{dim_string}]>"
 
 # Create common datatype

@@ -130,14 +130,6 @@ class PerPartKernel(Kern):
         '''
         return self._arguments
 
-    @property
-    def arguments(self) -> List[Reference]:
-        '''
-        :returns: The argument list of this perpart kernel.
-        :rtype: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.reference.Reference`
-        '''
-        return self._arguments
-
     @arguments.setter
     def arguments(self, arguments: List[Reference]) -> None:
         '''

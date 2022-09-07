@@ -11,6 +11,9 @@ def test_scalar_reference():
 
     correct = "ScalarReference[x]"
     assert correct == ref.node_str()
+    assert ref.symbol is sym
+
+    assert ref.is_array == False
 
 def test_scalar_ref_illegalsym():
     with pytest.raises(TypeError) as excinfo:

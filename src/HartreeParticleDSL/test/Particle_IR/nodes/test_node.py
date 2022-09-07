@@ -91,10 +91,20 @@ def test_children_list():
     assert len(a) == 1
     assert node3.parent is None
     assert a[0] is node2
+    a.append(node3)
+    del(a[0])
+    assert a[0] is node3
+    del(a[0])
+    a.append(node2)
     
     a.remove(node2)
     assert len(a) == 0
     assert node2.parent is None
+    a.append(node2)
+    a.append(node3)
+    a.remove(node2)
+    assert a[0] is node3
+    a.remove(node3)
 
     a.extend(x)
     a.reverse()
@@ -109,6 +119,9 @@ def test_node_init():
 
     assert len(node._children) == 0
     assert node._parent is None
+
+def test_node_validate_child():
+    assert Node._validate_child(0, "a") is False
 
 def test_node_init_children():
     class fakeNode(Node):
@@ -137,6 +150,11 @@ def test_node_init_children():
         def _validate_child(position, child):
             return True
 
+    class fakeNode2(Node):
+        @staticmethod
+        def _validate_child(position, child):
+            return True
+
     n1 = fakeNode()
     n2 = fakeNode()
 
@@ -149,6 +167,19 @@ def test_node_init_children():
     1: fakeNode[]
 '''
     assert mynode.view() == correct
+
+    with pytest.raises(TypeError) as excinfo:
+        mynode.view(depth="x")
+    assert ("depth argument should be an int but found <class 'str'>." in
+            str(excinfo.value))
+    with pytest.raises(ValueError) as excinfo:
+        mynode.view(depth=-1)
+    assert ("depth argument should be a positive integer but found -1." in
+            str(excinfo.value))
+    with pytest.raises(TypeError) as excinfo:
+        mynode.view(indent=3)
+    assert ("indent argument should be a string but found <class 'int'>." in
+            str(excinfo.value))
 
     mynode.children.pop(1)
     assert n2.parent is None
@@ -183,6 +214,12 @@ def test_node_init_children():
     assert n5.sameParent(n3) is False
 
     assert len(mynode.walk(Node)) is 6
+    x = fakeNode2()
+    n2.addchild(x)
+    z = fakeNode()
+    x.addchild(z)
+    x.addchild(fakeNode())
+    assert len(mynode.walk(Node, stop_type=fakeNode2)) is 7
 
     assert n5.ancestor(Node) is n1
     assert n5.ancestor(Node,include_self=True) is n5
@@ -190,6 +227,8 @@ def test_node_init_children():
     assert n5.ancestor(Node,excluding=(fakeNode, Node)) is None
     assert n5.ancestor(Node,limit=n1) is None
     assert n5.ancestor(int) is None
+    assert z.ancestor(Node,limit=n2) is x
+    assert z.ancestor(fakeNode, limit=mynode) is n2
 
     with pytest.raises(TypeError) as excinfo:
         n5.ancestor(Node,excluding=123)
@@ -210,3 +249,6 @@ def test_node_init_children():
 
     n1.validate_constraints()
     
+    li = [n5]
+    assert n5._find_position(li, None) == (True, 1)
+    assert n5.sameParent(None) == False

@@ -28,7 +28,7 @@ class c_visitor(baseVisitor):
 
     # Leaving to support pre-3.8 version of Python, no longer covered
     def visit_Str(self, node): # pragma: no cover
-        return f"\"{node.s}\""
+        return f"\"{node.s}\"" # pragma: no cover
 
     def visit_str(self, node):
         v = self._parent.variable_scope.get_variable(node)
@@ -132,13 +132,13 @@ class c_visitor(baseVisitor):
 
     # For pre-python 3.8 - no longer covered
     def visit_Num(self, node): # pragma: no cover
-        return f"{node.n}"
+        return f"{node.n}" # pragma: no cover
 
     def visit_NameConstant(self, node): # pragma: no cover
-        if str(node.value) == "True":
-            return "true"
+        if str(node.value) == "True": # pragma: no cover
+            return "true" #pragma: no cover
         elif str(node.value) == "False": #pragma: no cover
-            return "false"
+            return "false" #pragma: no cover
 
     def visit_Break(self, node):
         return self.addIndent() + "break;\n"
@@ -259,7 +259,7 @@ class c_visitor(baseVisitor):
 
     # Pre 3.9, no longer covered
     def visit_Index(self, node): # pragma: no cover
-        return self.visit(node.value)
+        return self.visit(node.value) #pragma: no cover
 
     def visit_Subscript(self, node):
         rval = self.visit(node.value)

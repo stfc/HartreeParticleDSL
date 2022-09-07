@@ -274,7 +274,7 @@ class Node:
         if depth < 0:
             raise ValueError(f"depth argument should be a positive integer but found {depth}.")
         if not isinstance(indent, str):
-            raise TypeError(f"indent arugment should be a string but found {type(indent)}.")
+            raise TypeError(f"indent argument should be a string but found {type(indent)}.")
 
         full_indent: str = depth*indent
         description = self.node_str()
@@ -409,7 +409,6 @@ class Node:
         local_list = []
         if isinstance(self, t_type):
             local_list.append(self)
-
         if stop_type and isinstance(self, stop_type):
             return local_list
         for child in self.children:

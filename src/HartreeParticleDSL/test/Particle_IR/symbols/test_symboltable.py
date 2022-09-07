@@ -7,9 +7,16 @@ from HartreeParticleDSL.Particle_IR.symbols.symboltable import SymbolTable
 from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 
+from HartreeParticleDSL.HartreeParticleDSL import _HartreeParticleDSL
+
 def test_symbol_table():
     class test_kern(Kern):
         pass
+
+    with pytest.raises(TypeError) as excinfo:
+        a = SymbolTable("123")
+    assert ("Argument 'kern' should be of type HartreeParticleDSL or Kern, "
+            "but instead got <class 'str'>." in str(excinfo.value))
 
     tks = test_kern()
 
@@ -50,3 +57,31 @@ def test_symbol_table():
 
     assert not sym_tab.is_empty()
 
+    z = sym_tab.find_or_create("new", FLOAT_TYPE, ScalarTypeSymbol)
+    assert sym_tab.lookup("new") is z
+
+    x = SymbolTable(_HartreeParticleDSL.get_instance())
+    assert x._is_global == True
+
+def test_symbol_table_errors():
+    class test_kern(Kern):
+        pass
+    tks = test_kern()
+
+    sym_tab = SymbolTable(tks)
+
+    with pytest.raises(TypeError) as excinfo:
+        a = sym_tab.new_symbol("a", FLOAT_TYPE, "b")
+    assert ("The symbol_type parameter should be a type class of a subclass of"
+            " Symbol, but found <class 'str'>.")
+    with pytest.raises(TypeError) as excinfo:
+        a = sym_tab.new_symbol(123, FLOAT_TYPE, ScalarTypeSymbol)
+
+    sym_tab._is_global = True
+    s4 = sym_tab.new_symbol("c", FLOAT_TYPE, ScalarTypeSymbol)
+    assert s4.visibility == Symbol.Visibility.GLOBAL
+
+    with pytest.raises(TypeError) as excinfo:
+        sym_tab.lookup(123)
+    assert ("Expected the name argument to be a string, but got <class 'int'>."
+            in str(excinfo.value))
