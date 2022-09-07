@@ -35,6 +35,11 @@ def test_call_create():
     assert mycall.children[0] is ref1
     assert mycall.children[1] is ref2
 
+    with pytest.raises(TypeError) as excinfo:
+        Call.create(123, [ref1, ref2])
+    assert ("Expected func_name to be a str but got "
+            "<class 'int'>." in str(excinfo.value))
+
 
 def test_call_nodestr():
     sym = ScalarTypeSymbol("x", INT_TYPE)

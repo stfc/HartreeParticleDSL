@@ -21,6 +21,14 @@ def test_c_visitor_visit_Str():
     out = v.visit(c)
     assert "\"string\"" in out
 
+    class Str():
+        def __init__(self):
+            self.s = ""
+    x = Str()
+    x.s = "mystring"
+    assert v.visit_Str(x) == "\"mystring\""
+
+
 def test_c_visitor_visit_str():
     '''Test the visit_str function in c_visitor'''
     aos = C_AOS()
@@ -55,6 +63,15 @@ def test_c_visitor_visit_NameConstant():
     c = ast.parse(textwrap.dedent(inspect.getsource(z)))
     out = v.visit(c)
     assert "b = true;" in out
+
+    class NC():
+        def __init__(self):
+            self.value = True
+    x = NC()
+    assert v.visit_NameConstant(x) == "true"
+    x.value = False
+    assert v.visit_NameConstant(x) == "false"
+
 
 def test_c_visitor_visit_Break():
     aos = C_AOS()
@@ -360,6 +377,13 @@ def test_c_visitor_visit_Num():
     out = v.visit(c)
     assert "1.2" in out
 
+    class Num():
+        def __init__(self):
+            self.n = 1
+    x = Num()
+    x.n = 12
+    assert v.visit_Num(x) == "12"
+
 def test_c_visitor_visit_Assign():
     '''Test the visit_Assign function in c_visitor'''
     aos = C_AOS()
@@ -483,6 +507,12 @@ def test_c_visitor_visit_Index():
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
     out = v.visit(c)
     assert "s[2]" in out
+
+    class Index():
+        def __init__(self):
+            self.value = 1
+    x = Index()
+    assert v.visit_Index(x) == "1"
 
 def test_c_visitor_visit_Subscript():
     '''Test the visit_Subscript function in c_visitor'''
