@@ -65,11 +65,12 @@ def test_loop_create():
 
     x = Loop.create(sym, ref1, ref2, ref3, [call])
 
+    assert x.variable is sym
     assert x.start_expr is ref1
     assert x.stop_expr is ref2
     assert x.step_expr is ref3
-    assert isinstance(x.children[3], Body)
-    assert x.children[3].children[0] is call
+    assert isinstance(x.body, Body)
+    assert x.body.children[0] is call
 
 def test_loop_node_str():
     sym = ScalarTypeSymbol("i", INT_TYPE)

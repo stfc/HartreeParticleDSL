@@ -24,6 +24,10 @@ def test_array_reference_init():
     assert ar.indices[0] is one
     assert ar.indices[1] is two
 
+    ar2 = ArrayReference(sym)
+    assert ar2.symbol is sym
+    assert len(ar2.indices) == 0
+
 def test_array_reference_node_str():
     one = Literal("1", INT_TYPE)
     two = Literal("2", INT_TYPE)

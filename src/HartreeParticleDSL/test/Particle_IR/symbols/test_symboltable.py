@@ -15,7 +15,7 @@ def test_symbol_table():
 
     with pytest.raises(TypeError) as excinfo:
         a = SymbolTable("123")
-    assert ("Argument 'kern' should be of type HartreeParticleDSL or Kern, "
+    assert ("Argument 'kern' should be of type HartreeParticleDSL, FuncDef or Kern, "
             "but instead got <class 'str'>." in str(excinfo.value))
 
     tks = test_kern()

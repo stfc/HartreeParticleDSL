@@ -7,6 +7,8 @@ from enum import Enum
 import inspect
 from typing import Union, Dict, List
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
+from HartreeParticleDSL.c_types import c_int, c_double, c_float, c_int64_t, \
+                                       c_int32_t, c_int8_t, c_bool
 
 class DataType(metaclass=ABCMeta):
     '''Abstract base class from which all types are derived.'''
@@ -44,6 +46,7 @@ class ScalarType(DataType):
         INTEGER = 1
         FLOAT = 2
         BOOLEAN = 3
+        CHARACTER = 4
 
     class Precision(Enum):
         '''
@@ -269,6 +272,16 @@ INT8_TYPE = ScalarType(ScalarType.Intrinsic.INTEGER, 8)
 
 BOOL_TYPE = ScalarType(ScalarType.Intrinsic.BOOLEAN, ScalarType.Precision.UNDEFINED)
 
+STRING_TYPE = ScalarType(ScalarType.Intrinsic.CHARACTER, ScalarType.Precision.UNDEFINED)
+
 # Particles always have a position, and its always considered to be a 3D double array
 # internally for now.
 PARTICLE_POSITION_TYPE = ArrayType(DOUBLE_TYPE, [3])
+
+type_mapping_str = {"c_int": INT_TYPE,
+                    "c_double": DOUBLE_TYPE,
+                    "c_float": FLOAT_TYPE,
+                    "c_int64_t": INT64_TYPE,
+                    "c_int32_t": INT32_TYPE,
+                    "c_int8_t": INT8_TYPE,
+                    "c_bool": BOOL_TYPE}

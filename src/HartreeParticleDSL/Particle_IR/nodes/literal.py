@@ -23,7 +23,7 @@ class Literal(DataNode):
                         or False.
     '''
     _real_value = r'^[+-]?[0-9]+(\.[0-9]*)?([eE][+-]?[0-9]+)?$'
-    _int_value = r'[+-]?[1-9][0-9]*'
+    _int_value = r'([+-]?[1-9][0-9]*|0)'
 
     def __init__(self, value: str, datatype: ScalarType) -> None:
         super().__init__()
@@ -37,12 +37,12 @@ class Literal(DataNode):
                             f"{type(value)} supplied.")
 
         if (datatype.intrinsic == ScalarType.Intrinsic.INTEGER and
-            not re.match(Literal._int_value, value)):
+            not re.fullmatch(Literal._int_value, value)):
             raise ValueError("Constructing integer Literal but got a value of "
                              f"'{value}' instead of an integer value.")
 
         if (datatype.intrinsic == ScalarType.Intrinsic.FLOAT and
-            not re.match(Literal._real_value, value)):
+            not re.fullmatch(Literal._real_value, value)):
             raise ValueError("Constructing float Literal but got a value of "
                              f"'{value}' instead of a float value.")
 

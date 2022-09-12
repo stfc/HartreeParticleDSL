@@ -119,7 +119,7 @@ class UnaryOperation(Operation):
     class UnaryOp(Enum):
         '''Enumeration of Unary Operations supported in Particle DSL.'''
         UNARYSUB=1
-        LOGICAL_NOT=2
+        LOG_NOT=2
 
     Operator = UnaryOp
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import List, Union
 
 from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
+from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
 from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
 from HartreeParticleDSL.Particle_IR.nodes.kernels import MainKernel
 
@@ -24,20 +25,20 @@ class Invoke(Statement):
         :return: whether the given child and position are valid for this node.
         :rtype: bool
         '''
-        if isinstance(child, Kern) and not isinstance(child, MainKernel):
+        if isinstance(child, Literal):
             return True
         return False
 
     @staticmethod
-    def create(kernels: Union[Kern, List[Kern]]) -> Invoke:
+    def create(kernels: Union[Literal, List[Literal]]) -> Invoke:
         '''
-        Creates an Invoke node for the Kern or list of Kern objects
+        Creates an Invoke node for the kernels represented by the literals
         passed to this function.
 
         :param kernels: kernel or list of kernels used in this invoke.
-        :type kernels: (list of) :py:class:`HartreeParticleDSL.Particle_IR.nodes.kern.Kern`
+        :type kernels: (list of) :py:class:`HartreeParticleDSL.Particle_IR.nodes.literal.Literal`
 
-        :returns: the Invoke object representing the supplied kernels.
+        :returns: the Invoke object representing the supplied kernel calls.
         :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.invoke.Invoke`
         '''
         rval = Invoke()

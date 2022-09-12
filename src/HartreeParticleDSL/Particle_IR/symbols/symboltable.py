@@ -7,6 +7,7 @@ import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import DataType
 from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
+from HartreeParticleDSL.Particle_IR.nodes.funcdef import FuncDef
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
 
 
@@ -33,9 +34,9 @@ class SymbolTable():
         # Store if we're a global symbol table.
         self._is_global = False
 
-        if not isinstance(kern, (HartreeParticleDSL._HartreeParticleDSL, Kern)):
+        if not isinstance(kern, (HartreeParticleDSL._HartreeParticleDSL, Kern, FuncDef)):
             raise TypeError("Argument 'kern' should be of type "
-                            "HartreeParticleDSL or Kern, but instead got "
+                            "HartreeParticleDSL, FuncDef or Kern, but instead got "
                             f"{type(kern)}.")
         
         if isinstance(kern, HartreeParticleDSL._HartreeParticleDSL):

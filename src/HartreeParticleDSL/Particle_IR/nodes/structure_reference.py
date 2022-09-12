@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Union
+
 from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
 from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
@@ -11,7 +15,7 @@ class StructureReference(Reference):
     :param member: The structure access member used in this reference.
     :type member: :py:class:`HartreeParticleDSL.Particle_IR.nodes.member.Member`
     '''
-    def __init__(self, symbol: StructureSymbol, member: Member) -> None:
+    def __init__(self, symbol: StructureSymbol, member: Union[NoneType,Member]=None) -> None:
         super().__init__()
         self.symbol = symbol
         self.member = member
@@ -36,10 +40,10 @@ class StructureReference(Reference):
         self._symbol = symbol
 
     @property
-    def member(self) -> Member:
+    def member(self) -> Union[NoneType,Member]:
         '''
         :returns: the member of the structure accessed in this reference.
-        :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.member.Member`
+        :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.member.Member` or None
         '''
         return self._member
 
@@ -53,7 +57,7 @@ class StructureReference(Reference):
 
         :raises TypeError: if the member is not the correct type.
         '''
-        if not isinstance(member, Member):
+        if member is not None and not isinstance(member, Member):
             raise TypeError("Attempted to make a StructureReference with a non-Member access. "
                             f"Got {type(member)} as input.")
         self._member = member

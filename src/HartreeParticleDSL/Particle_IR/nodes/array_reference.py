@@ -1,4 +1,6 @@
-from typing import List
+from __future__ import annotations
+
+from typing import List, Union
 
 from HartreeParticleDSL.Particle_IR.nodes.array_mixin import ArrayMixin
 from HartreeParticleDSL.Particle_IR.nodes.node import DataNode
@@ -15,10 +17,11 @@ class ArrayReference(ArrayMixin, Reference):
     :type indices: list of :py:class:`HartreeParticleDSL.Particle_IR.nodes.DataNode`
     '''
 
-    def __init__(self, symbol: ArraySymbol, indices: List[DataNode]) -> None:
+    def __init__(self, symbol: ArraySymbol, indices: Union[NoneType,List[DataNode]]=None) -> None:
         super().__init__()
         self.symbol = symbol
-        
+        if indices is None:
+            indices = []
         for index in indices:
             self.addchild(index)
 

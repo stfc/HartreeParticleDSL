@@ -103,6 +103,16 @@ class Loop(Statement):
                                     f"but found {len(self.children)}")
 
     @property
+    def variable(self) -> Symbol:
+        '''
+        :returns: the Symbol looped over in this Loop.
+        :rtype: :py:class:`HartreeParticleDSL.Particle_IR.symbols.Symbol`
+        '''
+        self._check_completeness()
+        return self._variable
+
+
+    @property
     def start_expr(self) -> DataNode:
         '''
         :returns: the DataNode representing the start in this Loop.
@@ -128,6 +138,15 @@ class Loop(Statement):
         '''
         self._check_completeness()
         return self.children[2]
+
+    @property
+    def body(self) -> Body:
+        '''
+        :returns: the Body representing the body of this Loop.
+        :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.Body`
+        '''
+        self._check_completeness()
+        return self.children[3]
 
     def node_str(self) -> str:
         '''
