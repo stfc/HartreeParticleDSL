@@ -15,3 +15,8 @@ class EmptyStatement(Statement):
     through the symbol table output.
     '''
 
+class Break(Statement):
+    '''
+    Node used to represent a break statement.
+    '''
+

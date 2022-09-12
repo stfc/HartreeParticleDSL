@@ -25,7 +25,7 @@ from HartreeParticleDSL.Particle_IR.nodes.loop import Loop
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
 from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, \
                                                            UnaryOperation
-from HartreeParticleDSL.Particle_IR.nodes.statement import EmptyStatement
+from HartreeParticleDSL.Particle_IR.nodes.statement import EmptyStatement, Break
 from HartreeParticleDSL.Particle_IR.nodes.structure_reference import StructureReference
 from HartreeParticleDSL.Particle_IR.nodes.while_loop import While
 
@@ -50,6 +50,13 @@ def test_visit_Name():
     assign = out.body.children[1]
     assert assign.lhs.symbol.name == "b"
 
+    def b():
+        b = 3
+    c = ast.parse(textwrap.dedent(inspect.getsource(b)))
+    with pytest.raises(IRGenerationError) as excinfo:
+        v.visit(c)
+    assert ("Attempted to access a symbol that has not been defined in this "
+            "scope. Symbol name was b" in str(excinfo.value))
 
 def test_visit_Add():
     v = ast_to_pir_visitor()
@@ -501,6 +508,13 @@ def test_visit_arg_and_arguments_and_FunctionDef(capsys):
     assert out.arguments[0].symbol.datatype == INT_TYPE
     assert "Got argument without corresponding type. Assuming int" in captured.out
 
+    def f(arg: fake):
+        create_variable(c_int, c)
+    c = ast.parse(textwrap.dedent(inspect.getsource(f)))
+    with pytest.raises(IRGenerationError) as excinfo:
+        out = v.visit(c)
+    assert ("Argument has unexpected type. Got fake." in str(excinfo.value))
+
 def test_visit_If():
     v = ast_to_pir_visitor()
     def a():
@@ -637,6 +651,45 @@ def test_visit_Call():
     assert isinstance(out.body.children[0], Invoke)
     assert len(out.body.children[0].children) == 1
 
+    def h():
+        create_variable(fake, a)
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(h)))
+    with pytest.raises(IRGenerationError) as excinfo:
+        out = v.visit(c)
+    assert ("Provided variable type fake not supported in Particle IR."
+            in str(excinfo.value))
+
+    # There isn't a known way to create an invalid variable name
+    # inside python, but we're checking just in case.
+    class fake_arg():
+        def __init__(self, the_id):
+            self.id = the_id
+    class fake_Call():
+        def __init__(self):
+            import ast
+            self.func = ast.Name("create_variable")
+            self.args = []
+            self.args.append(fake_arg("c_int"))
+            self.args.append(fake_arg("90xsdawer"))
+
+    with pytest.raises(IRGenerationError) as excinfo:
+        out = v.visit_Call(fake_Call())
+    assert ("Particle IR does not support 90xsdawer as a variable name."
+            in str(excinfo.value))
+
+    def k():
+        create_variable(c_int, a, 3)
+    c = ast.parse(textwrap.dedent(inspect.getsource(k)))
+    out = v.visit(c)
+
+    assert isinstance(out.body.children[0], Assignment)
+    assert out.body.children[0].lhs.symbol.name == "a"
+    assert out.body.children[0].lhs.symbol.datatype == INT_TYPE
+    assert out.body.children[0].rhs.value == "3"
+
+
+
 def test_visit_Module():
     v = ast_to_pir_visitor()
     def a():
@@ -772,6 +825,17 @@ def test_visit_For():
     assert ("Only range loops are supported in ParticleIR" in
             str(excinfo.value))
 
+    def e():
+        create_variable(c_int, i)
+        create_variable(array, a)
+        create_variable(array, d)
+        for i in a():
+            d[i] = 0.1
+    c = ast.parse(textwrap.dedent(inspect.getsource(e)))
+    with pytest.raises(IRGenerationError) as excinfo:
+        out = v.visit(c)
+    assert ("Only range loops are supported in ParticleIR" in
+            str(excinfo.value))
     del(type_mapping_str["array"])
 
 def test_visit_While():
@@ -790,6 +854,45 @@ def test_visit_While():
     whileloop = out.body.children[0]
     assert isinstance(whileloop.condition, ScalarReference)
     assert len(whileloop.body.children) == 1
+
+def test_visit_Break():
+    v = ast_to_pir_visitor()
+    def a(b: c_bool):
+        while b:
+            break
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    out = v.visit(c)
+    
+    assert isinstance(out, FuncDef)
+    assert len(out.arguments) == 1
+    assert isinstance(out.body.children[0], While)
+    whileloop = out.body.children[0]
+    assert isinstance(whileloop.condition, ScalarReference)
+    assert len(whileloop.body.children) == 1
+    assert isinstance(whileloop.body.children[0], Break)
+
+def test_visit_Constant():
+    v = ast_to_pir_visitor()
+    def a(b:c_bool, c:c_bool):
+        b = True
+        c = False
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    out = v.visit(c)
+    assert isinstance(out, FuncDef)
+    assert len(out.arguments) == 2
+    assert isinstance(out.body.children[0].rhs, Literal)
+    assert out.body.children[0].rhs.value == "True"
+    assert isinstance(out.body.children[1].rhs, Literal)
+    assert out.body.children[1].rhs.value == "False"
+
+    class temp():
+        def __init__(self):
+            self.value = None
+    with pytest.raises(NotImplementedError):
+        v.visit_Constant(temp())
+
 
 def test_visit_generic():
     v = ast_to_pir_visitor()

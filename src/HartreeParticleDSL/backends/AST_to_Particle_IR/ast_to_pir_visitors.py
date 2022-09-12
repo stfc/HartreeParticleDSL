@@ -28,7 +28,7 @@ from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, \
 from HartreeParticleDSL.Particle_IR.nodes.scalar_reference import ScalarReference
 from HartreeParticleDSL.Particle_IR.nodes.structure_reference import StructureReference
 from HartreeParticleDSL.Particle_IR.nodes.structure_member import StructureMember
-from HartreeParticleDSL.Particle_IR.nodes.statement import EmptyStatement
+from HartreeParticleDSL.Particle_IR.nodes.statement import EmptyStatement, Break
 from HartreeParticleDSL.Particle_IR.nodes.while_loop import While
 
 
@@ -40,14 +40,6 @@ class ast_to_pir_visitor(ast.NodeVisitor):
     def __init__(self):
         super().__init__()
         self._symbol_table = None
-
-    def visit_str(self, node: str):
-        # TODO when we work out what this needs.
-        raise NotImplementedError()
-
-    def visit_int(self, node: int):
-        # TODO when we work out what this needs.
-        raise NotImplementedError()
 
     def visit_Add(self, node: ast.Add) -> BinaryOperation.BinaryOp:
         return BinaryOperation.BinaryOp.ADDITION
@@ -183,9 +175,8 @@ class ast_to_pir_visitor(ast.NodeVisitor):
         return StructureReference(sym, mem)
 
 
-    def visit_Break(self, node: ast.Break):
-        print("Break NYI")
-        raise NotImplementedError()
+    def visit_Break(self, node: ast.Break) -> Break:
+        return Break()
 
     def visit_Constant(self, node: ast.Constant) -> Literal:
         if type(node.value) is str:
@@ -205,7 +196,6 @@ class ast_to_pir_visitor(ast.NodeVisitor):
                                ScalarType.Precision.UNDEFINED)
             return Literal(f"{node.value}", dtype)
         else:
-            print(type(node.value))
             raise NotImplementedError()
 
     def visit_Assign(self, node: ast.Assign) -> Assignment:
@@ -304,7 +294,7 @@ class ast_to_pir_visitor(ast.NodeVisitor):
                 initial_value = node.args[2]
                 # Create a Reference to the symbol
                 lhs = ScalarReference(sym)
-                rhs = self.visit(args[2])
+                rhs = self.visit(node.args[2])
                 return Assignment.create(lhs, rhs)
         else:
             args = []
@@ -316,9 +306,6 @@ class ast_to_pir_visitor(ast.NodeVisitor):
         module_nodes = []
         for a in ast.iter_child_nodes(node):
             module_nodes.append(self.visit(a))
-        if len(module_nodes) != 1:
-            raise IRGenerationError("Can't handle multiple nodes inside a "
-                                    "Module at this time.")
         return module_nodes[0]
 
     def visit_Index(self, node: ast.Index) -> DataNode:
@@ -328,10 +315,12 @@ class ast_to_pir_visitor(ast.NodeVisitor):
         if isinstance(node.value, ast.Attribute):
             temp_ref = self.visit(node.value)
             x = temp_ref.member
-            while hasattr(x, "member"):
-                x = temp_ref.member
-                temp_ref = temp_ref.member
-            # x is the innermost member
+            #while hasattr(x, "member"):
+#                x = temp_ref.member
+#                temp_ref = temp_ref.member
+            assert not hasattr(x, "member")
+            # x is always the innermost member, use assert to double check but
+            # couldn't create cases otherwise
             indices = self.visit(node.slice)
             if not isinstance(indices, list):
                 indices = [indices]
@@ -343,13 +332,17 @@ class ast_to_pir_visitor(ast.NodeVisitor):
             x = self.visit(node.value)
             if isinstance(x, StructureReference):
                 child = x
-                while not isinstance(child.member, ArrayMixin):
-                    child = child.member
+                # Most cases here are already handled in visit_Attribute
+                # we assert to ensure but
+                # child.member should always be ArrayMixin
+                assert isinstance(child.member, ArrayMixin)
+#                while not isinstance(child.member, ArrayMixin):
+#                    child = child.member
                 child.member.indices.append(index)
             elif isinstance(x, ArrayReference):
                 x.indices.append(index)
-            else:
-                raise NotImplementedError()
+#            else:
+#                raise NotImplementedError()
             return x
         else:
             r = self.visit(node.value)
@@ -364,7 +357,7 @@ class ast_to_pir_visitor(ast.NodeVisitor):
             raise IRGenerationError(f"Only range loops are supported in ParticleIR")
         if type(node.iter) == ast.Call:
             if node.iter.func.id != "range":
-                raise IRGeneration(f"Only range loops are supported in ParticleIR")
+                raise IRGenerationError(f"Only range loops are supported in ParticleIR")
 
         if len(node.iter.args) == 2:
             startval = self.visit(node.iter.args[0])
@@ -398,9 +391,6 @@ class ast_to_pir_visitor(ast.NodeVisitor):
         exprs = []
         for a in ast.iter_child_nodes(node):
             exprs.append(self.visit(a))
-        if len(exprs) != 1:
-            raise IRGenerationError("Can't handle multiple nodes inside an "
-                                    "Expr at this time.")
         return exprs[0]
 
     def generic_visit(self, node: Any):
