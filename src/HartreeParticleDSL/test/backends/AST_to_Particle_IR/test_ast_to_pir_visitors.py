@@ -725,7 +725,10 @@ def test_visit_Index_and_Subscript():
 
     # Cover pre-3.9 code to ensure 3.8 installations are tested.
     x = ast.Constant(1)
-    y = ast.Index(x)
+    class fake_Node():
+        def __init__(self, x):
+            self.value = x
+    y = fake_Node(x)
     out = v.visit_Index(y)
     assert isinstance(out, Literal)
     assert out.value == "1"
