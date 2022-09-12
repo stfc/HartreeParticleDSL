@@ -723,6 +723,13 @@ def test_visit_Index_and_Subscript():
     assert isinstance(assign.lhs.indices[1], Literal)
     assert assign.lhs.indices[1].value == "2"
 
+    # Cover pre-3.9 code to ensure 3.8 installations are tested.
+    x = ast.Constant(1)
+    y = ast.Index(x)
+    out = v.visit_Index(y)
+    assert isinstance(out, Literal)
+    assert out.value == "1"
+
     del(type_mapping_str["array"])
 
 def test_visit_For():

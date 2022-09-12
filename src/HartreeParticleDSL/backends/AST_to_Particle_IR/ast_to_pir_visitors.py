@@ -308,6 +308,7 @@ class ast_to_pir_visitor(ast.NodeVisitor):
             module_nodes.append(self.visit(a))
         return module_nodes[0]
 
+    # 3.8 only
     def visit_Index(self, node: ast.Index) -> DataNode:
         return self.visit(node.value)
 
