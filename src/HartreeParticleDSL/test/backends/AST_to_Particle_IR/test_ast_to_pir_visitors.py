@@ -964,6 +964,37 @@ def test_particle_visitors():
     type_mapping_str["part"].components["x"] = ArrayType(INT_TYPE, [3])
     def d(part1: part):
         part1.x[0] = 1
+    c = ast.parse(textwrap.dedent(inspect.getsource(d)))
+    out = v.visit(c)
+    assert isinstance(out.body.children[0].lhs, ParticleReference)
+    assert out.body.children[0].lhs.symbol.name == "part1"
+    assert out.body.children[0].lhs.member.name == "x"
+    assert out.body.children[0].lhs.member.indices[0].value == "0"
+
+    type_mapping_str["part"].components["x"] = ArrayType(INT_TYPE, [3])
+    def e(part1: part, part2: part):
+        part2 = part1
+    c = ast.parse(textwrap.dedent(inspect.getsource(e)))
+    with pytest.raises(IRGenerationError) as excinfo:
+        out = v.visit(c)
+    assert("Particle IR doesn't currently support accessing a full particle "
+           "type in a single statement." in str(excinfo.value))
+
+
+
+
+def test_visit_generic():
+    v = ast_to_pir_visitor()
+
+    with pytest.raises(IRGenerationError) as excinfo:
+        v.visit(v)
+    assert ("Found unsupported node of type <class 'HartreeParticleDSL.backends."
+            "AST_to_Particle_IR.ast_to_pir_visitors.ast_to_pir_visitor'>"
+            in str(excinfo.value))
+
+    def e(part1: part):
+        create_variable(part, part2, part1)
+
 
 
 def test_visit_generic():

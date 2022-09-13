@@ -130,7 +130,9 @@ class ast_to_pir_visitor(ast.NodeVisitor):
 #        if isinstance(sym, ScalarTypeSymbol):
 #            return ScalarReference(sym)
         if sym.datatype == type_mapping_str["part"]:
-            raise NotImplementedError
+            raise IRGenerationError("Particle IR doesn't currently support "
+                                    "accessing a full particle type in a "
+                                    "single statement.")
         ref = symbol_to_reference[type(sym)](sym)
         return ref
 
