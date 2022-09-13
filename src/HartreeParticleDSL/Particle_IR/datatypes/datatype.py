@@ -278,10 +278,16 @@ STRING_TYPE = ScalarType(ScalarType.Intrinsic.CHARACTER, ScalarType.Precision.UN
 # internally for now.
 PARTICLE_POSITION_TYPE = ArrayType(DOUBLE_TYPE, [3])
 
+BASE_PARTICLE_TYPE = StructureType()
+_CORE_PART_TYPE = StructureType()
+_CORE_PART_TYPE.components["position"] = PARTICLE_POSITION_TYPE
+BASE_PARTICLE_TYPE.components["core_part"] = _CORE_PART_TYPE
+
 type_mapping_str = {"c_int": INT_TYPE,
                     "c_double": DOUBLE_TYPE,
                     "c_float": FLOAT_TYPE,
                     "c_int64_t": INT64_TYPE,
                     "c_int32_t": INT32_TYPE,
                     "c_int8_t": INT8_TYPE,
-                    "c_bool": BOOL_TYPE}
+                    "c_bool": BOOL_TYPE,
+                    "part": BASE_PARTICLE_TYPE}

@@ -723,6 +723,26 @@ def test_visit_Index_and_Subscript():
     assert isinstance(assign.lhs.indices[1], Literal)
     assert assign.lhs.indices[1].value == "2"
 
+    struct = StructureType()
+    substruct = StructureType()
+    substruct.components["array"] = ArrayType(INT_TYPE, [3])
+    struct.components["sub"] = substruct
+    type_mapping_str["struc"] = struct
+
+    def b():
+        create_variable(struc, c)
+        c.sub.array[0] = 1
+    c = ast.parse(textwrap.dedent(inspect.getsource(b)))
+    out = v.visit(c)
+    assert isinstance(out, FuncDef)
+    assert isinstance(out.body.children[0], EmptyStatement)
+    assert isinstance(out.body.children[1], Assignment)
+    assign = out.body.children[1]
+    assert isinstance(assign.lhs, StructureReference)
+    assert isinstance(assign.lhs.member, StructureMember)
+    assert isinstance(assign.lhs.member.member, ArrayMixin)
+    assert assign.lhs.member.member.indices[0].value == "0"
+
     # Cover pre-3.9 code to ensure 3.8 installations are tested.
     x = ast.Constant(1)
     class fake_Node():
@@ -902,6 +922,48 @@ def test_visit_Constant():
             self.value = None
     with pytest.raises(NotImplementedError):
         v.visit_Constant(temp())
+
+def test_visit_Return():
+    v = ast_to_pir_visitor()
+    def a():
+        return 1
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    out = v.visit(c)
+    assert isinstance(out.body.children[0], Return)
+    assert len(out.body.children[0].children) == 1
+    assert out.body.children[0].children[0].value == "1"
+
+    def b():
+        return
+    c = ast.parse(textwrap.dedent(inspect.getsource(b)))
+    out = v.visit(c)
+    assert isinstance(out.body.children[0], Return)
+    assert len(out.body.children[0].children) == 0
+
+def test_particle_visitors():
+    v = ast_to_pir_visitor()
+    def a(part1: part):
+        part1.core_part.position[0] = 1.0
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    out = v.visit(c)
+    assert isinstance(out.body.children[0].lhs, ParticlePositionReference)
+    assert out.body.children[0].lhs.symbol.name == "part1"
+    assert out.body.children[0].lhs.dimension == 0
+
+    type_mapping_str["part"].components["test"] = INT_TYPE
+
+    def b(part1: part):
+        part1.test = 1
+    c = ast.parse(textwrap.dedent(inspect.getsource(b)))
+    out = v.visit(c)
+
+    assert isinstance(out.body.children[0].lhs, ParticleReference)
+    assert out.body.children[0].lhs.symbol.name == "part1"
+    assert out.body.children[0].lhs.member.name == "test"
+
+    type_mapping_str["part"].components["x"] = ArrayType(INT_TYPE, [3])
+    def d(part1: part):
+        part1.x[0] = 1
 
 
 def test_visit_generic():

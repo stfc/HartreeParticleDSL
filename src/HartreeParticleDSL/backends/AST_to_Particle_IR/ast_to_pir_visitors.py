@@ -25,10 +25,12 @@ from HartreeParticleDSL.Particle_IR.nodes.loop import Loop
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
 from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, \
                                                            UnaryOperation
+from HartreeParticleDSL.Particle_IR.nodes.particle_reference import ParticleReference
+from HartreeParticleDSL.Particle_IR.nodes.particle_position_reference import ParticlePositionReference
 from HartreeParticleDSL.Particle_IR.nodes.scalar_reference import ScalarReference
 from HartreeParticleDSL.Particle_IR.nodes.structure_reference import StructureReference
 from HartreeParticleDSL.Particle_IR.nodes.structure_member import StructureMember
-from HartreeParticleDSL.Particle_IR.nodes.statement import EmptyStatement, Break
+from HartreeParticleDSL.Particle_IR.nodes.statement import EmptyStatement, Break, Return
 from HartreeParticleDSL.Particle_IR.nodes.while_loop import While
 
 
@@ -127,6 +129,8 @@ class ast_to_pir_visitor(ast.NodeVisitor):
                                     f"name was {node.id}")
 #        if isinstance(sym, ScalarTypeSymbol):
 #            return ScalarReference(sym)
+        if sym.datatype == type_mapping_str["part"]:
+            raise NotImplementedError
         ref = symbol_to_reference[type(sym)](sym)
         return ref
 
@@ -144,6 +148,10 @@ class ast_to_pir_visitor(ast.NodeVisitor):
                                     "is not currently supported in ParticleIR.")
         sym_name = f"{temp_node.id}"
         sym = self._symbol_table.lookup(sym_name)
+        if sym.datatype == type_mapping_str["part"]:
+            if (len(attribute_names) == 2 and attribute_names[0] == "core_part"
+                and attribute_names[1] == "position"):
+                return ParticlePositionReference(sym, 0)
         if len(attribute_names) == 1:
             # Check validity
             if attribute_names[0] not in sym.datatype.components:
@@ -171,7 +179,8 @@ class ast_to_pir_visitor(ast.NodeVisitor):
                 else:
                     current_mem = None
 #            raise NotImplementedError()
-
+        if sym.datatype == type_mapping_str["part"]:
+            return ParticleReference(sym, mem)
         return StructureReference(sym, mem)
 
 
@@ -314,12 +323,16 @@ class ast_to_pir_visitor(ast.NodeVisitor):
 
     def visit_Subscript(self, node: ast.Subscript) -> Union[List[Node],Node]:
         if isinstance(node.value, ast.Attribute):
-            temp_ref = self.visit(node.value)
+            ref = self.visit(node.value)
+            if isinstance(ref, ParticlePositionReference):
+                index = self.visit(node.slice)
+                ref.dimension = int(index.value)
+                return ref
+            temp_ref = ref
             x = temp_ref.member
-            #while hasattr(x, "member"):
-#                x = temp_ref.member
-#                temp_ref = temp_ref.member
-            assert not hasattr(x, "member")
+            while hasattr(x, "member"):
+                x = x.member
+                temp_ref = temp_ref.member
             # x is always the innermost member, use assert to double check but
             # couldn't create cases otherwise
             indices = self.visit(node.slice)
@@ -327,7 +340,7 @@ class ast_to_pir_visitor(ast.NodeVisitor):
                 indices = [indices]
             new_x = ArrayMember(x.name, indices)
             temp_ref.member = new_x
-            return temp_ref
+            return ref
         elif isinstance(node.value, ast.Subscript):
             index = self.visit(node.slice)
             x = self.visit(node.value)
@@ -393,6 +406,12 @@ class ast_to_pir_visitor(ast.NodeVisitor):
         for a in ast.iter_child_nodes(node):
             exprs.append(self.visit(a))
         return exprs[0]
+
+    def visit_Return(self, node: ast.Return) -> Return:
+        r = Return()
+        if node.value is not None:
+            r.addchild(self.visit(node.value))
+        return r
 
     def generic_visit(self, node: Any):
         raise IRGenerationError(f"Found unsupported node of type {type(node)}")

@@ -36,6 +36,16 @@ class StructureMember(Member):
         '''
         return self.children[0]
 
+    @member.setter
+    def member(self, sub_member: Member) -> None:
+        '''
+        Sets the member attribute of this StructureMember.
+
+        :param sub_member: The member this structure contains as an access.
+        :type sub_member: :py:class:`HartreeParticleDSL.Particle_IR.nodes.member.Member`
+        '''
+        self.children[0] = sub_member
+
     def node_str(self) -> str:
         '''
         :returns: a text description of this node
