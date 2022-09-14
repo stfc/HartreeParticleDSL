@@ -22,6 +22,8 @@ from HartreeParticleDSL.Particle_IR.nodes.ifelse import IfElseBlock
 from HartreeParticleDSL.Particle_IR.nodes.invoke import Invoke
 from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
 from HartreeParticleDSL.Particle_IR.nodes.loop import Loop
+from HartreeParticleDSL.Particle_IR.nodes.kernels import MainKernel, PairwiseKernel, \
+                                                         PerPartKernel
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
 from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, \
                                                            UnaryOperation
@@ -223,7 +225,10 @@ class ast_to_pir_visitor(ast.NodeVisitor):
             types = f"{node.annotation.id}"
             sym = self._symbol_table.new_symbol(f"{node.arg}", type_mapping_str[types],
                                           datatype_to_symbol[type(type_mapping_str[types])])
-            ref = symbol_to_reference[type(sym)](sym)
+            if types == "part":
+                ref = ParticleReference(sym, Member(""))
+            else:
+                ref = symbol_to_reference[type(sym)](sym)
 
         else:
             print("Got argument without corresponding type. Assuming int")
@@ -418,3 +423,60 @@ class ast_to_pir_visitor(ast.NodeVisitor):
     def generic_visit(self, node: Any):
         raise IRGenerationError(f"Found unsupported node of type {type(node)}")
 
+class pir_main_visitor(ast_to_pir_visitor):
+    def visit_FunctionDef(self, node: ast.FuncDef) -> MainKernel:
+        body = []
+        if node.name != "main":
+            raise IRGenerationError("Attempting to create a main function "
+                                    "but name was not 'main', got "
+                                    f"'{node.name}'.")
+        main = MainKernel.create(node.name, body)
+        self._symbol_table = main.symbol_table
+        args = self.visit(node.args)
+        if len(args) != 0:
+            raise IRGenerationError("Particle IR expects no arguments to main "
+                                    f"function but received {len(args)}.")
+        for child in node.body:
+            main.body.addchild(self.visit(child))
+        return main
+
+class pir_pairwise_visitor(ast_to_pir_visitor):
+    def visit_FunctionDef(self, node: ast.FuncDef) -> PairwiseKernel:
+        name = node.name
+        kern = PairwiseKernel(name)
+        self._symbol_table = kern.symbol_table
+        args = self.visit(node.args)
+        if len(args) < 3:
+            raise IRGenerationError("Particle IR expects at least 3 arguments "
+                                    "for a pairwise kernel, but got "
+                                    f"{len(args)}.")
+        # Check for 2 particle references?
+        if (not (isinstance(args[0], ParticleReference) and 
+            isinstance(args[1], ParticleReference))):
+            raise IRGenerationError("Pairwise Kernel needs 2 particle "
+                                    "arguments in Particle IR.")
+
+        for child in node.body:
+            kern.body.addchild(self.visit(child))
+        kern.arguments = args
+        return kern
+
+class pir_perpart_visitor(ast_to_pir_visitor):
+    def visit_FunctionDef(self, node: ast.FuncDef) -> PerPartKernel:
+        name = node.name
+        kernel = PerPartKernel(name)
+        self._symbol_table = kernel.symbol_table
+        args = self.visit(node.args)
+        if len(args) < 2:
+            raise IRGenerationError("Particle IR expects at least 2 arguments "
+                                    "for a perpart kernel, but got "
+                                    f"{len(args)}.")
+
+        if not isinstance(args[0], ParticleReference):
+            raise IRGenerationError("First argument to PerPartKernel must "
+                                    "be a particle.")
+        # TODO check for 1 particle reference
+        for child in node.body:
+            kernel.body.addchild(self.visit(child))
+        kernel.arguments = args
+        return kernel

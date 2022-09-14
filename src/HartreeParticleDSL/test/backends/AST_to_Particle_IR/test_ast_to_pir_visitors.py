@@ -22,6 +22,8 @@ from HartreeParticleDSL.Particle_IR.nodes.funcdef import FuncDef
 from HartreeParticleDSL.Particle_IR.nodes.ifelse import IfElseBlock
 from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
 from HartreeParticleDSL.Particle_IR.nodes.loop import Loop
+from HartreeParticleDSL.Particle_IR.nodes.kernels import MainKernel, PairwiseKernel, \
+                                                         PerPartKernel
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
 from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, \
                                                            UnaryOperation
@@ -1004,4 +1006,92 @@ def test_visit_generic():
         v.visit(v)
     assert ("Found unsupported node of type <class 'HartreeParticleDSL.backends."
             "AST_to_Particle_IR.ast_to_pir_visitors.ast_to_pir_visitor'>"
+            in str(excinfo.value))
+
+def test_main_visitor():
+    v = pir_main_visitor()
+
+    def main(arg: c_int):
+        create_variable(c_int, a)
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(main)))
+    with pytest.raises(IRGenerationError) as excinfo:
+        out = v.visit(c)
+    assert ("Particle IR expects no arguments to main function but "
+            "received 1." in str(excinfo.value))
+
+    def a():
+        create_variable(c_int, a)
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    with pytest.raises(IRGenerationError) as excinfo:
+        out = v.visit(c)
+    assert ("Attempting to create a main function but name was not "
+            "'main', got 'a'." in str(excinfo.value))
+
+    def main():
+        create_variable(c_int, a)
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(main)))
+    out = v.visit(c)
+
+    assert isinstance(out, MainKernel)
+    assert len(out.body.children) == 1
+    assert isinstance(out.body.children[0], EmptyStatement)
+
+def test_pairwise_visitor():
+    v = pir_pairwise_visitor()
+
+    def x(arg: part, arg2: part, c: c_int):
+        create_variable(c_int, a)
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(x)))
+    out = v.visit(c)
+
+    assert isinstance(out.arguments[0], ParticleReference)
+    assert isinstance(out.arguments[1], ParticleReference)
+    assert len(out.body.children) == 1
+
+    def y(arg: part):
+        create_variable(c_int, a)
+    c = ast.parse(textwrap.dedent(inspect.getsource(y)))
+    with pytest.raises(IRGenerationError) as excinfo:
+        out = v.visit(c)
+    assert ("Particle IR expects at least 3 arguments for a pairwise kernel, "
+            "but got 1." in str(excinfo.value))
+
+    def z(arg: part, arg2: c_int, c: c_int):
+        create_variable(c_int, a)
+    c = ast.parse(textwrap.dedent(inspect.getsource(z)))
+    with pytest.raises(IRGenerationError) as excinfo:
+        out = v.visit(c)
+    assert ("Pairwise Kernel needs 2 particle arguments in Particle IR."
+            in str(excinfo.value))
+   
+def test_perpart_visitor():
+    v = pir_perpart_visitor()
+
+    def x(arg: part, c: c_int):
+        create_variable(c_int, a)
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(x)))
+    out = v.visit(c)
+
+    assert isinstance(out.arguments[0], ParticleReference)
+    assert len(out.body.children) == 1
+
+    def y(arg: part):
+        create_variable(c_int, a)
+    c = ast.parse(textwrap.dedent(inspect.getsource(y)))
+    with pytest.raises(IRGenerationError) as excinfo:
+        out = v.visit(c)
+    assert ("Particle IR expects at least 2 arguments for a perpart kernel, "
+            "but got 1." in str(excinfo.value))
+
+    def z(arg: c_int, c: c_int):
+        create_variable(c_int, a)
+    c = ast.parse(textwrap.dedent(inspect.getsource(z)))
+    with pytest.raises(IRGenerationError) as excinfo:
+        out = v.visit(c)
+    assert ("First argument to PerPartKernel must be a particle."
             in str(excinfo.value))
