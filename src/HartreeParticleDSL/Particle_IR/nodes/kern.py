@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from abc import ABCMeta
 from typing import List
+from HartreeParticleDSL.Particle_IR.nodes.assignment import Assignment
 from HartreeParticleDSL.Particle_IR.nodes.node import Node
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
+from HartreeParticleDSL.Particle_IR.nodes.particle_position_reference import \
+        ParticlePositionReference
 
 class Kern(Node, metaclass=ABCMeta):
     '''
@@ -73,3 +76,21 @@ class Kern(Node, metaclass=ABCMeta):
         arg_string = ", ".join(arg_strings)
         nodestr = type(self).__name__ + f"[{arg_string}: {self.children[0].node_str()}]"
         return nodestr
+
+    def does_update_position(self) -> bool:
+        '''
+        Computes if this Kern updates particle positions. This knowledge can be
+        used by backends to compute if communication should happen or to apply
+        boundary conditions etc.
+
+        This is done by walking the tree for all assignments, and then checking
+        if the lhs is a ParticlePositionReference.
+
+        :returns: Whether this Kern updates particle positions.
+        :rtype: bool
+        '''
+        assigns = self.walk(Assignment)
+        for assign in assigns:
+            if isinstance(assign.lhs, ParticlePositionReference):
+                return True
+        return False

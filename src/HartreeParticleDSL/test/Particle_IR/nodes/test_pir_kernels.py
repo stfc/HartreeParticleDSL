@@ -7,14 +7,36 @@ from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
 from HartreeParticleDSL.Particle_IR.nodes.kernels import PairwiseKernel, PerPartKernel, \
                                                          MainKernel
 from HartreeParticleDSL.Particle_IR.nodes.scalar_reference import ScalarReference
-from HartreeParticleDSL.Particle_IR.datatypes.datatype import INT_TYPE
+from HartreeParticleDSL.Particle_IR.nodes.particle_position_reference import ParticlePositionReference
+from HartreeParticleDSL.Particle_IR.datatypes.datatype import INT_TYPE, StructureType
 from HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol import ScalarTypeSymbol
+from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
 from HartreeParticleDSL.Particle_IR.symbols.symboltable import SymbolTable
 
 def test_kern_validate_child():
     assert PairwiseKernel._validate_child(0, Body()) == True
     assert PairwiseKernel._validate_child(0, "asd") == False
     assert PairwiseKernel._validate_child(1, Body()) == False
+
+def test_kernel_update_position():
+    pk1 = PairwiseKernel("kernel")
+    struct_type = StructureType()
+    structure = StructureSymbol(name="structure1", datatype=struct_type)
+
+    a = ParticlePositionReference(structure, 0)
+
+    sym = ScalarTypeSymbol("x", INT_TYPE)
+    ref_lhs = ScalarReference(sym)
+    assign = Assignment.create(ref_lhs, a) 
+    pk1.body.addchild(assign)
+    assert pk1.does_update_position() == False
+
+    b = ParticlePositionReference(structure, 1)
+    sym2 = ScalarTypeSymbol("y", INT_TYPE)
+    ref_rhs = ScalarReference(sym2)
+    assign2 = Assignment.create(b, ref_rhs)
+    pk1.body.addchild(assign2)
+    assert pk1.does_update_position() == True
 
 def test_pairwise_init():
     pk1 = PairwiseKernel("kernel")
