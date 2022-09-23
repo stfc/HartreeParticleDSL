@@ -69,6 +69,9 @@ class ast_to_pir_visitor(ast.NodeVisitor):
     def visit_Gt(self, node: ast.Gt) -> BinaryOperation.BinaryOp:
         return BinaryOperation.BinaryOp.GREATER_THAN
 
+    def visit_Eq(self, node: ast.Eq) -> BinaryOperation.BinaryOp:
+        return BinaryOperation.BinaryOp.EQUALITY
+
     def visit_USub(self, node: ast.USub) -> UnaryOperation.UnaryOp:
         return UnaryOperation.UnaryOp.UNARYSUB
 

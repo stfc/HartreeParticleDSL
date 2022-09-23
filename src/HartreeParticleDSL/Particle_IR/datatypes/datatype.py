@@ -290,4 +290,16 @@ type_mapping_str = {"c_int": INT_TYPE,
                     "c_int32_t": INT32_TYPE,
                     "c_int8_t": INT8_TYPE,
                     "c_bool": BOOL_TYPE,
+                    "char*": STRING_TYPE,
                     "part": BASE_PARTICLE_TYPE}
+
+def reset_type_mapping_str():
+    type_mapping_str = {"c_int": INT_TYPE,
+                        "c_double": DOUBLE_TYPE,
+                        "c_float": FLOAT_TYPE,
+                        "c_int64_t": INT64_TYPE,
+                        "c_int32_t": INT32_TYPE,
+                        "c_int8_t": INT8_TYPE,
+                        "c_bool": BOOL_TYPE,
+                        "char*": STRING_TYPE,
+                        "part": BASE_PARTICLE_TYPE}

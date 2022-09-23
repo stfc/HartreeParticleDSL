@@ -159,6 +159,21 @@ def test_visit_GtE():
     assert isinstance(assign.rhs, BinaryOperation)
     assert assign.rhs.operator == BinaryOperation.BinaryOp.GREATER_THAN_EQUAL
 
+def test_visit_Eq():
+    v = ast_to_pir_visitor()
+    def a():
+        create_variable(c_bool, b)
+        b = 1 == 2
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    out = v.visit(c)
+    assert isinstance(out, FuncDef)
+    assert isinstance(out.body.children[0], EmptyStatement)
+    assert isinstance(out.body.children[1], Assignment)
+    assign = out.body.children[1]
+    assert isinstance(assign.rhs, BinaryOperation)
+    assert assign.rhs.operator == BinaryOperation.BinaryOp.EQUALITY
+
+
 def test_visit_Gt_and_Compare():
     v = ast_to_pir_visitor()
     def a():
