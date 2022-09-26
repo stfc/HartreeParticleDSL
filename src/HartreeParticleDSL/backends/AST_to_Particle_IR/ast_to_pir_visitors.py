@@ -155,6 +155,10 @@ class ast_to_pir_visitor(ast.NodeVisitor):
                                     "is not currently supported in ParticleIR.")
         sym_name = f"{temp_node.id}"
         sym = self._symbol_table.lookup(sym_name)
+        if sym is None:
+            raise IRGenerationError("Attempted to access a symbol that has "
+                                    "not been defined in this scope. Symbol "
+                                    f"name was {node.id}")
         if sym.datatype == type_mapping_str["part"]:
             if (len(attribute_names) == 2 and attribute_names[0] == "core_part"
                 and attribute_names[1] == "position"):
