@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 from HartreeParticleDSL.backends.Cabana_PIR_backend.pir_to_cabana_visitor import *
+from HartreeParticleDSL.backends.Cabana_PIR_backend.cabana_pir import *
 from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import *
+
+from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, ScalarType, \
+        StructureType, ArrayType, \
+        INT_TYPE, FLOAT_TYPE, DOUBLE_TYPE, INT64_TYPE, INT32_TYPE, BOOL_TYPE, STRING_TYPE, \
+        BASE_PARTICLE_TYPE
 
 import ast
 import inspect
@@ -54,6 +60,42 @@ def test_pir_cabana_visit_return():
 '''
     assert correct == out
 
+    def e():
+        return 1.0
+    c = ast.parse(textwrap.dedent(inspect.getsource(e)))
+
+    pir = astpir.visit(c)
+    out = cpir(pir)
+    correct = '''double e(){
+    return 1.0;
+}
+'''
+    assert correct == out
+
+    def f():
+        return False
+    c = ast.parse(textwrap.dedent(inspect.getsource(f)))
+
+    pir = astpir.visit(c)
+    out = cpir(pir)
+    correct = '''bool f(){
+    return False;
+}
+'''
+    assert correct == out
+
+    def g():
+        return "string"
+    c = ast.parse(textwrap.dedent(inspect.getsource(g)))
+
+    pir = astpir.visit(c)
+    out = cpir(pir)
+    correct = '''char* g(){
+    return "string";
+}
+'''
+    assert correct == out
+
     def d(a: c_float):
         return a
     c = ast.parse(textwrap.dedent(inspect.getsource(d)))
@@ -66,6 +108,14 @@ def test_pir_cabana_visit_return():
 '''
     assert correct == out
 
+    def h():
+        return a_call()
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(h)))
+
+    pir = astpir.visit(c)
+    with pytest.raises(NotImplementedError):
+        out = cpir(pir)
 
 def test_pir_cabana_visit_ifdef():
     def a():
@@ -174,3 +224,129 @@ def test_pir_cabana_visit_operations():
 
     assert correct == out
 
+def test_pir_cabana_visit_call():
+    astpir = ast_to_pir_visitor()
+    cpir = Cabana_PIR_Visitor(None)
+    # TODO Check backend call functionality.
+
+    def d():
+        create_variable(c_int, x)
+        mycall(x)
+    c = ast.parse(textwrap.dedent(inspect.getsource(d)))
+    pir = astpir.visit(c)
+    out = cpir(pir)
+    correct = '''void d(){
+    int x;
+    mycall(x);
+}
+'''
+    assert correct == out
+
+
+def test_pir_cabana_visit_members():
+    astpir = ast_to_pir_visitor()
+    cpir = Cabana_PIR_Visitor(None)
+    mystruc1 = StructureType()
+    mystruc1.add("d", INT_TYPE)
+    type_mapping_str["mystruc1"]=mystruc1
+    def a():
+        create_variable(mystruc1, d)
+        d.d = 1
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    pir = astpir.visit(c)
+    out = cpir(pir)
+    correct = '''void a(){
+    struct mystruc1 d;
+    d.d = 1;
+}
+'''
+    assert correct == out
+    del(type_mapping_str["mystruc1"])
+
+    mystruc2 = StructureType()
+    substruc = StructureType()
+    substruc.add("e", INT_TYPE)
+    mystruc2.add("d", substruc)
+    type_mapping_str["mystruc2"]=mystruc2
+    def b():
+        create_variable(mystruc2, b)
+        b.d.e = 1
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(b)))
+    pir = astpir.visit(c)
+    out = cpir(pir)
+
+    correct = '''void b(){
+    struct mystruc2 b;
+    b.d.e = 1;
+}
+'''
+    assert correct == out
+    del(type_mapping_str["mystruc2"])
+
+    mystruc2 = StructureType()
+    substruc1 = ArrayType(INT_TYPE, [ArrayType.Extent.DYNAMIC])
+    mystruc2.add("c", substruc1)
+    type_mapping_str["mystruc2"]=mystruc2
+    def d():
+        create_variable(mystruc2, b)
+        b.c[0] = 1
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(d)))
+    pir = astpir.visit(c)
+    out = cpir(pir)
+    correct = '''void d(){
+    struct mystruc2 b;
+    b.c[0] = 1;
+}
+'''
+    assert correct == out
+    del(type_mapping_str["mystruc2"])
+
+def test_pir_cabana_particle_references_and_perpart():
+    backend = Cabana_PIR()
+    cpir = Cabana_PIR_Visitor(backend)
+    # Create a perpart_kernel
+    v = pir_perpart_visitor()
+    type_mapping_str["part"].add("subpart", INT_TYPE)
+    def x(arg: part, c: c_int):
+        arg.subpart = 1
+        arg.core_part.position[0] = 2.0
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(x)))
+    pir = v.visit(c)
+    out = cpir(pir)
+    correct = '''template < class SUBPART, class CORE_PART_POSITION >
+struct x_functor{
+    config_struct_type _c;
+    SUBPART _subpart;
+    CORE_PART_POSITION _core_part_position;
+
+    KOKKOS_INLINE_FUNCTION
+     x_functor( SUBPART subpart, CORE_PART_POSITION core_part_position, config_struct_type c):
+    _subpart(subpart), _core_part_position(core_part_position), {_{node.arguments[1].symbol.name}({node.arguments[1].symbol.name}){}
+
+    void operator()(const int i, const int a) const{
+        _subpart.access(i, a) = 1;
+        _core_part_position.access(i, a, 0) = 2.0;
+    }
+};
+'''
+    assert correct == out
+
+    assert pir == backend._kernels["x"]
+
+def test_pir_cabana_pairwise():
+    backend = Cabana_PIR()
+    cpir = Cabana_PIR_Visitor(backend)
+    # Create a pairwise kernel
+    v = pir_pairwise_visitor()
+    def x( arg1: part, arg2: part, c: c_int):
+        arg1.subpart = 1
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(x)))
+    pir = v.visit(c)
+    with pytest.raises(NotImplementedError) as excinfo:
+        out = cpir(pir)
+    assert "Pairwise kernels not yet supported in cabana." in str(excinfo.value)

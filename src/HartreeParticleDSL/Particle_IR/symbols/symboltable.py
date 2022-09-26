@@ -135,6 +135,10 @@ class SymbolTable():
                             f"{type(name)}.")
 
         # TODO Should we look in the global symbol table if we don't find locally?
+        if self._symbols.get(name) is None:
+            raise IRGenerationError(f"Failed to find symbol {name} in symbol "
+                                    "table. Need to check global symbol table "
+                                    "in the future too.")
         return self._symbols.get(name)            
 
     def find_or_create(self, name: str, datatype: DataType, symbol_type: type[Symbol]) ->  Symbol:

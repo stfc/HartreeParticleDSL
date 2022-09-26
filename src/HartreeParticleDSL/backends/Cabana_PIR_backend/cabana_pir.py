@@ -20,7 +20,14 @@ class Cabana_PIR(Backend):
     Outputs from this class use the Cabana & Kokkos system to compute
     parallel particle simulations.
     '''
-
+    _type_map = {c_int : "int",
+            c_double : "double",
+            c_float : "float",
+            c_int64_t : "int64_t",
+            c_int32_t : "int32_t",
+            c_int8_t : "int8_t",
+            c_bool : "bool",
+            }
     _type_sizes = {_type_map[c_int] : 4,
             _type_map[c_double] : 8,
             _type_map[c_float] : 4,
@@ -58,6 +65,10 @@ class Cabana_PIR(Backend):
         self._particle = None #TODO Remove & pull from PIR
 
         self._structures = {}
+
+    @property
+    def structures(self):
+        return self._structures
 
     def register_kernel(self, kernel_name: str, kernel: Kern):
         if kernel_name in self._kernels.keys():
@@ -210,14 +221,14 @@ class Cabana_PIR(Backend):
         input_module_header = ""
         if self._input_module is not None:
             input_module_header = self._input_module.gen_code_cabana(part_type) #FIXME
-        if input_module_header is not "":
+        if input_module_header != "":
             print(input_module_header)
             print("\n")
 
         output_module_header = ""
         if self._output_module is not None:
             output_module_header = self._output_module.gen_code_cabana(part_type) #FIXME
-        if output_module_header is not "":
+        if output_module_header != "":
             # Do something later
             print(output_module_header)
             print("\n")

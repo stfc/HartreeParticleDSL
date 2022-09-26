@@ -2,16 +2,21 @@ from __future__ import annotations
 
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IllegalLoopError, UnsupportedCodeError
 
+from HartreeParticleDSL.Particle_IR.nodes.array_mixin import ArrayMixin
+from HartreeParticleDSL.Particle_IR.nodes.funcdef import FuncDef
+from HartreeParticleDSL.Particle_IR.nodes.invoke import Invoke
+from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
 from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
 from HartreeParticleDSL.Particle_IR.nodes.node import Node
 from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
 from HartreeParticleDSL.Particle_IR.nodes.statement import Return, EmptyStatement
 from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, UnaryOperation
+from HartreeParticleDSL.Particle_IR.nodes.particle_reference import ParticleReference
 from HartreeParticleDSL.backends.base_backend.pir_visitor import PIR_Visitor
 
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, ScalarType, \
         INT_TYPE, FLOAT_TYPE, DOUBLE_TYPE, INT64_TYPE, INT32_TYPE, BOOL_TYPE, STRING_TYPE, \
-        BASE_PARTICLE_TYPE
+        BASE_PARTICLE_TYPE, StructureType
 
 class Cabana_PIR_Visitor(PIR_Visitor):
     '''
@@ -44,7 +49,10 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         if t is not None:
             return t
         for key in type_mapping_str.keys():
-            if type_mapping_str[key] == symbol.datatype:
+            if isinstance(datatype, StructureType):
+                if type_mapping_str[key] == datatype:
+                    return "struct " + key
+            if type_mapping_str[key] == datatype:
                 return key
 
     def addSlice(self, slice_name: str):
@@ -100,14 +108,13 @@ class Cabana_PIR_Visitor(PIR_Visitor):
                                        f" but got {type(node.arguments[0])}.")
         if len(node.walk(Invoke)) != 0:
             raise UnsupportedCodeError("Per part kernel cannot contain Invokes.")
-        if len(node.walk((Kern, FuncDef))) != 0:
+        if len(node.body.walk((Kern, FuncDef))) != 0:
             raise UnsupportedCodeError("Per part kernel cannot contain functions.")
         #TODO Save the particle 1 symbol name.
         self._parent.register_kernel(node.name, node)
         argument_names = []
         for arg in node.arguments:
             # Need the correct typing on these arguments
-            raise NotImplementedError
             argument_names.append(arg.symbol.name)
 
         self.indent()
@@ -130,7 +137,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         rval = self._nindent + "template < "
         all_slices = []
         for slices in self._slices:
-            all_slices.append("class" + slices.upper())
+            all_slices.append("class " + slices.upper())
         classes = ", ".join(all_slices)
         rval = rval + classes + " >\n"
         rval = rval + f"{self._nindent}struct {node.name}_functor" + "{\n"
@@ -164,7 +171,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         rval = rval + ", {" + "_{node.arguments[1].symbol.name}({node.arguments[1].symbol.name})" + "{}\n"
 
         # Need to have an update_structs call if there are structures
-        if len(self.parent.structures) > 0:
+        if len(self._parent.structures) > 0:
             rval = rval + f"{self._nindent}void update_structs("
             all_structs = []
             for struct in self._parent.structures:
@@ -180,10 +187,10 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         rval = rval + self._nindent + "void operator()(const int i, const int a) const{\n"
         rval = rval + symbol_list
         rval = rval + kernel_body
-        rval = rval + self._nindent + "}"
+        rval = rval + self._nindent + "}\n"
 
         self.dedent()
-        rval = rval + self._nindent + "};"
+        rval = rval + self._nindent + "};\n"
         return rval
 
     def visit_mainkernel_node(self, node: MainKernel) -> str:
@@ -286,7 +293,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         except:
             pass
         arg_string = ", ".join(args)
-        end = ""
+        end = ";"
         return f"{func_name}({arg_string}){end}"
 
     def visit_funcdef_node(self, node: FuncDef) -> str:
@@ -343,6 +350,8 @@ class Cabana_PIR_Visitor(PIR_Visitor):
 
 
     def visit_literal_node(self, node: Literal) -> str:
+        if node.datatype.intrinsic == ScalarType.Intrinsic.CHARACTER:
+            return "\"" + node.value + "\""
         return node.value
 
     def visit_loop_node(self, node: Loop) -> str:
