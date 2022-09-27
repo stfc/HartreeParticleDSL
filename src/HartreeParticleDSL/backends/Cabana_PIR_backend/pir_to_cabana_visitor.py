@@ -81,15 +81,15 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         # Find the name in the type_mapping_str
         type_str = Cabana_PIR_Visitor.get_cpp_datatype(symbol.datatype)
         all_dynamic = True
-        for extent in symbol.datatype.shape:
-            if isinstance(extent, int):
+        for index, extent in enumerate(symbol.datatype.shape):
+            if isinstance(extent, int) and (index == 0 or all_dynamic == False):
                 all_dynamic = False
-            elif not all_dynamic:
+            elif isinstance(extent, int) or not all_dynamic:
                 raise UnsupportedCodeError("Got an ArraySymbol with a mixed "
                                            "dynamic and fixed typing, which is "
                                            "not supported.")
         if all_dynamic:
-            type_str = type_str + ("*"*len(symbol.shape))
+            type_str = type_str + ("*"*len(symbol.datatype.shape))
         else:
             for extent in symbol.datatype.shape:
                 type_str = type_str + "[" + f"{extent}" + "]"
@@ -198,9 +198,6 @@ class Cabana_PIR_Visitor(PIR_Visitor):
 
     def visit_mainkernel_node(self, node: MainKernel) -> str:
         self._in_kernel = False
-        #TODO Implement
-        if len(node.walk((Kern, FuncDef))) != 0:
-            raise UnsupportedCodeError("Per part kernel cannot contain functions.")
 
         #Current indentation level isn't quite correct
         self.indent()
@@ -209,13 +206,11 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         symbol_list = ""
         for pairs in symbols.keys():
             symbol = symbols[pairs]
-            if pairs not in argument_names:
-                sym = self._visit(symbol)
-                symbol_list = symbol_list + self._nindent + sym + " " + pairs + ";\n"
+            sym = self._visit(symbol)
+            symbol_list = symbol_list + self._nindent + sym + " " + pairs + ";\n"
 
-        body = self._visit(node.body)
         self.dedent()
-
+        body = self._visit(node.body)
         rval = self._nindent + f"int {node.name}( int argc, char* argv[] )" + "{\n"
         rval = rval + symbol_list
         rval = rval + body
@@ -235,33 +230,42 @@ class Cabana_PIR_Visitor(PIR_Visitor):
     def visit_ifelseblock_node(self, node: IfElseBlock) -> str:
         cond = self._visit(node.condition)
         ifbody = self._visit(node.ifbody)
-        if node.is_else_if():
-            raise NotImplementedError()
+#        if node.is_else_if():
+#            raise NotImplementedError()
         string = f"if({cond})" + "{\n"
         string = string + ifbody
         string = string + self._nindent + "}"
         if len(node.elsebody.children) > 0:
-            string = string + "else{\n"
-            string = string + self._visit(node.elsebody)
-            string = string + self._nindent + "}"
+            string = string + "else"
+            if node.is_else_if():
+                self.dedent()
+                child = self._visit(node.elsebody)
+                child = child.lstrip()
+                child = child.rstrip()
+                self.indent()
+                string = string + " " + child
+            else:
+                string = string + "{\n"
+                string = string + self._visit(node.elsebody)
+                string = string + self._nindent + "}"
         return string
 
     def visit_invoke_node(self, node: Invoke) -> str:
         rval = ""
-        for invoke in node.arguments:
+        for invoke in node.children:
             # TODO Check if the call updates particle position.
-            rval = rval + f"{self._nindent}Kokkos::deep_copy(config.config, config.config_host);\n"
+            rval = rval + f"Kokkos::deep_copy(config.config, config.config_host);\n"
             if len(self._parent.structures) > 0:
                 rval = rval + self._nindent
-                rval = rval + f"{node.name}.update_structs("
+                rval = rval + f"{invoke.value}.update_structs("
                 struct_list = []
                 for struct in self._parent.structures:
                     struct_list.append(struct)
                 rval = rval + ", ".join(struct_list)
-            rval = rval + f"{self._nindent}Cabana::simd_parallel_for(simd_policy, {node.name}, "
-            rval = rval + "\"" + node.name + "\");\n"
+            rval = rval + f"{self._nindent}Cabana::simd_parallel_for(simd_policy, {invoke.value}, "
+            rval = rval + "\"" + invoke.value + "\");\n"
             # TODO Check if we need to block (i.e. only if kernel dependencies or final kernel)
-            rval = rval + self._nindent + "Kokkos::fence();\n"
+            rval = rval + self._nindent + "Kokkos::fence();"
         return rval
 
     def visit_arraymember_node(self, node: ArrayMember) -> str:
@@ -428,7 +432,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             indices = []
             for index in node.member.indices:
                 indices.append(self._visit(index))
-            rstr + rstr + ", " + ", ".join(indices) + ")"
+            rstr = rstr + ", " + ", ".join(indices) + ")"
         else:
             rstr = rstr + ")"
         return rstr

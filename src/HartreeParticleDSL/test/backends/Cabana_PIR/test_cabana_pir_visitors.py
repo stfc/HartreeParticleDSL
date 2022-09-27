@@ -4,6 +4,7 @@ from HartreeParticleDSL.backends.Cabana_PIR_backend.pir_to_cabana_visitor import
 from HartreeParticleDSL.backends.Cabana_PIR_backend.cabana_pir import *
 from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import *
 
+from HartreeParticleDSL.Particle_IR.symbols.pointersymbol import PointerSymbol
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, ScalarType, \
         StructureType, ArrayType, PointerType, \
         INT_TYPE, FLOAT_TYPE, DOUBLE_TYPE, INT64_TYPE, INT32_TYPE, BOOL_TYPE, STRING_TYPE, \
@@ -136,12 +137,12 @@ def test_pir_cabana_visit_return():
     temp = PointerType(INT_TYPE)
     type_mapping_str["temp"] = temp
     def m(b: c_int, a: temp):
-        return b
+        return a
     c = ast.parse(textwrap.dedent(inspect.getsource(m)))
     pir = astpir.visit(c)
     out = cpir(pir)
-    correct = '''int m(int b, *temp a){
-    return b;
+    correct = '''temp m(int b, *temp a){
+    return *a;
 }
 '''
     assert correct == out
@@ -164,7 +165,51 @@ def test_pir_cabana_visit_return():
     assert correct == out
     del(type_mapping_str["temp"])
 
+    temp = ArrayType(INT_TYPE, [ArrayType.Extent.DYNAMIC, ArrayType.Extent.DYNAMIC])
+    type_mapping_str["temp"] = temp
+    def xx(b: c_int):
+        create_variable(temp, f)
+        return b
 
+    c = ast.parse(textwrap.dedent(inspect.getsource(xx)))
+    pir = astpir.visit(c)
+    out = cpir(pir)
+    correct = '''int xx(int b){
+    int** f;
+    return b;
+}
+'''
+    assert correct == out
+    del(type_mapping_str["temp"])
+
+
+    temp = ArrayType(INT_TYPE, [ArrayType.Extent.DYNAMIC, 3])
+    type_mapping_str["temp"] = temp
+    def yy(b: c_int):
+        create_variable(temp, f)
+        return b
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(yy)))
+    pir = astpir.visit(c)
+    with pytest.raises(UnsupportedCodeError) as excinfo:
+        out = cpir(pir)
+    assert ("Got an ArraySymbol with a mixed dynamic and fixed typing, "
+            "which is not supported." in str(excinfo.value))
+    del(type_mapping_str["temp"])
+
+    temp = ArrayType(INT_TYPE, [3, ArrayType.Extent.DYNAMIC])
+    type_mapping_str["temp"] = temp
+    def zz(b: c_int):
+        create_variable(temp, f)
+        return b
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(zz)))
+    pir = astpir.visit(c)
+    with pytest.raises(UnsupportedCodeError) as excinfo:
+        out = cpir(pir)
+    assert ("Got an ArraySymbol with a mixed dynamic and fixed typing, "
+            "which is not supported." in str(excinfo.value))
+    del(type_mapping_str["temp"])
 
 def test_pir_cabana_visit_ifdef():
     def a():
@@ -192,7 +237,35 @@ def test_pir_cabana_visit_ifdef():
     out = cpir(pir)
     assert correct == out
 
-    #TODO More tests here for incompleted functionality
+    def b():
+        create_variable(c_int, b)
+        if b < 1:
+            b = 1
+        elif b < 2:
+            b = 2
+        elif b < 3:
+            b = 3
+        else:
+            b = 4   
+    c = ast.parse(textwrap.dedent(inspect.getsource(b)))
+
+    pir = astpir.visit(c)
+    out = cpir(pir)
+    correct = '''void b(){
+    int b;
+    if((b < 1)){
+        b = 1;
+    }else if((b < 2)){
+        b = 2;
+    }else if((b < 3)){
+        b = 3;
+    }else{
+        b = 4;
+    }
+}
+'''
+    print(out)
+    assert correct == out
 
 def test_pir_cabana_visit_loop():
     astpir = ast_to_pir_visitor()
@@ -353,31 +426,42 @@ def test_pir_cabana_visit_members():
     assert correct == out
     del(type_mapping_str["mystruc2"])
 
+def test_pir_cabana_pointer_reference():
+    a = PointerReference(PointerSymbol("a", PointerType(INT_TYPE)))
+    cpir = Cabana_PIR_Visitor(None)
+    out = cpir(a)
+    assert "*a" == out
+
 def test_pir_cabana_particle_references_and_perpart():
     backend = Cabana_PIR()
     cpir = Cabana_PIR_Visitor(backend)
     # Create a perpart_kernel
     v = pir_perpart_visitor()
     type_mapping_str["part"].add("subpart", INT_TYPE)
+    new_type = ArrayType(INT_TYPE, [3])
+    type_mapping_str["part"].add("subarray", new_type)
     def x(arg: part, c: c_int):
         arg.subpart = 1
+        arg.subarray[0] = 1
         arg.core_part.position[0] = 2.0
 
     c = ast.parse(textwrap.dedent(inspect.getsource(x)))
     pir = v.visit(c)
     out = cpir(pir)
-    correct = '''template < class SUBPART, class CORE_PART_POSITION >
+    correct = '''template < class SUBPART, class SUBARRAY, class CORE_PART_POSITION >
 struct x_functor{
     config_struct_type _c;
     SUBPART _subpart;
+    SUBARRAY _subarray;
     CORE_PART_POSITION _core_part_position;
 
     KOKKOS_INLINE_FUNCTION
-     x_functor( SUBPART subpart, CORE_PART_POSITION core_part_position, config_struct_type c):
-    _subpart(subpart), _core_part_position(core_part_position), _c(c){}
+     x_functor( SUBPART subpart, SUBARRAY subarray, CORE_PART_POSITION core_part_position, config_struct_type c):
+    _subpart(subpart), _subarray(subarray), _core_part_position(core_part_position), _c(c){}
 
     void operator()(const int i, const int a) const{
         _subpart.access(i, a) = 1;
+        _subarray.access(i, a, 0) = 1;
         _core_part_position.access(i, a, 0) = 2.0;
     }
 };
@@ -422,8 +506,9 @@ struct y_functor{
     }
 };
 '''
-    print(out)
     assert correct == out
+
+    #TODO When parent contains structures.
 
 
 def test_pir_cabana_pairwise():
@@ -439,3 +524,53 @@ def test_pir_cabana_pairwise():
     with pytest.raises(NotImplementedError) as excinfo:
         out = cpir(pir)
     assert "Pairwise kernels not yet supported in cabana." in str(excinfo.value)
+
+def test_pir_cabana_mainkernel():
+    backend = Cabana_PIR()
+    cpir = Cabana_PIR_Visitor(backend)
+    # Create a main kernel
+    v = pir_main_visitor()
+
+    def main():
+        create_variable(c_int, a)
+        while a < 100:
+            a = a + 1
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(main)))
+    pir = v.visit(c)
+    out = cpir(pir)
+
+    correct = '''int main( int argc, char* argv[] ){
+    int a;
+    while((a < 100)){
+        a = (a + 1);
+    }
+}
+'''
+    assert correct == out
+
+    # Create a perpart_kernel
+    v2 = pir_perpart_visitor()
+    # subpart still exists from previous tests.
+    def x(arg: part, c: c_int):
+        arg.subpart = 1
+        arg.core_part.position[0] = 2.0
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(x)))
+    pir = v2.visit(c)
+    out = cpir(pir)
+
+    def main():
+        invoke(x)
+    c = ast.parse(textwrap.dedent(inspect.getsource(main)))
+    pir = v.visit(c)
+    out = cpir(pir)
+    correct = '''int main( int argc, char* argv[] ){
+    Kokkos::deep_copy(config.config, config.config_host);
+    Cabana::simd_parallel_for(simd_policy, x, "x");
+    Kokkos::fence();
+}
+'''
+    assert correct == out
+
+    # TODO Add structures
