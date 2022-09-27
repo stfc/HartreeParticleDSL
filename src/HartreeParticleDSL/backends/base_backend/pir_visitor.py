@@ -3,6 +3,9 @@ import inspect
 
 from HartreeParticleDSL.Particle_IR.nodes.node import Node
 
+class VisitorError(Exception):
+    pass
+
 class PIR_Visitor():
     '''
     Generic PIR visitor.
@@ -19,10 +22,10 @@ class PIR_Visitor():
 
         if not isinstance(indent_string, str):
             raise TypeError("Expected indent_string to be a string but got "
-                            f"{type(indent_string)}")
+                            f"{type(indent_string)}.")
         if not isinstance(initial_indent_depth, int):
             raise TypeError("Expected initial_indent_depth to be an int but "
-                            f"got {type(initial_indent_depth)}")
+                            f"got {type(initial_indent_depth)}.")
 
         self._indent = indent_string
         self._depth = initial_indent_depth
