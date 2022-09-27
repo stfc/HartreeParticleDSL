@@ -5,7 +5,7 @@ from HartreeParticleDSL.backends.Cabana_PIR_backend.cabana_pir import *
 from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import *
 
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, ScalarType, \
-        StructureType, ArrayType, \
+        StructureType, ArrayType, PointerType, \
         INT_TYPE, FLOAT_TYPE, DOUBLE_TYPE, INT64_TYPE, INT32_TYPE, BOOL_TYPE, STRING_TYPE, \
         BASE_PARTICLE_TYPE
 
@@ -116,6 +116,55 @@ def test_pir_cabana_visit_return():
     pir = astpir.visit(c)
     with pytest.raises(NotImplementedError):
         out = cpir(pir)
+
+    temp = ScalarType(ScalarType.Intrinsic.INTEGER, 128)
+    type_mapping_str["temp"] = temp
+    def k(a: temp):
+        return a
+    c = ast.parse(textwrap.dedent(inspect.getsource(k)))
+
+    pir = astpir.visit(c)
+    out = cpir(pir)
+    correct = '''temp k(temp a){
+    return a;
+}
+'''
+    assert correct == out
+    del(type_mapping_str["temp"])
+
+
+    temp = PointerType(INT_TYPE)
+    type_mapping_str["temp"] = temp
+    def m(b: c_int, a: temp):
+        return b
+    c = ast.parse(textwrap.dedent(inspect.getsource(m)))
+    pir = astpir.visit(c)
+    out = cpir(pir)
+    correct = '''int m(int b, *temp a){
+    return b;
+}
+'''
+    assert correct == out
+    del(type_mapping_str["temp"])
+
+    temp = ArrayType(INT_TYPE, [3,3])
+    type_mapping_str["temp"] = temp
+    def x(b: c_int):
+        create_variable(temp, f)
+        return b
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(x)))
+    pir = astpir.visit(c)
+    out = cpir(pir)
+    correct = '''int x(int b){
+    int[3][3] f;
+    return b;
+}
+'''
+    assert correct == out
+    del(type_mapping_str["temp"])
+
+
 
 def test_pir_cabana_visit_ifdef():
     def a():
@@ -325,7 +374,7 @@ struct x_functor{
 
     KOKKOS_INLINE_FUNCTION
      x_functor( SUBPART subpart, CORE_PART_POSITION core_part_position, config_struct_type c):
-    _subpart(subpart), _core_part_position(core_part_position), {_{node.arguments[1].symbol.name}({node.arguments[1].symbol.name}){}
+    _subpart(subpart), _core_part_position(core_part_position), _c(c){}
 
     void operator()(const int i, const int a) const{
         _subpart.access(i, a) = 1;
@@ -336,6 +385,46 @@ struct x_functor{
     assert correct == out
 
     assert pir == backend._kernels["x"]
+
+    def z(arg: part, c: c_int):
+        invoke(x)
+    c = ast.parse(textwrap.dedent(inspect.getsource(z)))
+    pir = v.visit(c)
+    with pytest.raises(UnsupportedCodeError) as excinfo:
+        out = cpir(pir)
+    assert "Per part kernel cannot contain Invokes." in str(excinfo.value)
+
+    def y(arg: part, c: c_int):
+        create_variable(c_int, b)
+        create_variable(c_int, f)
+        b = c
+        f = c + b
+        arg.core_part.position[0] = f
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(y)))
+    pir = v.visit(c)
+    out = cpir(pir)
+    correct = '''template < class CORE_PART_POSITION >
+struct y_functor{
+    config_struct_type _c;
+    CORE_PART_POSITION _core_part_position;
+
+    KOKKOS_INLINE_FUNCTION
+     y_functor( CORE_PART_POSITION core_part_position, config_struct_type c):
+    _core_part_position(core_part_position), _c(c){}
+
+    void operator()(const int i, const int a) const{
+        int b;
+        int f;
+        b = c;
+        f = (c + b);
+        _core_part_position.access(i, a, 0) = f;
+    }
+};
+'''
+    print(out)
+    assert correct == out
+
 
 def test_pir_cabana_pairwise():
     backend = Cabana_PIR()

@@ -12,11 +12,12 @@ from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
 from HartreeParticleDSL.Particle_IR.nodes.statement import Return, EmptyStatement
 from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, UnaryOperation
 from HartreeParticleDSL.Particle_IR.nodes.particle_reference import ParticleReference
+from HartreeParticleDSL.Particle_IR.nodes.pointer_reference import PointerReference
 from HartreeParticleDSL.backends.base_backend.pir_visitor import PIR_Visitor
 
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, ScalarType, \
         INT_TYPE, FLOAT_TYPE, DOUBLE_TYPE, INT64_TYPE, INT32_TYPE, BOOL_TYPE, STRING_TYPE, \
-        BASE_PARTICLE_TYPE, StructureType
+        BASE_PARTICLE_TYPE, StructureType, ArrayType
 
 class Cabana_PIR_Visitor(PIR_Visitor):
     '''
@@ -46,6 +47,9 @@ class Cabana_PIR_Visitor(PIR_Visitor):
                 STRING_TYPE: "char*",
                 BASE_PARTICLE_TYPE: "part"}
         t = type_map.get(datatype)
+        if isinstance(datatype, ArrayType):
+            childtype = datatype._datatype
+            t = type_map.get(childtype)
         if t is not None:
             return t
         for key in type_mapping_str.keys():
@@ -75,9 +79,9 @@ class Cabana_PIR_Visitor(PIR_Visitor):
 
     def visit_arraysymbol_node(self, symbol: ArraySymbol) -> str:
         # Find the name in the type_mapping_str
-        type_str = Cabana_PIR_visitor.get_cpp_datatype(symbol.datatype)
+        type_str = Cabana_PIR_Visitor.get_cpp_datatype(symbol.datatype)
         all_dynamic = True
-        for extent in symbol.shape:
+        for extent in symbol.datatype.shape:
             if isinstance(extent, int):
                 all_dynamic = False
             elif not all_dynamic:
@@ -87,8 +91,8 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         if all_dynamic:
             type_str = type_str + ("*"*len(symbol.shape))
         else:
-            for extent in symbol.shape:
-                type_str = type_str + "[" + extent + "]"
+            for extent in symbol.datatype.shape:
+                type_str = type_str + "[" + f"{extent}" + "]"
         return type_str
 
     # Implement visitors
@@ -101,15 +105,11 @@ class Cabana_PIR_Visitor(PIR_Visitor):
     def visit_perpartkernel_node(self, node: PerPartKernel) -> str:
         self._in_kernel = True
         self._slices = []
-        # Check rules. Arg1 is particle. Doesn't contain invokes.
-        if not isinstance(node.arguments[0], ParticleReference):
-            raise UnsupportedCodeError("Expected the first argument to a "
-                                       "PerPartKernel to be a ParticleReference"
-                                       f" but got {type(node.arguments[0])}.")
+        # Check rules. Doesn't contain invokes.
         if len(node.walk(Invoke)) != 0:
             raise UnsupportedCodeError("Per part kernel cannot contain Invokes.")
-        if len(node.body.walk((Kern, FuncDef))) != 0:
-            raise UnsupportedCodeError("Per part kernel cannot contain functions.")
+
+        # Arg 1 is always a particle
         #TODO Save the particle 1 symbol name.
         self._parent.register_kernel(node.name, node)
         argument_names = []
@@ -117,6 +117,8 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             # Need the correct typing on these arguments
             argument_names.append(arg.symbol.name)
 
+        self.indent()
+        # Extra indentation for symbol table
         self.indent()
         symbols = node.symbol_table.get_symbols()
         sym_strings = []
@@ -126,6 +128,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             if pairs not in argument_names:
                 sym = self._visit(symbol)
                 symbol_list = symbol_list + self._nindent + sym + " " + pairs + ";\n"
+        self.dedent()
 
         #Current indentation level isn't quite correct
         kernel_body = self._visit(node.body)
@@ -168,7 +171,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             all_slices.append(f"{structure}({structure.upper()})")
         classes = ", ".join(all_slices)
         rval = rval + f"{self._nindent}{classes}"
-        rval = rval + ", {" + "_{node.arguments[1].symbol.name}({node.arguments[1].symbol.name})" + "{}\n"
+        rval = rval + ", " + f"_{node.arguments[1].symbol.name}({node.arguments[1].symbol.name})" + "{}\n"
 
         # Need to have an update_structs call if there are structures
         if len(self._parent.structures) > 0:
@@ -328,7 +331,10 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             name = arg.symbol.name
             arg_base_names.append(name)
             typ = Cabana_PIR_Visitor.get_cpp_datatype(arg.symbol.datatype)
-            argument_names.append(f"{typ} {name}")
+            if isinstance(arg, PointerReference):
+                argument_names.append(f"*{typ} {name}")
+            else:
+                argument_names.append(f"{typ} {name}")
 
         symbols = node.symbol_table.get_symbols()
         sym_strings = []

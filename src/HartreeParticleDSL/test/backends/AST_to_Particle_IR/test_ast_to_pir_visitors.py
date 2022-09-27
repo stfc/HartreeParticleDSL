@@ -667,7 +667,7 @@ def test_visit_Call():
     assert len(out.body.children[0].children) == 0
 
     def g():
-        invoke("mykern")
+        invoke(mykern)
 
 
     c = ast.parse(textwrap.dedent(inspect.getsource(g)))

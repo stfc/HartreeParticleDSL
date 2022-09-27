@@ -8,7 +8,7 @@ import re
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import ScalarType, BOOL_TYPE,\
-                                                     type_mapping_str, INT_TYPE
+                                                     type_mapping_str, INT_TYPE, STRING_TYPE
 
 from HartreeParticleDSL.Particle_IR.nodes.symbol_to_reference import symbol_to_reference
 
@@ -294,7 +294,7 @@ class ast_to_pir_visitor(ast.NodeVisitor):
         if function_name == "invoke":
             args = []
             for arg in node.args:
-                args.append(self.visit(arg))
+                args.append(Literal(arg.id, STRING_TYPE))
             return Invoke.create(args)
         elif function_name == "create_variable":
             var_type = f"{node.args[0].id}"
