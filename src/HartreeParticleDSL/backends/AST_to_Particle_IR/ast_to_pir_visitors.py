@@ -158,7 +158,7 @@ class ast_to_pir_visitor(ast.NodeVisitor):
         if sym is None:
             raise IRGenerationError("Attempted to access a symbol that has "
                                     "not been defined in this scope. Symbol "
-                                    f"name was {node.id}")
+                                    f"name was {sym_name}")
         if sym.datatype == type_mapping_str["part"]:
             if (len(attribute_names) == 2 and attribute_names[0] == "core_part"
                 and attribute_names[1] == "position"):
@@ -257,6 +257,10 @@ class ast_to_pir_visitor(ast.NodeVisitor):
         self._symbol_table = fd.symbol_table
         arglist = self.visit(node.args)
         fd.arguments = arglist
+
+        if node.name == "main":
+            sym = self._symbol_table.new_symbol("config", type_mapping_str["config"],
+                    datatype_to_symbol[type(type_mapping_str["config"])])
         for child in node.body:
             fd.body.children.append(self.visit(child))
             
@@ -319,6 +323,12 @@ class ast_to_pir_visitor(ast.NodeVisitor):
                 lhs = ScalarReference(sym)
                 rhs = self.visit(node.args[2])
                 return Assignment.create(lhs, rhs)
+        elif function_name == "initialise":
+            args = []
+            kwargs = {}
+            for kwarg in node.keywords:
+                kwargs[kwarg.arg] = self.visit(kwarg.value)
+            return Call.create(function_name, [kwargs["particle_count"], kwargs["filename"]])
         else:
             args = []
             for arg in node.args:

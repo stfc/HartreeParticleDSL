@@ -283,23 +283,42 @@ _CORE_PART_TYPE = StructureType()
 _CORE_PART_TYPE.components["position"] = PARTICLE_POSITION_TYPE
 BASE_PARTICLE_TYPE.components["core_part"] = _CORE_PART_TYPE
 
+BASE_CONFIG_TYPE = StructureType()
+
 type_mapping_str = {"c_int": INT_TYPE,
                     "c_double": DOUBLE_TYPE,
+                    "double": DOUBLE_TYPE,
                     "c_float": FLOAT_TYPE,
+                    "float": FLOAT_TYPE,
                     "c_int64_t": INT64_TYPE,
                     "c_int32_t": INT32_TYPE,
                     "c_int8_t": INT8_TYPE,
                     "c_bool": BOOL_TYPE,
                     "char*": STRING_TYPE,
-                    "part": BASE_PARTICLE_TYPE}
+                    "part": BASE_PARTICLE_TYPE,
+                    "config": BASE_CONFIG_TYPE}
+
+def reset_part_and_config():
+    BASE_PARTICLE_TYPE = StructureType()
+    _CORE_PART_TYPE = StructureType()
+    _CORE_PART_TYPE.components["position"] = PARTICLE_POSITION_TYPE
+    BASE_PARTICLE_TYPE.components["core_part"] = _CORE_PART_TYPE
+
+    BASE_CONFIG_TYPE = StructureType()
+    type_mapping_str["part"] = BASE_PARTICLE_TYPE
+    type_mapping_str["config"] = BASE_CONFIG_TYPE
+
 
 def reset_type_mapping_str():
     type_mapping_str = {"c_int": INT_TYPE,
                         "c_double": DOUBLE_TYPE,
+                        "double": DOUBLE_TYPE,
                         "c_float": FLOAT_TYPE,
+                        "float": FLOAT_TYPE,
                         "c_int64_t": INT64_TYPE,
                         "c_int32_t": INT32_TYPE,
                         "c_int8_t": INT8_TYPE,
                         "c_bool": BOOL_TYPE,
                         "char*": STRING_TYPE,
-                        "part": BASE_PARTICLE_TYPE}
+                        "part": BASE_PARTICLE_TYPE,
+                        "config": BASE_CONFIG_TYPE}

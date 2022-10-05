@@ -52,7 +52,7 @@ class Backend(metaclass=ABCMeta):
         '''
         pass
 
-    def get_pointer(self, code):
+    def get_pointer(self, code, **kwargs):
         pass
 
     def initialisation_code(self, particle_count, filename):

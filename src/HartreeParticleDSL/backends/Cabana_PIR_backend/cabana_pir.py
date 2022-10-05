@@ -3,6 +3,7 @@ from __future__ import annotations
 from HartreeParticleDSL.backends.base_backend.backend import Backend
 from HartreeParticleDSL.coupled_systems.base_coupler.base_coupler import base_coupler
 from HartreeParticleDSL.backends.Cabana_backend.Cabana_IO_Mixin import Cabana_IO_Mixin
+from HartreeParticleDSL.backends.Cabana_PIR_backend.pir_to_cabana_visitor import Cabana_PIR_Visitor
 import HartreeParticleDSL.kernel_types.kernels as kernels
 from HartreeParticleDSL.IO_modules.IO_Exceptions import *
 from HartreeParticleDSL.HartreeParticleDSLExceptions import InvalidNameError, \
@@ -60,11 +61,14 @@ class Cabana_PIR(Backend):
         # We need to keep track of what kernels use what slices
         self._kernel_slices = {}
         self._kernels = {}
+        self._kernels_pir = {}
 
         # The Cabana backend needs to store the particle type reference
         self._particle = None #TODO Remove & pull from PIR
 
         self._structures = {}
+
+        self._global_values = {}
 
     @property
     def structures(self):
@@ -77,9 +81,7 @@ class Cabana_PIR(Backend):
 
 
     def add_structure(self, structure_type: StructureType, structure_name: str):
-        assert False
-        # I think this is handled by symbol tables now.
-        # Needs to be done somehow
+        self._structures[structure_name] = structure_type
 
     def add_kernel_slices(self, kernel_name, kernel_slice):
         '''
@@ -100,23 +102,42 @@ class Cabana_PIR(Backend):
         if type_mapping_str.get(type_name) is not None:
             raise InvalidNameError(f"Attempting to add new type {type_name} "
                                    f"but a type with that name already exists.")
-        if not isinstance(the_type, Datatype):
+        if not isinstance(the_type, DataType):
             raise UnsupportedTypeError(
                     f"Attempting to add a new type but got {type(the_type)} "
                     "but expected a Particle IR DataType instead.")
 
         type_mapping_str[type_name] = the_type
 
-    def create_global_variable(self, c_type: str, name: str, initial_value: str):
+    def create_global_variable(self, c_type: DataType, name: str, initial_value: str):
         '''
         Function to create a global variable in the header file.
 
-        :param str c_type: The c_type of this variable.
+        :param c_type: The c_type of this variable.
+        :type c_type: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.DataType.DataType`
         :param str name: The name of the variable.
         :param initial_value: The initial value of this variable
         '''
+        from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
+        from HartreeParticleDSL.Particle_IR.symbols.pointersymbol import PointerSymbol
+        from HartreeParticleDSL.Particle_IR.symbols.arraysymbol import ArraySymbol
+        from HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol import ScalarTypeSymbol
+        from HartreeParticleDSL.Particle_IR.datatypes.datatype import StructureType, \
+                PointerType, ArrayType, ScalarType
         #TODO
-        raise NotImplementedError()
+        if isinstance(c_type, StructureType):
+            HartreeParticleDSL.global_symbol_table().new_symbol(name, c_type, StructureSymbol)
+        elif isinstance(c_type, PointerType):
+            HartreeParticleDSL.global_symbol_table().new_symbol(name, c_type, PointerSymbol)
+        elif isinstance(c_type, ArrayType):
+            HartreeParticleDSL.global_symbol_table().new_symbol(name, c_type, ArraySymbol)
+        elif isinstance(c_type, ScalarType):
+            HartreeParticleDSL.global_symbol_table().new_symbol(name, c_type, ScalarTypeSymbol)
+        else:
+            raise TypeError("Attempting to create global variable but c_type argument is not "
+                    f"a supported datatype. Got {type(c_type)}")
+
+        self._global_values[name] = initial_value
 
     def set_io_modules(self, input_module, output_module):
         '''
@@ -192,6 +213,8 @@ class Cabana_PIR(Backend):
         :param part_type: The part_type used in the system.
         :type part_type: :py:class:`HartreeParticleDSL.HartreeParticleDSL.Particle`
         '''
+        self._config = config
+        self._part_type = part_type
         config_output = self.gen_config(config)
         part_output = self.gen_particle(part_type)
         with open('part.h', 'w') as f:
@@ -210,9 +233,10 @@ class Cabana_PIR(Backend):
             f.write("using HostType = Kokkos::Device<Kokkos::Serial, Kokkos::HostSpace>;\n")
             f.write("const int VectorLength = 16;\n\n") #This vector length should be chosen better in future
 
-            for name in self._globals:
-                ctype = Cabana._type_map[self._globals[name][0]]
-                value = self._globals[name][1]
+            for name in self._global_values:
+                raise NotImplementedError
+                ctype = Cabana._type_map[self._global_values[name][0]]
+                value = self._global_values[name][1]
                 f.write("{0} {1} = {2};\n".format(ctype, name, value))
 
             f.write(config_output)
@@ -241,11 +265,27 @@ class Cabana_PIR(Backend):
         :param kernel: Kernel object to generate code for.
         :type kernel: :py:class:`HartreeParticleDSL.kernel_types.kernels.kernel`
         '''
-        raise NotImplementedError()
+        # The input to this is the Python AST for this kernel.
+        # First we need to convert the Python AST to Particle IR.
+        # Store the resulting Particle IR node in this for later codegen.
+        # In principle we could do this codegen now as well, but I sort of want
+        # to wait and do all the codegen from print_main, and output to file
+        # for this backend.
+        from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import \
+                pir_perpart_visitor, pir_pairwise_visitor
+        pir = None
         if isinstance(kernel, kernels.perpart_kernel_wrapper):
-            print(self._per_part_visitor.visit(tree))
+            conv = pir_perpart_visitor()
+            pir = conv.visit(kernel.get_kernel_tree())
         elif isinstance(kernel, kernels.pairwise_kernel_wrapper):
-            print(self._pairwise_visitor.visit(tree))
+            conv = pir_pairwise_visitor()
+            pir = conv.visit(kernel.get_kernel_tree())
+        else:
+            raise NotImplementedError("Cabana PIR backend doesn't yet support "
+                                      f"kernel of type {type(kernel)}.")
+
+        name = pir.name
+        self._kernels_pir[name] = pir
 
     def print_main(self, function):
         '''
@@ -254,18 +294,41 @@ class Cabana_PIR(Backend):
         :param function: AST.Module of the Main function to generate code for.
         :type function: :py:class:`ast.Module`
         '''
-        raise NotImplementedError()
+        from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import \
+                ast_to_pir_visitor
+        from HartreeParticleDSL.Particle_IR.nodes.invoke import Invoke
+        cabana_pir = Cabana_PIR_Visitor(self)
+        # Plan for this:
+        # Find where the output files should go
+        # Generate the header file into that directory
+        self.gen_headers(self._config, self._part_type)
+        # Open an output C++ file
+        # Find all the kernels used by this main function and 
+        # generate those kernels.
+        conv = ast_to_pir_visitor()
+        pir = conv.visit(function)
 
-    def gen_invoke_perpart(self, kernel_name, current_indent, indent, kernel_type):
-        '''
-        Generates a Cabana compatible per_part kernel
-        '''
-        raise NotImplementedError()
+        kernels = pir.body.walk(Invoke)
+        names = []
+        for kernel in kernels:
+            for arg in kernel.children:
+                names.append(arg.value)
 
-    def gen_invoke(self, kernel_name, current_indent, indent):
-        '''
-        '''
-        raise NotImplementedError("gen_invoke not yet implemented")
+        codes = []
+        for name in names:
+            kern_pir = self._kernels_pir[name]
+            codes.append(cabana_pir(kern_pir))
+
+        main_code = cabana_pir(pir)
+
+        includes = self.generate_includes()
+
+        with open('code.cpp', 'w') as f:
+            f.write(includes + "\n")
+            for code in codes:
+                f.write(code + "\n")
+            f.write(main_code)
+
 
     def set_cutoff(self, cutoff, var_type=CONSTANT):
         '''
@@ -279,14 +342,152 @@ class Cabana_PIR(Backend):
         return self._input_module.call_input_cabana(particle_count, filename)
 
     def gen_particle(self, particle):
-        raise NotImplementedError()
+        # Store the particle for later
+        self._particle = particle
+        # I have performance concerns about putting a struct inside the AoSoA
+        # but it may be ok, we will see.
+        # Output the core part type
+        output = ""
+        output = output + "struct core_part_type{\n"
+        output = output + "    double position[3];\n"
+        output = output + "    double velocity[3];\n"
+        output = output + "};\n\n"
+
+        #Output the neighbour part type
+        output = output + "struct neighbour_part_type{\n"
+        output = output + "    double cutoff;\n"
+        output = output + "};\n\n"
+
+        #particle.add_element("core_part_position", "double[3]")
+#        particle.add_element("core_part_velocity", "double[3]")
+#        particle.add_element("neighbour_part_cutoff", "double")
+
+        # Sort particle by size of element
+        sizes = []
+        for element in particle.particle_type:
+            if element == "core_part" or element == "neighbour_part":
+                sizes.append(0)
+                continue
+            c_type = particle.particle_type[element]['type']
+            is_array = particle.particle_type[element]['is_array']
+            if is_array:
+                x = c_type.index("[")
+                base_type = c_type[0:x]
+                count = 1
+                array_str = c_type[x:]
+                while array_str.find("[") >= 0:
+                    val = int(array_str[array_str.index("[")+1:array_str.index("]")])
+                    count = count * val
+                    array_str = array_str[array_str.index("]")+1:]
+                size = Cabana_PIR._type_sizes[base_type]
+                sizes.append(size * count)
+            else:
+                size = Cabana_PIR._type_sizes[c_type]
+                sizes.append(size)
+        fields = particle.particle_type.keys()
+        sorted_fields = [x for _, x in sorted(zip(sizes, fields), reverse=True)]
+
+        output = output + "enum FieldNames{"
+        first = True
+        for key in sorted_fields:
+            if key != "core_part" and key != "neighbour_part":
+                if first:
+                    output = output + f"{key} = 0"
+                    first = False
+                else:
+                    output = output + f",\n                 {key}"
+        output = output + "\n               };\n"
+
+        output = output + "using DataTypes = Cabana::MemberTypes<"
+        first = True
+        for key in sorted_fields:
+            if key != "core_part" and key != "neighbour_part":
+                if first:
+                    c_type = particle.particle_type[key]['type']
+                    output = output + c_type
+                    first = False
+                else:
+                    c_type = particle.particle_type[key]['type']
+                    output = output + ",\n    " + c_type
+        output = output + ">;\n"
+
+        return output
 
     def gen_config(self, config):
-        raise NotImplementedError()
+        # FIXME
+        output = ""
+        output = output + "struct boundary{\n"
+        output = output + "    double x_min, x_max;\n"
+        output = output + "    double y_min, y_max;\n"
+        output = output + "    double z_min, z_max;\n"
+        output = output + "};\n\n"
 
-    def cleanup(self, current_indent, *args, **kwargs):
+        output = output + "struct space_type{\n"
+        output = output + "    boundary box_dims;\n"
+        output = output + "    int nparts;\n"
+        output = output + "};\n\n"
+
+        # Currently empty neiughbour config
+        output = output + "struct neighbour_config_type{\n"
+        output = output + "};\n\n"
+
+        output = output + "struct config_view_type{\n"
+#        output = output + "    space_type space;\n"
+#        output = output + "    neighbour_config_type neighbour_config;\n"
+        for key in config.config_type:
+            is_array = config.config_type[key]['is_array']
+            c_type = config.config_type[key]['type']
+            varnam = key
+            if is_array:
+                # Move array index to the correct position for C++ definitions
+                x = c_type.index("[")
+                varnam = varnam + c_type[x:]
+                c_type = c_type[0:x]
+            output = output + f"        {c_type} {varnam};\n"
+        output = output + "};\n\n"
+
+        output = output + "using config_struct_type = Kokkos::View<struct config_view_type*, MemorySpace>;\n"
+        output = output + "using config_struct_host = config_struct_type::HostMirror;\n"
+
+        output = output + "struct config_type{\n"
+        output = output + "    config_struct_type config;\n"
+        output = output + "    config_struct_host config_host;\n"
+        output = output + "};\n"
+
+        # There are some complex things to work out here. How do we add other Kokkos views into the config_type struct
+        # We probably need to do some extra type analysis in the config_type object.
+        return output
+
+    def cleanup(self, *args, current_indent, **kwargs):
         rval = "}\n"
         return rval
+
+    def println(self, string, *args, **kwargs):
+        '''
+        Function to output the println string for the Cabana PIR module.
+        Called via the visitors when reaching a println statement in user
+        code.
+
+        For the Cabana module this is a call to `std::cout`, using the
+        string argument as the first value to be passed into cout, and
+        the *args contains any further values used in the output.
+
+        :param string: The formatted string to use with cout.                                                                                                                      :type string: str
+        :param int current_indent: The current indentation level
+        :param *args: A list of strings containing the other values
+                      to output with cout. Any strings to add to cout
+                      should be surrounded with \"\".
+        :type args: str
+        '''
+        current_indent = kwargs.get("current_indent", 0)
+        output = " "*current_indent + f"std::cout << {string}"
+        for arg in args:
+            x = arg[0].replace('"', '') + arg[1:]
+            x = x[0:len(x)-1] + x[-1].replace('"', '')
+
+            output = output + f" << {x}"
+        output = output + " << \"\\n\";\n"
+        return output
 
     def initialise(self,particle_count, filename, current_indent, **kwargs):
         # FIXME
@@ -296,13 +497,13 @@ class Cabana_PIR(Backend):
         rval = rval + space*current_indent + "config_type config;\n"
         rval = rval + space*current_indent + "config.config = config_struct_type(\"config\", 1);\n"
         rval = rval + space*current_indent + "config.config_host = Kokkos::create_mirror_view(config.config);\n"
-        rval = rval + space*current_indent + f"{self._input_module.call_input_cabana(particle_count, filename, current_indent=current_indent)}\n"
+        rval = rval + space*current_indent + f"{self._input_module.call_input_cabana(int(particle_count), filename, current_indent=current_indent)}\n"
         rval = rval + space*current_indent + "Cabana::SimdPolicy<VectorLength, ExecutionSpace> simd_policy( 0, particle_aosoa.size());\n"
 
-        self.variable_scope = variable_scope()
+#        self.variable_scope = variable_scope()
         for struct in self._structures.keys():
             # Add this to the variable scope with a special c_type.
-            self.variable_scope.add_variable(struct, self._structures[struct], False)
+ #           self.variable_scope.add_variable(struct, self._structures[struct], False)
             rval = rval + space*current_indent + self._structures[struct] + " " + struct + ";\n"
         # Need to do something with each kernel now.
 #        rval = rval + space*current_indent + "auto core_part_slice = Cabana::slice<core_part_space>(particle_aosoa);\n"
@@ -372,10 +573,14 @@ class Cabana_PIR(Backend):
         string = ""
         try:
             fn = getattr(self, func_call)
-            string = fn(*args, **kwargs)
+            string = fn( *(args[0]), **kwargs)
             return string
         except (AttributeError) as err:
             pass
+        except Exception as err:
+            import traceback
+            print(traceback.format_exc())
+            print("???", err, type(err), "\n", args, type(args))
         for system in self._coupled_systems:
             try:
                 fn = getattr(system, func_call)
@@ -384,3 +589,34 @@ class Cabana_PIR(Backend):
             except (AttributeError) as err:
                 pass
         raise AttributeError
+
+    def add_coupler(self, coupled_system):
+        '''
+        Adds a coupled system to the list of coupled systems in the backend
+
+        :param coupled_system: The object to couple with.
+        :type couple_system: Object
+
+        :raises UnsupportedTypeError: If the object to couple with is not \
+                                      an instance of base_coupler
+        '''
+        if not isinstance(coupled_system, base_coupler):
+            raise UnsupportedTypeError("Can only couple to base_coupler classes "
+                                       "or subclasses. Found {0}".format(
+                                           type(coupled_system).__name__))
+        self._coupled_systems.append(coupled_system)
+        extra_includes = coupled_system.get_includes()
+        for include in extra_includes:
+            self._includes.append(include)
+
+    def write_output(self, filename, variable=None, **kwargs):
+        '''
+        Generates the code to write a file output using the selected output module.
+
+        :param str filename: The filename to write the file to.
+
+        '''
+        current_indent = kwargs.get("current_indent", 0)
+        code = " " * current_indent
+        code = code + self._output_module.call_output_cabana(0, filename, variable) + "\n"
+        return code
