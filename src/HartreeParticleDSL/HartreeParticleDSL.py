@@ -506,7 +506,7 @@ class Config():
             indices = re.findall(r'\[[0-9]*\]', c_type)
             index_vals = []
             for index in indices:
-                index_vals.append(index.replace("[", "").replace("]",""))
+                index_vals.append(int(index.replace("[", "").replace("]","")))
             base_type = c_type[0:c_type.index("[")]
             atype = ArrayType(type_mapping_str[base_type], index_vals)
             self._pir_type.components[variable_name] = atype
