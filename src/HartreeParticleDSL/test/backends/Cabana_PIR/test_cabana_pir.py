@@ -396,22 +396,7 @@ def test_cabana_pir_initialise():
     auto core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
     auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
     slice1_functor<decltype(s1_slice), decltype(s2_slice)> slice1(s1_slice, s2_slice, config.config,mystruct);'''
-    print(out)
     assert correct in out
-
-def test_cabana_pir_add_coupler():
-    backedn = Cabana_PIR()
-    coupler = coupler_test()
-    backend.add_coupler(coupler)
-    assert coupler in backend._coupled_systems
-    with pytest.raises(UnsupportedTypeError) as excinfo:
-        backend.add_coupler(32)
-    assert ("Can only couple to base_coupler classes or "
-            "subclasses. Found int") in str(excinfo.value)
-
-def test_cabana_pir_write_output():
-    a = Cabana_PIR()
-    assert False
 
 def test_cabana_pir_call_language_function():
     backend = Cabana_PIR()
