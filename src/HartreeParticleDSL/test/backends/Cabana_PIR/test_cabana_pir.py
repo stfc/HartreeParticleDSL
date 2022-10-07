@@ -105,21 +105,11 @@ def test_cabana_pir_set_io_modules():
     assert "Cabana_PIR backend does not support temp_module" in str(excinfo.value)
 
 def test_cabana_pir_add_include():
-    mod = Random_Particles()
     backend = Cabana_PIR()
-    backend.set_io_modules(mod, mod)
-    assert backend._input_module is mod
-    assert backend._output_module is mod
-    class temp_module(IO_Module):
-        def __init__(self):
-            pass
-    mod2 = temp_module()
-    with pytest.raises(InvalidIOModuleError) as excinfo:
-        backend.set_io_modules(mod2, mod)
-    assert "Cabana_PIR backend does not support temp_module" in str(excinfo.value)
-    with pytest.raises(InvalidIOModuleError) as excinfo:
-        backend.set_io_modules(mod, mod2)
-    assert "Cabana_PIR backend does not support temp_module" in str(excinfo.value)
+    backend.add_include("<string.h>")
+    assert "<string.h>" in backend._includes
+    backend.add_include("<string.h>")
+    assert backend._includes.count("<string.h>") is 1
 
 def test_cabana_pir_generate_includes():
     backend = Cabana_PIR()

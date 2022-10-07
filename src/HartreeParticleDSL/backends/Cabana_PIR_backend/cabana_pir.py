@@ -614,25 +614,6 @@ class Cabana_PIR(Backend):
                 pass
         raise AttributeError
 
-    def add_coupler(self, coupled_system):
-        '''
-        Adds a coupled system to the list of coupled systems in the backend
-
-        :param coupled_system: The object to couple with.
-        :type couple_system: Object
-
-        :raises UnsupportedTypeError: If the object to couple with is not \
-                                      an instance of base_coupler
-        '''
-        if not isinstance(coupled_system, base_coupler):
-            raise UnsupportedTypeError("Can only couple to base_coupler classes "
-                                       "or subclasses. Found {0}".format(
-                                           type(coupled_system).__name__))
-        self._coupled_systems.append(coupled_system)
-        extra_includes = coupled_system.get_includes()
-        for include in extra_includes:
-            self._includes.append(include)
-
     def write_output(self, filename, variable=None, **kwargs):
         '''
         Generates the code to write a file output using the selected output module.
