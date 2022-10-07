@@ -310,15 +310,14 @@ def reset_part_and_config():
 
 
 def reset_type_mapping_str():
-    type_mapping_str = {"c_int": INT_TYPE,
-                        "c_double": DOUBLE_TYPE,
-                        "double": DOUBLE_TYPE,
-                        "c_float": FLOAT_TYPE,
-                        "float": FLOAT_TYPE,
-                        "c_int64_t": INT64_TYPE,
-                        "c_int32_t": INT32_TYPE,
-                        "c_int8_t": INT8_TYPE,
-                        "c_bool": BOOL_TYPE,
-                        "char*": STRING_TYPE,
-                        "part": BASE_PARTICLE_TYPE,
-                        "config": BASE_CONFIG_TYPE}
+    global type_mapping_str
+    valid_keys = ["c_int", "c_double", "double",
+            "c_float", "float", "c_int64_t", "c_int32_t",
+            "c_int8_t", "c_bool", "char*", "part", "config"]
+    dict_keys = type_mapping_str.keys()
+    to_remove = []
+    for key in dict_keys:
+        if key not in valid_keys:
+            to_remove.append(key)
+    for key in to_remove:
+        del type_mapping_str[key]

@@ -446,11 +446,11 @@ def test_visit_Attribute():
 
     def ah():
         b.c = 3
-    c = ast.parse(textwrap.dedent(inspect.getsource(ag)))
+    c = ast.parse(textwrap.dedent(inspect.getsource(ah)))
     with pytest.raises(IRGenerationError) as excinfo:
         out = v.visit(c)
-    assert ("Array inside a reference with children is not currently supported"
-            " in ParticleIR." in str(excinfo.value))
+    assert ("Attempted to access a symbol that has not been defined in this "
+            "scope. Symbol name was b" in str(excinfo.value))
 
 
 def test_visit_Assign():

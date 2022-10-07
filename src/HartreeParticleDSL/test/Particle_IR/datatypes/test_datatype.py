@@ -129,3 +129,13 @@ def test_inbuilt_types():
     assert str(BOOL_TYPE) == "Scalar<BOOLEAN, UNDEFINED>"
 
     assert str(PARTICLE_POSITION_TYPE) == "ArrayType<Scalar<FLOAT, DOUBLE>: [3]>"
+
+def test_reset_part():
+    type_mapping_str["part"].components["x"] = INT_TYPE
+    reset_part_and_config()
+    assert type_mapping_str["part"].components.get("x") is None
+
+def test_reset_type_mapping_str():
+    type_mapping_str["abcd"] = INT_TYPE
+    reset_type_mapping_str()
+    assert type_mapping_str.get("abcd") is None

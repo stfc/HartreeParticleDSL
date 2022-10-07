@@ -11,6 +11,7 @@ from HartreeParticleDSL.backends.base_backend.backend import Backend
 from HartreeParticleDSL.backends.C_AOS.C_AOS import C_AOS
 from HartreeParticleDSL.IO_modules.random_IO.random_IO import *
 from HartreeParticleDSL.kernel_types.kernels import perpart_kernel_wrapper
+from HartreeParticleDSL.Particle_IR.symbols.symboltable import SymbolTable
 
 def test_get_instance():
     '''Test get_instance function of _HartreeParticleDSL '''
@@ -123,6 +124,10 @@ def test_generate_code(capsys):
     correct = correct + "}\n\n"
     assert correct == captured.out
     HartreeParticleDSL.get_backend().enable_variable_checks()
+
+def test_global_symbol_table():
+    val = HartreeParticleDSL.global_symbol_table()
+    assert isinstance(val, SymbolTable)
 
 
 def test_global_set_particle_type():

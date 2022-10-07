@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
 from HartreeParticleDSL.backends.base_backend.backend import Backend
 from HartreeParticleDSL.coupled_systems.base_coupler.base_coupler import base_coupler
 from HartreeParticleDSL.backends.Cabana_backend.Cabana_IO_Mixin import Cabana_IO_Mixin
@@ -12,7 +13,7 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import InvalidNameError, \
 from HartreeParticleDSL.c_types import c_int, c_double, c_float, c_int64_t, \
                                        c_int32_t, c_int8_t, c_bool
 
-from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str
+from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, DataType
 
 
 class Cabana_PIR(Backend):
@@ -76,11 +77,12 @@ class Cabana_PIR(Backend):
 
     def register_kernel(self, kernel_name: str, kernel: Kern):
         if kernel_name in self._kernels.keys():
-            raise NotImplementedError()
+            raise InvalidNameError(f"Kernel with name {kernel_name} already exists.") 
         self._kernels[kernel_name] = kernel
 
 
     def add_structure(self, structure_type: StructureType, structure_name: str):
+        # Should this check the structure type is defined?
         self._structures[structure_name] = structure_type
 
     def add_kernel_slices(self, kernel_name, kernel_slice):
@@ -234,10 +236,11 @@ class Cabana_PIR(Backend):
             f.write("const int VectorLength = 16;\n\n") #This vector length should be chosen better in future
 
             for name in self._global_values:
-                raise NotImplementedError
-                ctype = Cabana._type_map[self._global_values[name][0]]
-                value = self._global_values[name][1]
-                f.write("{0} {1} = {2};\n".format(ctype, name, value))
+#                print(HartreeParticleDSL.global_symbol_table().lookup(name))
+                symbol = HartreeParticleDSL.global_symbol_table().lookup(name)
+                dt_str = Cabana_PIR_Visitor.get_cpp_datatype(symbol.datatype)
+                print(dt_str)
+                f.write(f"{dt_str} {name} = {self._global_values[name]};\n")
 
             f.write(config_output)
             f.write(part_output)
@@ -297,6 +300,7 @@ class Cabana_PIR(Backend):
         from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import \
                 ast_to_pir_visitor
         from HartreeParticleDSL.Particle_IR.nodes.invoke import Invoke
+        from HartreeParticleDSL.Particle_IR.nodes.kernels import MainKernel
         cabana_pir = Cabana_PIR_Visitor(self)
         # Plan for this:
         # Find where the output files should go
@@ -307,6 +311,12 @@ class Cabana_PIR(Backend):
         # generate those kernels.
         conv = ast_to_pir_visitor()
         pir = conv.visit(function)
+        if not isinstance(pir, MainKernel):
+            body = pir.body.detach()
+            sym_tabl = pir.symbol_table
+            pir = MainKernel("main")
+            pir.children[0] = body
+            pir._symbol_table = sym_tabl
 
         kernels = pir.body.walk(Invoke)
         names = []
@@ -396,6 +406,13 @@ class Cabana_PIR(Backend):
                     first = False
                 else:
                     output = output + f",\n                 {key}"
+        # Extra field names for core part and neighbour part things
+        if first:
+            output = output + "core_part_velocity = 0"
+        else:
+            output = output + ",\n                 core_part_velocity"
+        output = output + ",\n                 core_part_position"
+        output = output + ",\n                 neighbour_part_cutoff"
         output = output + "\n               };\n"
 
         output = output + "using DataTypes = Cabana::MemberTypes<"
@@ -409,6 +426,13 @@ class Cabana_PIR(Backend):
                 else:
                     c_type = particle.particle_type[key]['type']
                     output = output + ",\n    " + c_type
+        # Extra types for core part and neighbour part things
+        if first:
+            output = output + "double[3]"
+        else:
+            output = output + ",\n    double[3]"
+        output = output + ",\n    double[3]"
+        output = output + ",\n    double"
         output = output + ">;\n"
 
         return output
@@ -510,6 +534,10 @@ class Cabana_PIR(Backend):
 #        rval = rval + space*current_indent + "auto neighbour_part_slice = Cabana::slice<neighbour_part_space>(particle_aosoa);\n"
 
         # We need the particle type to be able to initialise correctly
+        # The initialisation of the core part and neighbour cutoff stuf fis a bit weird, needs to be fixed.
+        rval = rval + space*current_indent + "auto core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);\n"
+        rval = rval + space*current_indent + "auto core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);\n"
+        rval = rval + space*current_indent + "auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);\n"
         for key in self._particle.particle_type:
             if key != "core_part" and key != "neighbour_part":
                 rval = rval + space*current_indent + f"auto {key}_slice = Cabana::slice<{key}>" + "(particle_aosoa);\n"
@@ -573,14 +601,10 @@ class Cabana_PIR(Backend):
         string = ""
         try:
             fn = getattr(self, func_call)
-            string = fn( *(args[0]), **kwargs)
+            string = fn( *args, **kwargs)
             return string
         except (AttributeError) as err:
             pass
-        except Exception as err:
-            import traceback
-            print(traceback.format_exc())
-            print("???", err, type(err), "\n", args, type(args))
         for system in self._coupled_systems:
             try:
                 fn = getattr(system, func_call)
