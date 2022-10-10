@@ -513,6 +513,8 @@ def test_cabana_pir_add_coupler():
     call = Call("a_function")
     test_visitor = Cabana_PIR_Visitor(backend)
     assert test_visitor._visit(call) == "test_string()"
+    call = Call("not_a_function")
+    assert test_visitor._visit(call) == "not_a_function();"
 
 
 def test_cabana_pir_write_output():

@@ -4,7 +4,9 @@ from HartreeParticleDSL.backends.Cabana_PIR_backend.pir_to_cabana_visitor import
 from HartreeParticleDSL.backends.Cabana_PIR_backend.cabana_pir import *
 from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import *
 
+from HartreeParticleDSL.Particle_IR.symbols.arraysymbol import ArraySymbol
 from HartreeParticleDSL.Particle_IR.symbols.pointersymbol import PointerSymbol
+from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, ScalarType, \
         StructureType, ArrayType, PointerType, \
         INT_TYPE, FLOAT_TYPE, DOUBLE_TYPE, INT64_TYPE, INT32_TYPE, BOOL_TYPE, STRING_TYPE, \
@@ -437,6 +439,12 @@ def test_pir_cabana_pointer_symbol():
     out = cpir.visit_pointersymbol_node(a)
     assert "int*" == out
 
+def test_pir_cabana_arrayreference():
+    cpir = Cabana_PIR_Visitor(None)
+    ar = ArrayReference(ArraySymbol("x", ArrayType(INT_TYPE, [2,2])), [Literal("2", INT_TYPE), Literal("2", INT_TYPE)])
+    out = cpir(ar)
+    assert out == "x[2][2]"
+
 def test_pir_cabana_particle_references_and_perpart():
     backend = Cabana_PIR()
     cpir = Cabana_PIR_Visitor(backend)
@@ -526,7 +534,10 @@ struct y_functor{
 '''
     assert correct == out
 
-    #TODO When parent contains structures.
+    cpir._in_kernel = False
+    fake = ParticlePositionReference(StructureSymbol("part",StructureType()), 0)
+    with pytest.raises(NotImplementedError):
+        cpir(fake)
 
 
 def test_pir_cabana_pairwise():

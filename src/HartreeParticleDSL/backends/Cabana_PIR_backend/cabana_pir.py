@@ -620,15 +620,3 @@ class Cabana_PIR(Backend):
             except (AttributeError) as err:
                 pass
         raise AttributeError
-
-    def write_output(self, filename, variable=None, **kwargs):
-        '''
-        Generates the code to write a file output using the selected output module.
-
-        :param str filename: The filename to write the file to.
-
-        '''
-        current_indent = kwargs.get("current_indent", 0)
-        code = " " * current_indent
-        code = code + self._output_module.call_output_cabana(0, filename, variable) + "\n"
-        return code
