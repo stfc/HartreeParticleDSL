@@ -191,6 +191,7 @@ def test_cabana_pir_gen_headers(capsys):
     backend.set_io_modules(mod, mod)
     _HartreeParticleDSL.the_instance = None
     backend.create_global_variable(INT_TYPE, "hello", "0")
+    backend.create_global_variable(INT_TYPE, "hello2")
     backend.gen_headers(config, part)
     assert "hello\n\n\nhello" in capsys.readouterr().out
     f_str = ""
@@ -210,6 +211,7 @@ using HostType = Kokkos::Device<Kokkos::Serial, Kokkos::HostSpace>;
 const int VectorLength = 16;
 
 int hello = 0;
+int hello2;
 struct boundary{
     double x_min, x_max;
     double y_min, y_max;
