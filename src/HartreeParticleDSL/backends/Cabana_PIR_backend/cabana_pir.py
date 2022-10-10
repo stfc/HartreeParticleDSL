@@ -111,7 +111,7 @@ class Cabana_PIR(Backend):
 
         type_mapping_str[type_name] = the_type
 
-    def create_global_variable(self, c_type: DataType, name: str, initial_value: str):
+    def create_global_variable(self, c_type: DataType, name: str, initial_value: Union[str, NoneType]=None):
         '''
         Function to create a global variable in the header file.
 
@@ -119,6 +119,7 @@ class Cabana_PIR(Backend):
         :type c_type: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.DataType.DataType`
         :param str name: The name of the variable.
         :param initial_value: The initial value of this variable
+        :type initial_value: str or None.
         '''
         from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
         from HartreeParticleDSL.Particle_IR.symbols.pointersymbol import PointerSymbol
@@ -129,17 +130,20 @@ class Cabana_PIR(Backend):
         #TODO
         if isinstance(c_type, StructureType):
             HartreeParticleDSL.global_symbol_table().new_symbol(name, c_type, StructureSymbol)
+            self._global_values[name] = None
         elif isinstance(c_type, PointerType):
             HartreeParticleDSL.global_symbol_table().new_symbol(name, c_type, PointerSymbol)
+            self._global_values[name] = initial_value
         elif isinstance(c_type, ArrayType):
             HartreeParticleDSL.global_symbol_table().new_symbol(name, c_type, ArraySymbol)
+            self._global_values[name] = initial_value
         elif isinstance(c_type, ScalarType):
             HartreeParticleDSL.global_symbol_table().new_symbol(name, c_type, ScalarTypeSymbol)
+            self._global_values[name] = initial_value
         else:
             raise TypeError("Attempting to create global variable but c_type argument is not "
                     f"a supported datatype. Got {type(c_type)}")
 
-        self._global_values[name] = initial_value
 
     def set_io_modules(self, input_module, output_module):
         '''
@@ -239,8 +243,10 @@ class Cabana_PIR(Backend):
 #                print(HartreeParticleDSL.global_symbol_table().lookup(name))
                 symbol = HartreeParticleDSL.global_symbol_table().lookup(name)
                 dt_str = Cabana_PIR_Visitor.get_cpp_datatype(symbol.datatype)
-                print(dt_str)
-                f.write(f"{dt_str} {name} = {self._global_values[name]};\n")
+                if self._global_values[name] is not None:
+                    f.write(f"{dt_str} {name} = {self._global_values[name]};\n")
+                else:
+                    f.write(f"{dt_str} {name};\n")
 
             f.write(config_output)
             f.write(part_output)
@@ -606,6 +612,7 @@ class Cabana_PIR(Backend):
         except (AttributeError) as err:
             pass
         for system in self._coupled_systems:
+            print(system)
             try:
                 fn = getattr(system, func_call)
                 string = fn(*args, **kwargs)

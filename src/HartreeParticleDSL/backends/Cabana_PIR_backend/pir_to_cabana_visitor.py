@@ -74,7 +74,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
     def visit_pointersymbol_node(self, symbol: PointerSymbol) -> str:
         # Find the name in the type_mapping_str
         type_str = ""
-        type_str = Cabana_PIR_visitor.get_cpp_datatype(symbol.datatype)
+        type_str = Cabana_PIR_Visitor.get_cpp_datatype(symbol.datatype._datatype)
         return f"{type_str}*"
 
     def visit_arraysymbol_node(self, symbol: ArraySymbol) -> str:
@@ -150,7 +150,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         for slices in self._slices:
             rval = rval + f"{self._nindent}{slices.upper()} _{slices};\n"
         for structure in self._parent.structures:
-            rval = rval + f"{self._nindent}{self._parent.structures[structure]} structure;\n"
+            rval = rval + f"{self._nindent}{structure} _{structure};\n"
 
         # Constructor
         rval = rval + "\n"
@@ -161,28 +161,28 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             all_slices.append(f"{slices.upper()} {slices}")
         all_slices.append("config_struct_type " + node.arguments[1].symbol.name)
         for structure in self._parent.structures:
-            all_slices.append(f"{self._parent.structures[structure]} {structure.upper()}")
+            all_slices.append(f"{structure} {structure.upper()}")
         classes = ", ".join(all_slices)
         rval = rval + classes + "):\n"
         all_slices = []
         for slices in self._slices:
             all_slices.append(f"_{slices}({slices})")
         for structure in self._parent.structures:
-            all_slices.append(f"{structure}({structure.upper()})")
+            all_slices.append(f"_{structure}({structure.upper()})")
         classes = ", ".join(all_slices)
         rval = rval + f"{self._nindent}{classes}"
         rval = rval + ", " + f"_{node.arguments[1].symbol.name}({node.arguments[1].symbol.name})" + "{}\n"
 
         # Need to have an update_structs call if there are structures
         if len(self._parent.structures) > 0:
-            rval = rval + f"{self._nindent}void update_structs("
+            rval = rval + f"\n{self._nindent}void update_structs("
             all_structs = []
             for struct in self._parent.structures:
-                all_structs.append(self._parent.structures[struct] + " " + struct.upper())
+                all_structs.append(struct + " " + struct.upper())
             rval = rval + ", ".join(all_structs) + "){\n"
             self.indent()
             for struct in self._parent.structures:
-                rval = rval + self._nindent + struct + " = " + struct.upper() + ";\n"
+                rval = rval + self._nindent + "_" + struct + " = " + struct.upper() + ";\n"
             self.dedent()
             rval = rval + self._nindent + "}\n"
 
@@ -194,6 +194,8 @@ class Cabana_PIR_Visitor(PIR_Visitor):
 
         self.dedent()
         rval = rval + self._nindent + "};\n"
+        for slices in self._slices:
+            self._parent.add_kernel_slices(node.name, slices)
         return rval
 
     def visit_mainkernel_node(self, node: MainKernel) -> str:
@@ -206,6 +208,8 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         symbol_list = ""
         for pairs in symbols.keys():
             symbol = symbols[pairs]
+            if symbol.name == "config":
+                continue
             sym = self._visit(symbol)
             symbol_list = symbol_list + self._nindent + sym + " " + pairs + ";\n"
 
@@ -213,6 +217,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         body = self._visit(node.body)
         rval = self._nindent + f"int {node.name}( int argc, char* argv[] )" + "{\n"
         rval = rval + symbol_list
+        # Append the code body
         rval = rval + body
         rval = rval + self._nindent + "}\n"
 
@@ -261,7 +266,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
                 struct_list = []
                 for struct in self._parent.structures:
                     struct_list.append(struct)
-                rval = rval + ", ".join(struct_list)
+                rval = rval + ", ".join(struct_list) + ");\n"
             rval = rval + f"{self._nindent}Cabana::simd_parallel_for(simd_policy, {invoke.value}, "
             rval = rval + "\"" + invoke.value + "\");\n"
             # TODO Check if we need to block (i.e. only if kernel dependencies or final kernel)
@@ -295,7 +300,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         try:
             current_indent = len(self._nindent)
             indent = len(self._indent)
-            return self._parent.call_language_function(func_name, args,
+            return self._parent.call_language_function(func_name, *args,
                     current_indent=current_indent, indent=indent)
         except:
             pass

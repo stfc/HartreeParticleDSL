@@ -264,7 +264,6 @@ def test_pir_cabana_visit_ifdef():
     }
 }
 '''
-    print(out)
     assert correct == out
 
 def test_pir_cabana_visit_loop():
@@ -432,9 +431,18 @@ def test_pir_cabana_pointer_reference():
     out = cpir(a)
     assert "*a" == out
 
+def test_pir_cabana_pointer_symbol():
+    a = PointerSymbol("a", PointerType(INT_TYPE))
+    cpir = Cabana_PIR_Visitor(None)
+    out = cpir.visit_pointersymbol_node(a)
+    assert "int*" == out
+
 def test_pir_cabana_particle_references_and_perpart():
     backend = Cabana_PIR()
     cpir = Cabana_PIR_Visitor(backend)
+    xs = StructureType()
+    xs.add("boo", INT_TYPE)
+    backend.add_structure(xs, "xs")
     # Create a perpart_kernel
     v = pir_perpart_visitor()
     type_mapping_str["part"].add("subpart", INT_TYPE)
@@ -454,10 +462,15 @@ struct x_functor{
     SUBPART _subpart;
     SUBARRAY _subarray;
     CORE_PART_POSITION _core_part_position;
+    xs _xs;
 
     KOKKOS_INLINE_FUNCTION
-     x_functor( SUBPART subpart, SUBARRAY subarray, CORE_PART_POSITION core_part_position, config_struct_type c):
-    _subpart(subpart), _subarray(subarray), _core_part_position(core_part_position), _c(c){}
+     x_functor( SUBPART subpart, SUBARRAY subarray, CORE_PART_POSITION core_part_position, config_struct_type c, xs XS):
+    _subpart(subpart), _subarray(subarray), _core_part_position(core_part_position), _xs(XS), _c(c){}
+
+    void update_structs(xs XS){
+        _xs = XS;
+    }
 
     void operator()(const int i, const int a) const{
         _subpart.access(i, a) = 1;
@@ -492,10 +505,15 @@ struct x_functor{
 struct y_functor{
     config_struct_type _c;
     CORE_PART_POSITION _core_part_position;
+    xs _xs;
 
     KOKKOS_INLINE_FUNCTION
-     y_functor( CORE_PART_POSITION core_part_position, config_struct_type c):
-    _core_part_position(core_part_position), _c(c){}
+     y_functor( CORE_PART_POSITION core_part_position, config_struct_type c, xs XS):
+    _core_part_position(core_part_position), _xs(XS), _c(c){}
+
+    void update_structs(xs XS){
+        _xs = XS;
+    }
 
     void operator()(const int i, const int a) const{
         int b;
@@ -564,9 +582,13 @@ def test_pir_cabana_mainkernel():
         invoke(x)
     c = ast.parse(textwrap.dedent(inspect.getsource(main)))
     pir = v.visit(c)
+    xs = StructureType()
+    xs.add("boo", INT_TYPE)
+    backend.add_structure(xs, "xs")
     out = cpir(pir)
     correct = '''int main( int argc, char* argv[] ){
     Kokkos::deep_copy(config.config, config.config_host);
+    x.update_structs(xs);
     Cabana::simd_parallel_for(simd_policy, x, "x");
     Kokkos::fence();
 }
