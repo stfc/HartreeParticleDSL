@@ -1,11 +1,14 @@
+'''
+This module contains the IfElseBlock class.
+'''
+
 from __future__ import annotations
 from typing import List
 
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
-from HartreeParticleDSL.Particle_IR.nodes.node import DataNode, Node
+from HartreeParticleDSL.Particle_IR.nodes.node import Node
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
 from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
-from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
 
 class IfElseBlock(Statement):
     '''
@@ -33,9 +36,9 @@ class IfElseBlock(Statement):
         '''
         if position == 0 and isinstance(child, Node):
             return True
-        if (position == 1 or position == 2) and isinstance(child, Body):
+        if (position in (1, 2)) and isinstance(child, Body):
             return True
-        return False 
+        return False
 
     @staticmethod
     def create(condition: Node, ifbody: List[Node], elsebody: List[Node]) -> IfElseBlock:
@@ -117,7 +120,7 @@ class IfElseBlock(Statement):
         '''
         self._check_completeness()
         return self.children[2]
-        
+
     def is_else_if(self) -> bool:
         '''
         Computes if the else body is an elseif block. To be an elseif, the
@@ -126,7 +129,7 @@ class IfElseBlock(Statement):
         :returns: true if the else is an elseif, otherwise false.
         :rtype: bool
         '''
-        if ( len(self.elsebody.children) > 0 and 
+        if ( len(self.elsebody.children) > 0 and
              isinstance(self.elsebody.children[0], IfElseBlock)):
             return True
         return False

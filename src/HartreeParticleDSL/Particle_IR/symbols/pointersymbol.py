@@ -1,10 +1,13 @@
-
+'''
+This module contains the PointerSymbol class to represent Pointers in the
+Particle_IR tree.
+'''
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import PointerType
 
 class PointerSymbol(Symbol):
     '''
-    Class for those symbols that are to a Structure Type.
+    Class for those symbols that are to a Pointer Type.
 
     :param str name: name of the symbol.
     :param datatype: datatype of the symbol.
@@ -21,7 +24,7 @@ class PointerSymbol(Symbol):
     @property
     def datatype(self) -> PointerType:
         '''
-        :returns: datatype of the StructureSymbol.
+        :returns: datatype of the PointerSymbol.
         :rtype: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.datatype.PointerType`
         '''
         return self._datatype
@@ -29,7 +32,7 @@ class PointerSymbol(Symbol):
     @datatype.setter
     def datatype(self, value: PointerType) -> None:
         '''
-        Setter for the datattype of a StructureSymbol.
+        Setter for the datattype of a PointerSymbol.
 
         :param value: new value for the datatype.
         :type value: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.datatype.PointerType`
@@ -37,7 +40,6 @@ class PointerSymbol(Symbol):
         :raises TypeError: if the value is not of the correct type.
         '''
 
-        # TODO
         if not isinstance(value, PointerType):
             raise TypeError(
                     f"The datatype of a {type(self)} must be specified "

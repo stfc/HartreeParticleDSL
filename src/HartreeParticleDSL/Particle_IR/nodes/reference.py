@@ -1,4 +1,8 @@
-from abc import ABCMeta, abstractproperty, abstractmethod
+'''
+This module contains the abstract Reference class.
+'''
+
+from abc import ABCMeta
 from HartreeParticleDSL.Particle_IR.nodes.node import DataNode
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
 
@@ -38,7 +42,7 @@ class Reference(DataNode, metaclass=ABCMeta):
         '''
         return self._symbol.name
 
-    @property 
+    @property
     def is_array(self) -> bool:
         '''
         :returns: if this reference is an array.

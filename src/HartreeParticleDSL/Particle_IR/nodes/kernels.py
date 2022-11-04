@@ -1,8 +1,12 @@
+'''
+This module contains all of the Kernel class types.
+'''
+# pylint: disable=undefined-variable
+
 from __future__ import annotations
 
 from typing import List
 
-from HartreeParticleDSL.Particle_IR.nodes.body import Body
 from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
 from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
@@ -55,7 +59,8 @@ class PairwiseKernel(Kern):
         arguments required, to represent the two particles and the config.
 
         :param arguments: list of arguments for this pairwise kernel.
-        :type arguments: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.reference.Reference`
+        :type arguments: List of \
+                :py:class:`HartreeParticleDSL.Particle_IR.nodes.reference.Reference`
 
         :raises TypeError: If any provided argument is not a Reference.
         :raises IRGenerationError: If there are not at least three arguments.
@@ -71,15 +76,18 @@ class PairwiseKernel(Kern):
             self._arguments.append(arg)
 
     @staticmethod
-    def create(name: str, arguments: List[Reference], kernel_body: List[Statement]) -> PairwiseKernel:
+    def create(name: str, arguments: List[Reference], kernel_body: List[Statement]) \
+            -> PairwiseKernel:
         '''
         Creates a PairwiseKernel containing the input arguments and kernel body.
 
         :param str name: The name of this PairwiseKernel.
         :param arguments: The list of arguments to use for this Pairwise Kernel.
-        :type arguments: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.reference.Reference`
+        :type arguments: List of \
+                :py:class:`HartreeParticleDSL.Particle_IR.nodes.reference.Reference`
         :param kernel_body: The list of Statements that make up this Pairwise Kernel
-        :type kernel_body: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.statement.Statement`
+        :type kernel_body: List of \
+                :py:class:`HartreeParticleDSL.Particle_IR.nodes.statement.Statement`
 
         :returns: The new Pairwise Kernel created
         :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.kernels.PairwiseKernel
@@ -137,7 +145,8 @@ class PerPartKernel(Kern):
         arguments required, to represent the particle and the config.
 
         :param arguments: list of arguments for this perpart kernel.
-        :type arguments: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.reference.Reference`
+        :type arguments: List of \
+                :py:class:`HartreeParticleDSL.Particle_IR.nodes.reference.Reference`
 
         :raises TypeError: If any provided argument is not a Reference.
         :raises IRGenerationError: If there are not at least two arguments.
@@ -153,15 +162,18 @@ class PerPartKernel(Kern):
             self._arguments.append(arg)
 
     @staticmethod
-    def create(name: str, arguments: List[Reference], kernel_body: List[Statement]) -> PerPartKernel:
+    def create(name: str, arguments: List[Reference], kernel_body: List[Statement]) \
+            -> PerPartKernel:
         '''
         Creates a PerPartKernel containing the input arguments and kernel body.
 
         :param str name: The name of this PerPartKernel.
         :param arguments: The list of arguments to use for this PerPart Kernel.
-        :type arguments: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.reference.Reference`
+        :type arguments: List of \
+                :py:class:`HartreeParticleDSL.Particle_IR.nodes.reference.Reference`
         :param kernel_body: The list of Statements that make up this PerPart Kernel
-        :type kernel_body: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.statement.Statement`
+        :type kernel_body: List of \
+                :py:class:`HartreeParticleDSL.Particle_IR.nodes.statement.Statement`
 
         :returns: The new PerPart Kernel created
         :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.kernels.PerPartKernel
@@ -221,7 +233,8 @@ class MainKernel(Kern):
         Sets the arguments of this main Kernel. Must be empty
 
         :param arguments: list of arguments for this perpart kernel.
-        :type arguments: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.reference.Reference`
+        :type arguments: List of \
+                :py:class:`HartreeParticleDSL.Particle_IR.nodes.reference.Reference`
 
         :raises IRGenerationError: If there are any provided arguments.
         '''
@@ -237,7 +250,8 @@ class MainKernel(Kern):
 
         :param str name: The name of this MainKernel.
         :param kernel_body: The list of Statements that make up this Main Kernel
-        :type kernel_body: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.statement.Statement`
+        :type kernel_body: List of \
+                :py:class:`HartreeParticleDSL.Particle_IR.nodes.statement.Statement`
 
         :returns: The new Main Kernel created
         :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.kernels.MainKernel

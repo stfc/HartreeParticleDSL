@@ -203,7 +203,6 @@ def test_cabana_pir_gen_headers(capsys):
 #include <Kokkos_Core.hpp>
 #include <Cabana_Core.hpp>
 #include a
-/*using MemorySpace = Kokkos::CudaSpace;*/
 using MemorySpace = Kokkos::HostSpace;
 using ExecutionSpace = Kokkos::DefaultExecutionSpace;
 using DeviceType = Kokkos::Device<Kokkos::DefaultExecutionSpace, MemorySpace>;
@@ -254,9 +253,15 @@ using DataTypes = Cabana::MemberTypes<double[3],
     double[3],
     double>;
 #endif'''
-    print(f_str)
     assert f_str == correct
 
+    HartreeParticleDSL.set_cuda(True)
+    backend.gen_headers(config, part)
+    f_str = ""
+    with open('part.h', 'r') as f:
+        f_str = f.readlines()
+    f_str = "".join(f_str)
+    assert "using MemorySpace = Kokkos::CudaSpace;" in f_str
 def kern2(part: part, config: config):
     create_variable(c_double, a, 2.0)
     part.core_part.position[0] = part.core_part.position[0] + 2.0

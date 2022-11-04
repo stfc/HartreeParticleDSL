@@ -1,9 +1,12 @@
+'''
+This module contains the ChildrenList class and the base Node class.
+'''
+
 from __future__ import annotations
+from typing import Union, Tuple, List, Any
 from abc import ABCMeta
-from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
-import typing
-from typing import Union, Tuple, List
 from collections.abc import Callable
+from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 
 class ChildrenList(list):
     '''
@@ -61,6 +64,7 @@ class ChildrenList(list):
         :type node: :py:class:`HartreeParticleDSL.Particle_IR.nodes.Node`
 
         '''
+        # pylint: disable=protected-access
         node._parent = self._node_reference
 
     @staticmethod
@@ -71,6 +75,7 @@ class ChildrenList(list):
         :param node: node for which the parent connection needs to be updated.
         :type node: :py:class:`HartreeParticleDSL.Particle_IR.nodes.Node`
         '''
+        # pylint: disable=protected-access
         node._parent = None
 
     def append(self, item: Node) -> None:
@@ -120,7 +125,7 @@ class ChildrenList(list):
     def extend(self, items: list[Node]) -> None:
         '''
         Extends list extend method with children node validation.
-        
+
         :param items: list of items to be inserted to the list.
         :type items: list of :py:class:`HartreeParticleDSL.Particle_IR.nodes.Node`
         '''
@@ -180,6 +185,12 @@ class ChildrenList(list):
         super().reverse()
 
 class Node:
+    '''
+    The base Node class. All other Particle_IR nodes inherit from Node.
+
+    :param children: List of children nodes of this Node.
+    :type node: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.Node`
+    '''
 
     START_DEPTH = 0
 
@@ -205,13 +216,14 @@ class Node:
         :return: whether the given child and position are valid for this node.
         :rtype: bool
         '''
+        # pylint: disable=unused-argument
         return False
 
     @property
     def children(self) -> list[Node]:
         '''
         :returns: the children of this Node.
-        :rtype: List[:py:class::py:class:`HartreeParticleDSL.Particle_IR.nodes.Node`]
+        :rtype: List[:py:class:`HartreeParticleDSL.Particle_IR.nodes.Node`]
         '''
         return self._children
 
@@ -219,7 +231,7 @@ class Node:
     def parent(self) -> Node:
         '''
         :returns: the parent node.
-        :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.Node` or NoneType
+        :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.Node` or None
         '''
         return self._parent
 
@@ -242,7 +254,7 @@ class Node:
     def depth(self) -> int:
         '''
         Returns this Node's depth in the tree.
-        
+
         :returns: depth of the Node in the tree.
         :rtype: int
         '''
@@ -256,7 +268,8 @@ class Node:
 
     def view(self, depth:int=0, indent: str= "    ", _index: Union[int, None]=None) -> str:
         '''
-        Output a human readable description of the current node and all of its descendents as a string.
+        Output a human readable description of the current node and all of its descendents
+        as a string.
 
         :param int depth: depth of the tree hierarch for output text. Default is 0.
         :param str indent: the indent to apply as the depth increases. Defaults to 4 spaces.
@@ -318,6 +331,7 @@ class Node:
         for index, child in enumerate(self.parent.children):
             if child is self:
                 return index
+        return self.START_POSITION
 
     @property
     def abs_position(self) -> int:
@@ -328,16 +342,16 @@ class Node:
         :returns: absolute position of a Node in the tree.
         :rtype: int
         '''
+        # pylint: disable=unused-variable
         if self.root is self:
             return self.START_POSITION
         found, position = self._find_position(self.root.children,
                                               self.START_POSITION)
 
-        assert found
-
         return position
 
-    def _find_position(self, children: list[Node], position: Union[None, int]=None) -> Tuple[bool,int]:
+    def _find_position(self, children: list[Node], position: Union[None, int]=None) \
+            -> Tuple[bool,int]:
         '''
         Recurse through the tree depth first returning position of self
         if found.
@@ -377,7 +391,7 @@ class Node:
             node = node.parent
         return node
 
-    def sameParent(self, node_2: Node) -> bool:
+    def same_parent(self, node_2: Node) -> bool:
         '''
         :param node_2: The node to check if has the same parent.
         :type node_2: :py:class:`HartreeParticleDSL.Particle_IR.nodes.Node`
@@ -389,7 +403,8 @@ class Node:
             return False
         return self.parent is node_2.parent
 
-    def walk(self, t_type: Union[Tuple[type[Any]], type[Any]], stop_type: Union[None, Tuple[type[Any]], type[Any]]=None) -> List[Node]:
+    def walk(self, t_type: Union[Tuple[type[Any]], type[Any]],
+             stop_type: Union[None, Tuple[type[Any]], type[Any]]=None) -> List[Node]:
         '''
         Recurse through the PIR tree and return all objects that are an instance of
         t_type, which is either a single class or a tuple of classes.
@@ -415,7 +430,8 @@ class Node:
             local_list += child.walk(t_type, stop_type)
         return local_list
 
-    def ancestor(self, t_type: Union[Tuple[type[Any]], type[Any]], excluding: Union[None, Tuple[type[Any]], type[Any]]=None,
+    def ancestor(self, t_type: Union[Tuple[type[Any]], type[Any]],
+                 excluding: Union[None, Tuple[type[Any]], type[Any]]=None,
             include_self: bool=False, limit: Union[None, Node]=None) -> Union[Node, None]:
         '''
         Search back up the tree and find an ancestor that is an instance of the supplied type.
@@ -436,6 +452,7 @@ class Node:
                   or None if not found.
         :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.Node` or None.
         '''
+        # pylint: disable=too-many-branches
 
         if include_self:
             myparent = self
@@ -448,12 +465,13 @@ class Node:
             elif isinstance(excluding, tuple):
                 excludes = excluding
             else:
-                raise TypeError(f"The 'excluding' argument to ancestor() must be a type or tuple of types."
+                raise TypeError("The 'excluding' argument to ancestor() must be a "
+                                "type or tuple of types."
                                 f" Was supplied {type(excluding)}.")
 
         if limit and not isinstance(limit, Node):
-            raise TypeError(f"The 'limit' argument to ancestor() must be an instance of Node, but got "
-                            f"{type(limit)}.")
+            raise TypeError(f"The 'limit' argument to ancestor() must be an instance of Node, "
+                            f"but got {type(limit)}.")
 
         if limit:
             while myparent is not None and myparent is not limit:
@@ -468,7 +486,7 @@ class Node:
                         return myparent
                 myparent = myparent.parent
 
-        return None 
+        return None
 
     def pop_all_children(self) -> List[Node]:
         '''
@@ -485,7 +503,7 @@ class Node:
     def detach(self) -> Node:
         '''
         Detach this node from the tree it belongs to and return it.
-        
+
         :returns: this node as an orphan.
         :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.Node`
         '''
@@ -494,6 +512,7 @@ class Node:
             self.parent.children.pop(index)
         return self
 
+    # pylint: disable=fixme
     #TODO copy??
 
     def validate_constraints(self) -> None:
@@ -505,7 +524,6 @@ class Node:
         By default this routine does nothing, and must be overridden if
         required.
         '''
-        pass
 
 class DataNode(Node, metaclass=ABCMeta):
     '''

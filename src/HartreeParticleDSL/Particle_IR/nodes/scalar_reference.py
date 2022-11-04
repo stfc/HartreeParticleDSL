@@ -1,3 +1,7 @@
+'''
+This module contains the ScalarReference class.
+'''
+
 from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
 from HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol import ScalarTypeSymbol
 
@@ -6,14 +10,15 @@ class ScalarReference(Reference):
     Contains a ScalarReference to a variable in the ParticleIR tree.
 
     :param symbol: The scalar type symbol that this reference points to.
-    :type symbol: :py:class:`HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol.ScalarTypeSymbol`
+    :type symbol: \
+            :py:class:`HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol.ScalarTypeSymbol`
 
     '''
 
     def __init__(self, symbol: ScalarTypeSymbol) -> None:
         super().__init__()
         self.symbol = symbol
- 
+
     @property
     def symbol(self) -> ScalarTypeSymbol:
         return super().symbol
@@ -24,7 +29,8 @@ class ScalarReference(Reference):
         Sets the symbol this ScalarReference refers to.
 
         :param symbol: The symbol to make this symbol refer to.
-        :type symbol: :py:class:`HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol.ScalarTypeSymbol`
+        :type symbol: \
+                :py:class:`HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol.ScalarTypeSymbol`
 
         :raises TypeError: if the symbol is not the correct type.
         '''

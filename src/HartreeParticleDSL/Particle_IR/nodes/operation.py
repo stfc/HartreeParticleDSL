@@ -1,3 +1,8 @@
+'''
+This module contains the abstract Operation class, and its direct descendants,
+BinaryOperation and UnaryOperation.
+'''
+
 from __future__ import annotations
 
 from abc import ABCMeta
@@ -30,6 +35,10 @@ class Operation(DataNode, metaclass=ABCMeta):
 
     @property
     def operator(self) -> object:
+        '''
+        :returns: the operator for this Operation.
+        :rtype: Any
+        '''
         return self._operator
 
 class BinaryOperation(Operation):
@@ -57,21 +66,22 @@ class BinaryOperation(Operation):
     Operator = BinaryOp
 
     @staticmethod
-    def create(operator: BinaryOp, children: List[DataNode]) -> BinaryOperator:
+    def create(operator: BinaryOp, children: List[DataNode]) -> BinaryOperation:
         '''
         Create a binary operation representing `children[0] operation children[1]`.
 
         :param operator: The binary operation represented by the created node.
-        :type operator: py:class:`HartreeParticleDSL.Particle_IR.nodes.BinaryOperator.BinaryOp`
+        :type operator: py:class:`HartreeParticleDSL.Particle_IR.nodes.BinaryOperation.BinaryOp`
         :param children: The children represented by this BinaryOperation.
         :type children: list of py:class:`HartreeParticleDSL.Particle_IR.nodes.DataNode`
 
-        :raises IRGenerationError: if the children input doesn't contain exactly 2 children DataNodes.
-    
+        :raises IRGenerationError: if the children input doesn't contain exactly 2 children \
+                                   DataNodes.
+
         :returns: The new binary operation node.
-        :rtype: py:class:`HartreeParticleDSL.Particle_IR.nodes.BinaryOperator
+        :rtype: py:class:`HartreeParticleDSL.Particle_IR.nodes.BinaryOperation
         '''
-        op = BinaryOperation(operator=operator)
+        oper = BinaryOperation(operator=operator)
         if len(children) != 2:
             raise IRGenerationError(f"Attempting to create a BinaryOperation with "
                                     f"wrong number of children. Was provided "
@@ -85,9 +95,9 @@ class BinaryOperation(Operation):
                                     f"but second provided child is {type(children[1])} "
                                     f"instead of a DataNode.")
 
-        op.addchild(children[0])
-        op.addchild(children[1])
-        return op
+        oper.addchild(children[0])
+        oper.addchild(children[1])
+        return oper
 
     @staticmethod
     def _validate_child(position: int, child: Node) -> bool:
@@ -101,7 +111,7 @@ class BinaryOperation(Operation):
         :return: whether the given child and position are valid for this node.
         :rtype: bool
         '''
-        if (position == 0 or position == 1) and isinstance(child, DataNode):
+        if (position in (0, 1)) and isinstance(child, DataNode):
             return True
         return False
 
@@ -140,28 +150,28 @@ class UnaryOperation(Operation):
         return False
 
     @staticmethod
-    def create(operator: UnaryOp, child: DataNode) -> BinaryOperator:
+    def create(operator: UnaryOp, child: DataNode) -> UnaryOperation:
         '''
-        Create a binary operation representing `children[0] operation children[1]`.
+        Create a unary operation representing `operation children[0]`.
 
-        :param operator: The binary operation represented by the created node.
+        :param operator: The unary operation represented by the created node.
         :type operator: py:class:`HartreeParticleDSL.Particle_IR.nodes.UnaryOpeartion.UnaryOp`
         :param children: The child of this UnaryOperation.
         :type children: py:class:`HartreeParticleDSL.Particle_IR.nodes.DataNode`
 
         :raises IRGenerationError: if the child is not a DataNode.
-    
-        :returns: The new binary operation node.
-        :rtype: py:class:`HartreeParticleDSL.Particle_IR.nodes.BinaryOperator
+
+        :returns: The new unary operation node.
+        :rtype: py:class:`HartreeParticleDSL.Particle_IR.nodes.UnaryOperation
         '''
-        op = UnaryOperation(operator=operator)
+        oper = UnaryOperation(operator=operator)
         if not isinstance(child, DataNode):
             raise IRGenerationError(f"Attempting to create a UnaryOperation "
                                     f"but provided child is {type(child)} "
                                     f"instead of a DataNode.")
 
-        op.addchild(child)
-        return op
+        oper.addchild(child)
+        return oper
 
     def node_str(self) -> str:
         '''
@@ -170,4 +180,5 @@ class UnaryOperation(Operation):
         '''
         return f"UnaryOperation[{self.operator}: {self.children[0]}]"
 
+# pylint: disable=fixme
 #TODO Do we need an N-ary class for general operations?

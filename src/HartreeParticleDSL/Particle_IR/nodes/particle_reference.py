@@ -1,9 +1,13 @@
+'''
+This module contains the ParticleReference class.
+'''
+
 from __future__ import annotations
-from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
+from HartreeParticleDSL.Particle_IR.nodes.structure_reference import StructureReference
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
 from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
 
-class ParticleReference(Reference):
+class ParticleReference(StructureReference):
     '''
     Contains a ParticleReference in the IR tree.
 
@@ -12,10 +16,9 @@ class ParticleReference(Reference):
     :param member: The structure access member used in this reference.
     :type member: :py:class:`HartreeParticleDSL.Particle_IR.nodes.member.Member`
     '''
+    # pylint: disable=undefined-variable
     def __init__(self, symbol: StructureSymbol, member: Member) -> None:
-        super().__init__()
-        self.symbol = symbol
-        self.member = member
+        super().__init__(symbol, member)
 
     @property
     def symbol(self) -> ScalarTypeSymbol:
@@ -27,7 +30,8 @@ class ParticleReference(Reference):
         Sets the symbol this ParticleReference refers to.
 
         :param symbol: The symbol to make this symbol refer to.
-        :type symbol: :py:class:`HartreeParticleDSL.Particle_IR.symbols.structuresymbol.StructureSymbol`
+        :type symbol: \
+                :py:class:`HartreeParticleDSL.Particle_IR.symbols.structuresymbol.StructureSymbol`
 
         :raises TypeError: if the symbol is not the correct type.
         '''

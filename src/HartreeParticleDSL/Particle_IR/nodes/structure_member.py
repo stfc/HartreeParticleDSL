@@ -1,3 +1,7 @@
+'''
+This module contains the StructureMember class.
+'''
+
 from __future__ import annotations
 
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
@@ -10,6 +14,7 @@ class StructureMember(Member):
     :param sub_member: The member this structure contains as an access.
     :type sub_member: :py:class:`HartreeParticleDSL.Particle_IR.nodes.member.Member`
     '''
+    # pylint: disable=undefined-variable
     def __init__(self, name: str, sub_member: Member) -> None:
         super().__init__(name)
         self.addchild(sub_member)

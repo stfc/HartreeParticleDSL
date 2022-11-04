@@ -1,3 +1,7 @@
+'''
+This module contains the Loop class.
+'''
+
 from __future__ import annotations
 from typing import List
 
@@ -24,7 +28,8 @@ class Loop(Statement):
         self._variable = variable
 
     @staticmethod
-    def create(variable: Symbol, start: DataNode, stop: DataNode, step: DataNode, children: List[DataNode]) -> Loop:
+    def create(variable: Symbol, start: DataNode, stop: DataNode, step: DataNode,
+               children: List[DataNode]) -> Loop:
         '''
         Creates and returns a Loop node.
 
@@ -67,7 +72,7 @@ class Loop(Statement):
             body.addchild(child)
 
         return loop
-        
+
 
     @staticmethod
     def _validate_child(position: int, child: Node) -> bool:
@@ -85,7 +90,7 @@ class Loop(Statement):
         :return: whether the given child and position are valid for this node.
         :rtype: bool
         '''
-        if (position >= 0 and position <= 2) and isinstance(child, DataNode):
+        if (0 <= position <= 2) and isinstance(child, DataNode):
             return True
         if position == 3 and isinstance(child, Body):
             return True
@@ -93,7 +98,7 @@ class Loop(Statement):
 
     def _check_completeness(self):
         '''
-        Checks whether this loop is fully formed, i.e. has 4 children, 
+        Checks whether this loop is fully formed, i.e. has 4 children,
         start, stop, step and body.
 
         :raises IRGeneration: If this node is not fully formed as expected.
@@ -156,4 +161,3 @@ class Loop(Statement):
         my_str = (f"Loop[ ({self.start_expr.node_str()}, {self.stop_expr.node_str()} "
                  f"{self.step_expr.node_str()}): {self.children[3].node_str()}\n]")
         return my_str
-

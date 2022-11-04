@@ -1,3 +1,7 @@
+'''
+This module contains the While class.
+'''
+
 from __future__ import annotations
 from typing import List
 
@@ -5,7 +9,6 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 from HartreeParticleDSL.Particle_IR.nodes.node import DataNode, Node
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
 from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
-from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
 
 class While(Statement):
     '''
@@ -41,7 +44,7 @@ class While(Statement):
             body.addchild(child)
 
         return while_loop
-        
+
 
     @staticmethod
     def _validate_child(position: int, child: Node) -> bool:
@@ -65,7 +68,7 @@ class While(Statement):
 
     def _check_completeness(self):
         '''
-        Checks whether this while loop is fully formed, i.e. has 2 children, 
+        Checks whether this while loop is fully formed, i.e. has 2 children,
         condition and body.
 
         :raises IRGeneration: If this node is not fully formed as expected.
@@ -100,4 +103,3 @@ class While(Statement):
         '''
         my_str = (f"While[{self.children[0].node_str()}: {self.children[1].node_str()}\n]")
         return my_str
-

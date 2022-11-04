@@ -1,3 +1,7 @@
+'''
+This module contaisn the Assignment class.
+'''
+
 from __future__ import annotations
 
 from typing import List, Union
@@ -11,7 +15,8 @@ class Assignment(Statement):
     children, which can be accessed as lhs and rhs.
 
     :param children: List of Nodes to be contained in this Assignment region.
-    :type children: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.Node`
+    :type children: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.Node` \
+            or None.
     '''
     def __init__(self, children: Union[List[Node], None]=None) -> None:
         super().__init__(children=children)
@@ -22,8 +27,6 @@ class Assignment(Statement):
         Determines whether a given position and node are valid as a child
         of this node.
 
-        Assignment
-
         :param int position: the position to be validated.
         :param child: a child to be validated.
         :type child: :py:class:`HartreeParticleDSL.Particle_IR.nodes.Node`
@@ -31,7 +34,7 @@ class Assignment(Statement):
         :return: whether the given child and position are valid for this node.
         :rtype: bool
         '''
-        if (position == 0 or position == 1) and isinstance(child, DataNode):
+        if (position in (0, 1)) and isinstance(child, DataNode):
             return True
         return False
 
@@ -55,12 +58,12 @@ class Assignment(Statement):
     def create(lhs: DataNode, rhs: DataNode) -> Assignment:
         '''
         Creates an assignment with the given lhs and rhs nodes.
-    
+
         :param lhs: The lhs of the assignment to be created.
         :type lhs: :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.DataNode`
         :param rhs: The rhs of the assignment to be created.
         :type rhs: :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.DataNode
-    
+
         :returns: An assignment node representing the lhs and rhs provided.
         :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.assignment.Assignment`
         '''

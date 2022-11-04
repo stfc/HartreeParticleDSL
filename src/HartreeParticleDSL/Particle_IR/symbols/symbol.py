@@ -1,3 +1,8 @@
+'''
+This module contains the basic Symbol abstract class, which is used as the base
+class for other Symbols in Particle_IR.
+'''
+
 from __future__ import annotations
 
 from abc import ABCMeta
@@ -18,7 +23,7 @@ class Symbol(metaclass=ABCMeta):
     class Visibility(Enum):
         '''
         Enumeration of the different visibilty attributes supported in the PIR.
-        If no visibility information is supplied for a Symbol then it is given 
+        If no visibility information is supplied for a Symbol then it is given
         the DEFAULT_VISIBILITY.
 
         LOCAL: the symbol is local to the current kernel or function.
@@ -71,13 +76,14 @@ class Symbol(metaclass=ABCMeta):
 
         :param node: the PIR node from which to search.
         :type node: :py:class:`HartreeParticleDSL.Particle_IR.nodes.Node`
-        
+
         :returns: the SymbolTable containing this Symbol or None
-        :rtype: TODO
+        :rtype: :py:type:`HartreeParticleDSL.Particle_IR.symbols.symboltable.SymbolTable` \
+                or None
 
         :raises TypeError: if the supplied node is not a PIR Node.
         '''
-        from HartreeParticleDSL.Particle_IR.nodes import Node
+        # pylint: disable=fixme
         if not isinstance(node, Node):
             raise TypeError(f"find symbol table expected to be passed an instance of "
                             f"Particle_IR.nodes.Node but got {type(node)}.")

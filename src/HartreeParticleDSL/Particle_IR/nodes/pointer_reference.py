@@ -1,3 +1,7 @@
+'''
+This module contains the PointerReference class.
+'''
+
 from __future__ import annotations
 
 from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
@@ -11,11 +15,12 @@ class PointerReference(Reference):
     :type symbol: :py:class:`HartreeParticleDSL.Particle_IR.symbols.pointersymbol.PointerSymbol`
 
     '''
+    # pylint: disable=undefined-variable
 
     def __init__(self, symbol: PointerSymbol) -> None:
         super().__init__()
         self.symbol = symbol
-   
+
     @property
     def symbol(self) -> Symbol:
         return super().symbol

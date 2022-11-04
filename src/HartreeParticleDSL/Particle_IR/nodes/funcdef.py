@@ -1,20 +1,26 @@
+'''
+This module contains the FuncDef class.
+'''
+
 from __future__ import annotations
 
-from abc import ABCMeta
-from typing import List
+from typing import List, Union
 from HartreeParticleDSL.Particle_IR.nodes.node import Node, DataNode
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
+from HartreeParticleDSL.Particle_IR.symbols.symboltable import SymbolTable
 
 class FuncDef(Node):
     '''
     Class representing a general (non-kernel) Function Definition.
-    
+
     :param str name: The name of this function definition.
     :param children: List of Nodes to be contained in this Kern region.
-    :type children: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.Node.
+    :type children: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.Node. \
+            or None.
     '''
+    # pylint: disable=undefined-variable
 
-    def __init__(self, name: str,  children: List[Node]=None) -> None:
+    def __init__(self, name: str,  children: Union[None,List[Node]]=None) -> None:
         super().__init__(children=children)
 
         self.name = name
@@ -26,7 +32,6 @@ class FuncDef(Node):
         self._arguments = []
 
         # Add a symbol table
-        from HartreeParticleDSL.Particle_IR.symbols.symboltable import SymbolTable
         self._symbol_table = SymbolTable(kern=self)
 
     @property
@@ -95,8 +100,8 @@ class FuncDef(Node):
         :rtype: str
         '''
         arg_strings = []
-        for x in self._arguments:
-            arg_strings.append(x.node_str())
+        for arg in self._arguments:
+            arg_strings.append(arg.node_str())
         arg_string = ", ".join(arg_strings)
         nodestr = type(self).__name__ + f"[{arg_string}: {self.children[0].node_str()}]"
         return nodestr

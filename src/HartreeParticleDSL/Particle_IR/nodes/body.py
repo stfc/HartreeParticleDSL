@@ -1,6 +1,12 @@
+'''
+This module contains the Body class.
+'''
+
+from __future__ import annotations
+from typing import Union, List
+
 from HartreeParticleDSL.Particle_IR.nodes.node import Node
 from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
-from typing import Union, Tuple, List
 
 class Body(Node):
     '''
@@ -8,10 +14,12 @@ class Body(Node):
     number of Statement nodes.
 
     :param children: List of Nodes to be contained in this Body region.
-    :type children: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.Node`
+    :type children: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.Node` \
+            or None.
     '''
+    # pylint: disable=undefined-variable
 
-    def __init__(self, children: List[Node]=None) -> None:
+    def __init__(self, children: Union[None,List[Node]]=None) -> None:
         super().__init__(children=children)
 
     @staticmethod
@@ -39,8 +47,7 @@ class Body(Node):
         :returns: a text description of this assignment
         :rtype: str
         '''
-        nodestr = f"Body[\n"
-        indices = []
+        nodestr = "Body[\n"
         for i in self.children:
             nodestr += f"    {i.node_str()}\n"
         nodestr +="] End Body"

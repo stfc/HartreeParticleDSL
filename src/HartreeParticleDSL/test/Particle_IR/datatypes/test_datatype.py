@@ -46,7 +46,7 @@ def test_structure_type():
     assert ("Expected typ argument to be a DataType but got <class 'int'>.") in str(excinfo.value)
     with pytest.raises(IRGenerationError) as excinfo:
         struct.add("myint64", scalartype)
-    assert ("names in a StructureType must be unique but provided duplicate myint64.") in str(excinfo.value)
+    assert ("Names in a StructureType must be unique but provided duplicate myint64.") in str(excinfo.value)
 
     comps = struct.components
     assert comps["myint64"] == scalartype

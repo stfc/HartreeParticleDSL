@@ -1,3 +1,8 @@
+'''
+This module contains the datatype_to_symbol map, which contains a mapping from
+Type to Symbol, enabling creation of the appropriate Symbol for a given Type.
+'''
+
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import ScalarType, \
         StructureType, PointerType, ArrayType
 

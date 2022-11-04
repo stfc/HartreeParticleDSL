@@ -1,3 +1,7 @@
+'''
+This module contains the abstract ArrayMixin class.
+'''
+
 from __future__ import annotations
 from abc import ABCMeta
 from typing import List
@@ -9,6 +13,7 @@ class ArrayMixin(metaclass=ABCMeta):
     Abstract class used to handle all common functionality for Arrays.
     This should always preceed other inheritence.
     '''
+    # pylint: disable=undefined-variable
 
     @staticmethod
     def _validate_child(position: int, child: Node) -> bool:
@@ -22,6 +27,7 @@ class ArrayMixin(metaclass=ABCMeta):
         :return: whether the given child and position are valid for this node.
         :rtype: bool
         '''
+        # pylint: disable=unused-argument
         return isinstance(child, DataNode)
 
     @property

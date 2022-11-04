@@ -1,3 +1,8 @@
+'''
+This module contains the abstract Statement class, as well as some
+child classes, EmptyStatement, Break and Return.
+'''
+
 from abc import ABCMeta
 
 from HartreeParticleDSL.Particle_IR.nodes.node import Node, DataNode
@@ -21,6 +26,9 @@ class Break(Statement):
     '''
 
 class Return(Statement):
+    '''
+    Node used to represent a Return statement.
+    '''
     @staticmethod
     def _validate_child(position: int, child: Node) -> bool:
         '''

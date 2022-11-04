@@ -1,10 +1,12 @@
+'''
+This module contains the Invoke class.
+'''
+
 from __future__ import annotations
 from typing import List, Union
 
 from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
 from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
-from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
-from HartreeParticleDSL.Particle_IR.nodes.kernels import MainKernel
 
 class Invoke(Statement):
     '''
@@ -12,6 +14,7 @@ class Invoke(Statement):
 
     An Invoke is used for any Kern objects that are not Main.
     '''
+    # pylint: disable=undefined-variable
 
     @staticmethod
     def _validate_child(position: int, child: Node) -> bool:
@@ -49,5 +52,3 @@ class Invoke(Statement):
             rval.addchild(kernels)
 
         return rval
-
-

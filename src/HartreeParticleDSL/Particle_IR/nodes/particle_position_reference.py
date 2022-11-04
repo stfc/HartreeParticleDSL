@@ -1,7 +1,10 @@
+'''
+This module contains the ParticlePositionReference class.
+'''
+
 from __future__ import annotations
 
 from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
-from HartreeParticleDSL.Particle_IR.nodes.member import Member
 from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
 
 class ParticlePositionReference(Reference):
@@ -12,6 +15,7 @@ class ParticlePositionReference(Reference):
     :type symbol: :py:class:`HartreeParticleDSL.Particle_IR.symbols.structuresymbol.StructureSymbol`
     :param int dimension: The dimension of the particle position accessed in this node.
     '''
+    # pylint: disable=undefined-variable
     def __init__(self, symbol: StructureSymbol, dimension: int) -> None:
         super().__init__()
         self.symbol = symbol
@@ -27,12 +31,14 @@ class ParticlePositionReference(Reference):
         Sets the symbol this ParticlePositionReference refers to.
 
         :param symbol: The symbol to make this symbol refer to.
-        :type symbol: :py:class:`HartreeParticleDSL.Particle_IR.symbols.structuresymbol.StructureSymbol`
+        :type symbol: \
+                :py:class:`HartreeParticleDSL.Particle_IR.symbols.structuresymbol.StructureSymbol`
 
         :raises TypeError: if the symbol is not the correct type.
         '''
         if not isinstance(symbol, StructureSymbol):
-            raise TypeError("Attempted to make a ParticlePositionReference to a non-StructureSymbol. "
+            raise TypeError("Attempted to make a ParticlePositionReference "
+                            "to a non-StructureSymbol. "
                             f"Got {type(symbol)} as input.")
         self._symbol = symbol
 
@@ -54,7 +60,8 @@ class ParticlePositionReference(Reference):
         :raises TypeError: if the member is not the correct type.
         '''
         if not isinstance(dimension, int):
-            raise TypeError("Attempted to make a ParticlePositionReference with a non-int dimension."
+            raise TypeError("Attempted to make a ParticlePositionReference with "
+                            "a non-int dimension."
                             f" Got {type(dimension)} as input.")
         self._dimension = dimension
 

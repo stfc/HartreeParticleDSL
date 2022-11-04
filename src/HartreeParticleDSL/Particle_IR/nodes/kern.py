@@ -1,3 +1,7 @@
+'''
+This module contains the abstract Kern class.
+'''
+
 from __future__ import annotations
 
 from abc import ABCMeta
@@ -7,14 +11,16 @@ from HartreeParticleDSL.Particle_IR.nodes.node import Node
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
 from HartreeParticleDSL.Particle_IR.nodes.particle_position_reference import \
         ParticlePositionReference
+from HartreeParticleDSL.Particle_IR.symbols.symboltable import SymbolTable
 
 class Kern(Node, metaclass=ABCMeta):
     '''
     Abstract class representing a general Kernel object.
-    
+
     :param children: List of Nodes to be contained in this Kern region.
     :type children: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.Node.
     '''
+    # pylint: disable=undefined-variable
 
     def __init__(self, children: List[Node]=None) -> None:
         super().__init__(children=children)
@@ -27,7 +33,6 @@ class Kern(Node, metaclass=ABCMeta):
         self._arguments = []
 
         # Add a symbol table
-        from HartreeParticleDSL.Particle_IR.symbols.symboltable import SymbolTable
         self._symbol_table = SymbolTable(kern=self)
 
     @property
@@ -71,8 +76,8 @@ class Kern(Node, metaclass=ABCMeta):
         :rtype: str
         '''
         arg_strings = []
-        for x in self._arguments:
-            arg_strings.append(x.node_str())
+        for arg in self._arguments:
+            arg_strings.append(arg.node_str())
         arg_string = ", ".join(arg_strings)
         nodestr = type(self).__name__ + f"[{arg_string}: {self.children[0].node_str()}]"
         return nodestr

@@ -1,3 +1,7 @@
+'''
+This module contains the StructureReference class.
+'''
+
 from __future__ import annotations
 
 from typing import Union
@@ -15,7 +19,8 @@ class StructureReference(Reference):
     :param member: The structure access member used in this reference.
     :type member: :py:class:`HartreeParticleDSL.Particle_IR.nodes.member.Member`
     '''
-    def __init__(self, symbol: StructureSymbol, member: Union[NoneType,Member]=None) -> None:
+    # pylint: disable=undefined-variable
+    def __init__(self, symbol: StructureSymbol, member: Union[None,Member]=None) -> None:
         super().__init__()
         self.symbol = symbol
         self.member = member
@@ -30,7 +35,8 @@ class StructureReference(Reference):
         Sets the symbol this StructureReference refers to.
 
         :param symbol: The symbol to make this symbol refer to.
-        :type symbol: :py:class:`HartreeParticleDSL.Particle_IR.symbols.structuresymbol.StructureSymbol`
+        :type symbol: \
+                :py:class:`HartreeParticleDSL.Particle_IR.symbols.structuresymbol.StructureSymbol`
 
         :raises TypeError: if the symbol is not the correct type.
         '''
@@ -40,7 +46,7 @@ class StructureReference(Reference):
         self._symbol = symbol
 
     @property
-    def member(self) -> Union[NoneType,Member]:
+    def member(self) -> Union[None,Member]:
         '''
         :returns: the member of the structure accessed in this reference.
         :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.member.Member` or None

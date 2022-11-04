@@ -1,3 +1,7 @@
+'''
+This module contains the Literal class.
+'''
+
 from __future__ import annotations
 
 import re
@@ -51,7 +55,7 @@ class Literal(DataNode):
             value not in ("True", "False")):
             raise ValueError("Constructing boolean Literal but got a value of "
                              f"'{value}' instead of True or False.")
-        if(datatype.intrinsic == ScalarType.Intrinsic.FLOAT):
+        if datatype.intrinsic == ScalarType.Intrinsic.FLOAT:
             self._value = value.replace("E", "e")
         else:
             self._value = value

@@ -1,4 +1,7 @@
-
+'''
+This module contains the ScalarTypeSymbol which represents scalar types
+in the Particle_IR tree.
+'''
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import ScalarType
 
@@ -36,8 +39,6 @@ class ScalarTypeSymbol(Symbol):
 
         :raises TypeError: if the value is not of the correct type.
         '''
-
-        # TODO
         if not isinstance(value, ScalarType):
             raise TypeError(
                     f"The datatype of a {type(self)} must be specified "

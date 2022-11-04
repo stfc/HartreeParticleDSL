@@ -1,17 +1,19 @@
+'''
+This module contains all of the data type classes used to describe types in
+Particle IR.
+'''
 from __future__ import annotations
 
 import abc
 from abc import ABCMeta
 from collections import OrderedDict
 from enum import Enum
-import inspect
-from typing import Union, Dict, List
+from typing import Union, Dict, List, Tuple
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
-from HartreeParticleDSL.c_types import c_int, c_double, c_float, c_int64_t, \
-                                       c_int32_t, c_int8_t, c_bool
 
 class DataType(metaclass=ABCMeta):
     '''Abstract base class from which all types are derived.'''
+    # pylint: disable=too-few-public-methods
 
     @abc.abstractmethod
     def __str__(self):
@@ -23,6 +25,7 @@ class DataType(metaclass=ABCMeta):
 
 class NoType(DataType):
     ''' Empty datatype (e.g. void type).'''
+    # pylint: disable=too-few-public-methods
 
     def __str__(self):
         return "NoType"
@@ -30,11 +33,12 @@ class NoType(DataType):
 class ScalarType(DataType):
     '''
     Describes a scalar datatype and its precision.
-    
+
     :param intrinsic: the intrinsic of this scalar type.
     :type intrinsic: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.ScalarType.Intrinsic`
     :param precision: the precision of this scalar type.
-    :type precision: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.ScalarType.Precision` or int
+    :type precision: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.ScalarType.Precision` \
+            or int
 
     :raises TypeError: if any of the arguments are of the wrong type.
     '''
@@ -105,19 +109,19 @@ class StructureType(DataType):
 
     def __init__(self) -> None:
         self._components = OrderedDict()
-    
+
     def __str__(self) -> str:
         '''
         :returns: a string representation of this structure type
         :rtype: str
         '''
-        s = "StructureType<"
+        stype = "StructureType<"
         comp_strs = []
-        for comp in self._components.keys():
+        for comp in self._components:
             comp_strs.append(f"({comp}: {self._components[comp]})")
         comp_str = ", ".join(comp_strs)
-        s = s + comp_str + ">"
-        return s
+        stype = stype + comp_str + ">"
+        return stype
 
     @property
     def components(self) -> Dict[str, DataType]:
@@ -137,6 +141,8 @@ class StructureType(DataType):
         :type typ: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.DataType`
 
         :raises TypeError: if any of the arguments are the wrong type.
+        :raises IRGenerationError: if the name of this member already exists \
+                in this StructureType.
         '''
         if not isinstance(name, str):
             raise TypeError(f"Expected name argument to be a string but got "
@@ -145,7 +151,7 @@ class StructureType(DataType):
             raise TypeError(f"Expected typ argument to be a DataType but got "
                             f"{type(typ)}.")
         if name in self._components.keys():
-            raise IRGenerationError("names in a StructureType must be unique "
+            raise IRGenerationError("Names in a StructureType must be unique "
                                     f"but provided duplicate {name}.")
         self._components[name] = typ
 
@@ -187,6 +193,7 @@ class PointerType(DataType):
 
     :raises TypeError: if datatype is not a DataType.
     '''
+    # pylint: disable=too-few-public-methods
 
     def __init__(self, datatype: DataType) -> None:
         if not isinstance(datatype, DataType):
@@ -299,6 +306,12 @@ type_mapping_str = {"c_int": INT_TYPE,
                     "config": BASE_CONFIG_TYPE}
 
 def reset_part_and_config():
+    '''
+    This function resets the BASE_PARTICLE_TYPE and BASE_CONFIG_TYPE to their
+    defaults.
+    '''
+    # pylint: disable=global-statement, invalid-name
+    global BASE_PARTICLE_TYPE, BASE_CONFIG_TYPE
     BASE_PARTICLE_TYPE = StructureType()
     _CORE_PART_TYPE = StructureType()
     _CORE_PART_TYPE.components["position"] = PARTICLE_POSITION_TYPE
@@ -310,7 +323,9 @@ def reset_part_and_config():
 
 
 def reset_type_mapping_str():
-    global type_mapping_str
+    '''
+    This function resets the type_mapping_str to its initial state.
+    '''
     valid_keys = ["c_int", "c_double", "double",
             "c_float", "float", "c_int64_t", "c_int32_t",
             "c_int8_t", "c_bool", "char*", "part", "config"]

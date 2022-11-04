@@ -1,4 +1,7 @@
-
+'''
+This module contains the StructureSymbol, which represents StructureTypes
+in the Particle_IR tree.
+'''
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import StructureType
 
@@ -37,12 +40,8 @@ class StructureSymbol(Symbol):
         :raises TypeError: if the value is not of the correct type.
         '''
 
-        # TODO
         if not isinstance(value, StructureType):
             raise TypeError(
                     f"The datatype of a {type(self)} must be specified "
                     f"using a StructureType but got {type(value)}.")
         self._datatype = value
-
-    # Handle arraytypes
-

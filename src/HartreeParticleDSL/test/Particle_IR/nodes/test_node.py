@@ -210,8 +210,8 @@ def test_node_init_children():
 
     assert n5.root is mynode
 
-    assert n5.sameParent(n4) is True
-    assert n5.sameParent(n3) is False
+    assert n5.same_parent(n4) is True
+    assert n5.same_parent(n3) is False
 
     assert len(mynode.walk(Node)) is 6
     x = fakeNode2()
@@ -251,4 +251,4 @@ def test_node_init_children():
     
     li = [n5]
     assert n5._find_position(li, None) == (True, 1)
-    assert n5.sameParent(None) == False
+    assert n5.same_parent(None) == False

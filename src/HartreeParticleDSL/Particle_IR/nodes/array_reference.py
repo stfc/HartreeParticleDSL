@@ -1,3 +1,7 @@
+'''
+This module contains the ArrayReference class.
+'''
+
 from __future__ import annotations
 
 from typing import List, Union
@@ -14,10 +18,10 @@ class ArrayReference(ArrayMixin, Reference):
     :param symbol: The array symbol referenced by this reference
     :type symbol: :py:class:`HartreeParticleDSL.Particle_IR.symbols.arraysymbol.ArraySymbol`
     :param indices: The indices used to access this array
-    :type indices: list of :py:class:`HartreeParticleDSL.Particle_IR.nodes.DataNode`
+    :type indices: list of :py:class:`HartreeParticleDSL.Particle_IR.nodes.DataNode` or None.
     '''
 
-    def __init__(self, symbol: ArraySymbol, indices: Union[NoneType,List[DataNode]]=None) -> None:
+    def __init__(self, symbol: ArraySymbol, indices: Union[None,List[DataNode]]=None) -> None:
         super().__init__()
         self.symbol = symbol
         if indices is None:
@@ -27,6 +31,10 @@ class ArrayReference(ArrayMixin, Reference):
 
     @property
     def symbol(self) -> ArraySymbol:
+        '''
+        :returns: The symbol associated with this ArrayReference
+        :rtype: :py:class:`HartreeParticleDSL.Particle_IR.symbols.arraysymbol.ArraySymbol`
+        '''
         return super().symbol
 
     @symbol.setter

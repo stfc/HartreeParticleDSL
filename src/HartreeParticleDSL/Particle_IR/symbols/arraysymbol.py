@@ -1,4 +1,7 @@
-
+'''
+This module contains the ArraySymbol class to contain ArrayTypes in
+the Particle_IR tree.
+'''
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import ArrayType
 
@@ -21,7 +24,7 @@ class ArraySymbol(Symbol):
     @property
     def datatype(self) -> ArrayType:
         '''
-        :returns: datatype of the StructureSymbol.
+        :returns: datatype of the ArraySymbol.
         :rtype: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.datatype.ArrayType`
         '''
         return self._datatype
@@ -29,7 +32,7 @@ class ArraySymbol(Symbol):
     @datatype.setter
     def datatype(self, value: ArrayType) -> None:
         '''
-        Setter for the datattype of a StructureSymbol.
+        Setter for the datattype of a ArraySymbol.
 
         :param value: new value for the datatype.
         :type value: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.datatype.ArrayType`
@@ -37,7 +40,6 @@ class ArraySymbol(Symbol):
         :raises TypeError: if the value is not of the correct type.
         '''
 
-        # TODO
         if not isinstance(value, ArrayType):
             raise TypeError(
                     f"The datatype of a {type(self)} must be specified "

@@ -1,9 +1,14 @@
+'''
+This module contains the SymbolTable class, which contains symbol definitions
+for a given Particle_IR tree, or the main HartreeParticleDSL object.
+'''
+
 from __future__ import annotations
 from collections import OrderedDict
 import inspect
 from typing import Union, Dict
 
-import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
+from HartreeParticleDSL import HartreeParticleDSL
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import DataType
 from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
@@ -38,7 +43,7 @@ class SymbolTable():
             raise TypeError("Argument 'kern' should be of type "
                             "HartreeParticleDSL, FuncDef or Kern, but instead got "
                             f"{type(kern)}.")
-        
+
         if isinstance(kern, HartreeParticleDSL._HartreeParticleDSL):
             self._is_global = True
 
@@ -68,35 +73,35 @@ class SymbolTable():
     def add(self, new_symbol: Symbol):
         ''' Add a new symbol to the symbol table if the symbol name is not already
         in use.
-    
+
         :param new_symbol: the symbol to add to the symbol table.
         :type new_symbol: :py:class:`HartreeParticleDSL.Particle_IR.symbols.symbol.Symbol`
-    
+
         :raises TypeError: if the new_symbol argument is not a symbol.
         :raises IRGenerationError: if the symbol table already contains a symbol of this name.
         '''
         if not isinstance(new_symbol, Symbol):
             raise IRGenerationError(f"Symbol {new_symbol} is not a symbol, but "
                                 f"{type(new_symbol)}.")
-    
+
         if new_symbol.name in self._symbols:
             raise IRGenerationError(f"Tried to add a new symbol {new_symbol.name} "
                                     "but it was already present in the symbol table.")
-    
+
         self._symbols[new_symbol.name] = new_symbol
-    
+
     def new_symbol(self, name: str, datatype: DataType, symbol_type: type[Symbol]) ->  Symbol:
         '''
         Create a new symbol of symbol type `symbol_type`, with name `name` and datatype `datatype`.
         The visibility will match the visibility of this symbol table.
-    
+
         :param name: Name of the symbol. This name must be unique in this symbol table.
         :type name: str
         :param datatype: The data type of the symbol.
         :type datatype: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.datatype.DataType`
         :param symbol_type: The Particle IR type of the symbol to create.
         :type symbol_type: :py:type:`HartreeParticleDSL.Particle_IR.symbols.symbol.Symbol`
-    
+
         :raises TypeError: if the type_symbol argument is not the type of a Symbol \
                            object class or one of its subclasses.
         :raises TypeError: if the name argument is not a str.
@@ -107,17 +112,17 @@ class SymbolTable():
                             f"a sublcass of Symbol, but found {type(symbol_type)} instead.")
         if not isinstance(name, str):
             raise TypeError(f"The name parameter should be a str, but found {type(name)}.")
-    
+
         visibility = Symbol.Visibility.LOCAL
         if self._is_global:
             visibility = Symbol.Visibility.GLOBAL
-    
+
         symbol = symbol_type(name=name, datatype=datatype, visibility=visibility)
         self.add(symbol)
 
         return symbol
 
-    def lookup(self, name: str) -> Union[Symbol, NoneType]:
+    def lookup(self, name: str) -> Union[Symbol, None]:
         '''
         Search for a Symbol named name in the symbol table. Returns the symbol
         if it exists, otherwise returns None.
@@ -130,12 +135,13 @@ class SymbolTable():
 
         :raises TypeError: If the name argument is not a string.
         '''
+        # pylint: disable=fixme
         if not isinstance(name, str):
             raise TypeError("Expected the name argument to be a string, but got "
                             f"{type(name)}.")
 
         # TODO Should we look in the global symbol table if we don't find locally?
-        return self._symbols.get(name)            
+        return self._symbols.get(name)
 
     def find_or_create(self, name: str, datatype: DataType, symbol_type: type[Symbol]) ->  Symbol:
         '''

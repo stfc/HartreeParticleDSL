@@ -1,3 +1,7 @@
+'''
+This module contains the implementation of the ArrayMember class.
+'''
+
 from __future__ import annotations
 
 from typing import List

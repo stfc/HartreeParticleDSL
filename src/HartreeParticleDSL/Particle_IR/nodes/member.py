@@ -1,3 +1,7 @@
+'''
+This module contains the Member class.
+'''
+
 from HartreeParticleDSL.Particle_IR.nodes.node import Node
 
 class Member(Node):
@@ -5,7 +9,7 @@ class Member(Node):
     Node representing a member of a structure. This is the leaf member node.
 
     :param str name: the name of the member of the structure that is \
-                            being referenced. 
+                            being referenced.
     '''
 
     def __init__(self, name: str) -> None:

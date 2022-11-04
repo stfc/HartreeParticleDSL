@@ -1,16 +1,20 @@
+'''
+This module contains the Call class.
+'''
+
 from __future__ import annotations
 from typing import List
 
-from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 from HartreeParticleDSL.Particle_IR.nodes.node import DataNode
 from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
 
 class Call(Statement, DataNode):
     '''
     Contains a generic call in the tree.
-    
+
     :param str name: the function name called by this Call.
     '''
+    # pylint: disable=undefined-variable
 
     def __init__(self, func_name: str) -> None:
         super().__init__()
