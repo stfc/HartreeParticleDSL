@@ -11,7 +11,6 @@ from HartreeParticleDSL.Particle_IR.nodes.node import Node
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
 from HartreeParticleDSL.Particle_IR.nodes.particle_position_reference import \
         ParticlePositionReference
-from HartreeParticleDSL.Particle_IR.symbols.symboltable import SymbolTable
 
 class Kern(Node, metaclass=ABCMeta):
     '''
@@ -33,6 +32,8 @@ class Kern(Node, metaclass=ABCMeta):
         self._arguments = []
 
         # Add a symbol table
+        # pylint: disable=import-outside-toplevel
+        from HartreeParticleDSL.Particle_IR.symbols.symboltable import SymbolTable
         self._symbol_table = SymbolTable(kern=self)
 
     @property

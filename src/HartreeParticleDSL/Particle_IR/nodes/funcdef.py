@@ -7,7 +7,6 @@ from __future__ import annotations
 from typing import List, Union
 from HartreeParticleDSL.Particle_IR.nodes.node import Node, DataNode
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
-from HartreeParticleDSL.Particle_IR.symbols.symboltable import SymbolTable
 
 class FuncDef(Node):
     '''
@@ -32,6 +31,8 @@ class FuncDef(Node):
         self._arguments = []
 
         # Add a symbol table
+        # pylint: disable=import-outside-toplevel
+        from HartreeParticleDSL.Particle_IR.symbols.symboltable import SymbolTable
         self._symbol_table = SymbolTable(kern=self)
 
     @property
