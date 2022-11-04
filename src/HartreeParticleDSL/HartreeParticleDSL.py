@@ -47,6 +47,9 @@ class _HartreeParticleDSL():
         self._outdir = "."
         _HartreeParticleDSL.the_instance = self
 
+        self._with_mpi=False
+        self._with_cuda = False
+
         # Add a global symbol table
         from HartreeParticleDSL.Particle_IR.symbols.symboltable import SymbolTable
         self._symbol_table = SymbolTable(self)
@@ -238,6 +241,22 @@ class _HartreeParticleDSL():
     def symbol_table(self) -> SymbolTable:
         return self._symbol_table
 
+    @property
+    def with_mpi(self) -> bool:
+        return self._with_mpi
+
+    @with_mpi.setter
+    def with_mpi(self, mpi: bool) -> None:
+        self._with_mpi = mpi
+
+    @property
+    def with_cuda(self) -> bool:
+        return self._with_cuda
+
+    @with_cuda.setter
+    def with_cuda(self, cuda: bool) -> None:
+        self._with_cuda = cuda
+
 
 def set_particle_type(part):
     '''
@@ -385,6 +404,40 @@ def global_symbol_table():
     '''
     return _HartreeParticleDSL.get_instance().symbol_table
 
+def set_mpi(with_mpi=False):
+    '''
+    Sets the MPI status of the DSL.
+    
+    :param bool with_mpi: The new MPI status for the DSL.
+    '''
+    _HartreeParticleDSL.get_instance().with_mpi = with_mpi
+
+def get_mpi() -> bool:
+    '''
+    Gets the MPI status of the DSL.
+
+    :returns: The MPI status of the DSL
+    :rtype: bool
+    '''
+    return _HartreeParticleDSL.get_instance().with_mpi
+
+def set_cuda(with_cuda=False):
+    '''
+    Sets the CUDA status of the DSL.
+
+    :param bool with_cuda: The new CUDA status for the DSL.
+    '''
+    _HartreeParticleDSL.get_instance().with_cuda = with_cuda
+
+def get_cuda() -> bool:
+    '''
+    Gets the CUDA status of the DSL.
+
+    :returns: The CUDA status of the DSL.
+    :rtype: bool
+    '''
+    return _HartreeParticleDSL.get_instance().with_cuda
+
 class Particle():
     '''Particle class used in HartreeParticleDSL'''
     def __init__(self):
@@ -448,6 +501,10 @@ class Particle():
             self._pir_type.components[variable_name] = c_type
 
 part = Particle()
+'''
+The part member is an instance of Particle, and can be imported to use as both
+the part object and to enable using `a: part` in Kernel implementations.
+'''
 
 class Config():
     '''
@@ -514,3 +571,7 @@ class Config():
             self._pir_type.components[variable_name] = c_type
 
 config = Config()
+'''
+The config member is an instance of Config, and can be imported to use as both
+the config object and to enable using `a: config` in Kernel implementations.
+'''

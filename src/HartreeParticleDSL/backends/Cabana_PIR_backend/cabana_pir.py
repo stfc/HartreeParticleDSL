@@ -70,6 +70,21 @@ class Cabana_PIR(Backend):
         self._structures = {}
 
         self._global_values = {}
+        self._boundary_condition = None
+
+    def set_boundary_condition(self, boundary_condition_kernel):
+        from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import \
+                pir_perpart_visitor
+        if not isinstance(boundary_condition_kernel, kernels.perpart_kernel_wrapper):
+            raise TypeError("Cannot set boundary condition to a non perpart kernel.")
+
+        conv = pir_perpart_visitor()
+        pir = conv.visit(kernel.get_kernel_tree())
+        self._boundary_condition = pir
+
+    @property
+    def boundary_condition(self) -> PerPartKernel:
+        return self._boundary_condition
 
     @property
     def structures(self):
@@ -208,6 +223,478 @@ class Cabana_PIR(Backend):
             include_string = include_string + f"#include {include}\n"
         return include_string
 
+    def mpi_headers(self, config, part_type):
+        '''
+        Generates the extra header file code required for this backend
+        if MPI is enabled.
+        '''
+        pass
+        #Templated class on aosoa type
+        # Needs a space for each member of the particle, e.g.:
+#        template<class aosoa> class Migrator{
+#
+#    private:
+        rval = rval + "template<class aosoa> class Migrator{\n"
+        rval = rval + "\n"
+        rval = rval + "    private:"
+        element_info = {} # element name: [datatype, array_dimension (i.e. 0-N), array_indices]
+        for element in particle.particle_type:
+            if element == "core_part" or element == "neighbour_part":
+                continue
+            c_type = particle.particle_type[element]['type']
+            is_array = particle.particle_type[element]['is_array']
+            if is_array:
+                x = c_type.index("[")
+                dimensionality = 0
+                array_indices = []
+                array_str = c_type[x:]
+                while array_str.find("[") >= 0:
+                    dimensionality += 1
+                    val = int(array_str[array_str.index("[")+1:array_str.index("]")])
+                    array_indices.append(val)
+                    array_str = array_str[array_str.index("]")+1:]
+                element_info[element] = [c_type, dimensionality, array_indices]
+            else:
+                element_info[element] = [c_type, 0, []]
+#        Kokkos::View<int**, MemorySpace> id_space;
+#        Kokkos::View<double**, MemorySpace> weight_space;
+#        Kokkos::View<double**, MemorySpace> mass_space;
+#        Kokkos::View<double**, MemorySpace> charge_space;
+#        Kokkos::View<double**, MemorySpace> pos_space;
+#        Kokkos::View<double**, MemorySpace> px_space;
+#        Kokkos::View<double**, MemorySpace> py_space;
+#        Kokkos::View<double**, MemorySpace> pz_space;
+#        int _buffer_size;
+        for element in element_info.keys():
+            rval = rval + "        Kokkos::View<"
+            rval = rval + element_info[element][0]
+            rval = rval + "**" + element_info[element][1]*"*"
+            rval = rval + ", Memoryspace> " + element+ "_space;\n"
+        # Add position, velocity and neighbour spaces separately
+        rval = rval + "        Kokkos::View<double***, MemorySpace> pos_space;\n"
+        rval = rval + "        Kokkos::View<double***, MemorySpace> vel_space;\n"
+        rval = rval + "        Kokkos::View<double**, MemorySpace> cutoff_space;\n"
+        rval = rval + "        int _buffer_size;\n"
+        rval = rval + "\n"
+
+
+
+#
+#    public:
+#        Migrator(int buffer_size, int nr_neighbours){
+#            _buffer_size = buffer_size;
+#            id_space = Kokkos::View<int**, MemorySpace>("temp_id", nr_neighbours, buffer_size);
+#            weight_space = Kokkos::View<double**, MemorySpace>("temp_weight", nr_neighbours, buffer_size);
+#            mass_space = Kokkos::View<double**, MemorySpace>("temp_mass", nr_neighbours, buffer_size);
+#            charge_space = Kokkos::View<double**, MemorySpace>("temp_charge", nr_neighbours, buffer_size);
+#            pos_space = Kokkos::View<double**, MemorySpace>("temp_pos", nr_neighbours, buffer_size);
+#            px_space = Kokkos::View<double**, MemorySpace>("temp_px", nr_neighbours, buffer_size);
+#            py_space = Kokkos::View<double**, MemorySpace>("temp_py", nr_neighbours, buffer_size);
+#            pz_space = Kokkos::View<double**, MemorySpace>("temp_pz", nr_neighbours, buffer_size);
+#        }
+        rval = rval + "    public:\n"
+        rval = rval + "        Migrator(int buffer_size, int nr_neighbours){\n"
+        rval = rval + "            _buffer_size = buffer_size;\n"
+        for element in element_info.keys():
+            rval = rval + "            " + element + "_space = "
+            rval = rval + "Kokkos::View<" + element_info[element[0]]
+            rval = rval + "**" + element_info[element][1]*"*"
+            rval = rval + ", MemorySpace>(\"" + element + "_id\", nr_neighbours, buffer_size"
+            #Extra indices?
+            for index in element_info[element][2]:
+                rval = rval + ", " + index
+            rval = rval + ");\n"
+        rval = rval + "            pos_space = Kokkos::View<double***, MemorySpace>(\"temp_pos\", nr_neighbours, buffer_size, 3);\n"
+        rval = rval + "            vel_space = Kokkos::View<double***, MemorySpace>(\"temp_velocity\", nr_neighbours, buffer_size, 3);\n"
+        rval = rval + "            cutoff_space = Kokkos::View<double**, MemorySpace>(\"temp_cutoff\", nr_neighbours, buffer_size);\n"
+        rval = rval + "        }\n\n"
+#       Final function is exchange_data call.
+        rval = rval + "    void exchange_data( aosoa &particle_aosoa, std::vector<int> neighbors, int myrank, int npart, double sorting_size,\n"
+        rval = rval + "                         double max_movement, double region_min, double region_max){\n\n"
+        rval = rval + "        auto rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa, \"rank\");\n"
+        rval = rval + "        auto last_pos_s = Cabana::slice<neighbour_part_old_position>(particle_aosoa, \"last_pos\");\n"
+        rval = rval + "        auto pos_s = Cabana::slice<core_part_position>(particle_aosoa, \"position\");\n"
+        rval = rval + "        auto vel_s = Cabana::slice<core_part_velocity>(particle_aosoa, \"velocity\");\n"
+        rval = rval + "        auto cutoff_s = Cabana::slice<neighbour_part_cutoff>(particle_aosoa, \"cutoff\");\n"
+        for element in element_info.keys():
+            rval = rval + "        auto " + element + "_s = Cabana::slice<" + element + ">(particle_aosoa, \"" + element + "\");\n"
+
+        rval = rval + "        int *send_count = (int*) malloc(sizeof(int) * neighbours.size());\n"
+        rval = rval + "        int count_neighbours = 0;\n"
+        rval = rval + "        double midpoint = (region_max - region_min) / 2.0;\n"
+        rval = rval + "        int end = particle_aosoa.size() - 1;\n"
+        rval = rval + "        for(int i = 0; i < neighbours.size(); i++){\n"
+        rval = rval + "            send_count[i] = 0;\n"
+        rval = rval + "        }\n\n"
+        rval = rval + "        for(int i = particle_aosoa.size()-1; i>=0; i--){\n"
+        rval = rval + "            if(rank_slice(i) != myrank && rank_slice(i) >= 0){\n"
+        rval = rval + "                int therank = rank_slice(i);\n"
+        rval = rval + "            for(int k = 0; k < neighbors.size(); k++){\n"
+        rval = rval + "                if(therank == neighbors[k]){\n"
+        rval = rval + "                    therank = k;\n"
+        rval = rval + "                    break;\n"
+        rval = rval + "                }\n"
+        rval = rval + "            }\n"
+        rval = rval + "            int pos = send_count[therank];\n"
+
+        # Fill in the slice data
+        rval = rval + "            pos_space(therank, pos, 0) = pos_s(i, 0);\n"
+        rval = rval + "            pos_space(therank, pos, 1) = pos_s(i, 1);\n"
+        rval = rval + "            pos_space(therank, pos, 2) = pos_s(i, 2);\n"
+        rval = rval + "            vel_space(therank, pos, 0) = vel_s(i, 0);\n"
+        rval = rval + "            vel_space(therank, pos, 1) = vel_s(i, 1);\n"
+        rval = rval + "            vel_space(therank, pos, 2) = vel_s(i, 2);\n"
+        rval = rval + "            cutoff_space(therank, pos) = cutoff_s(i);\n"
+        
+        for element in element_info.keys():
+            if element_info[element][1] == 0:
+                rval = rval + "            " + element + "_space(therank, pos) = " + element + "_s(i);\n"
+            else:
+                indexer = "i"
+                for index in range(element_info[element][1]):
+                    indexer = indexer + "i"
+                    rval = rval + "            for(int " + indexer + "=0; " + indexer + " < " + element_info[element][2][index] + "; "
+                    rval = rval + indexer + "++){\n"
+                rval = rval + "            " + element + "_space(therank, pos"
+                indexer = "i"
+                for index in range(element_info[element][1]):
+                    indexer = indexer + "i"
+                    rval = rval + ", " + indexer
+                rval = rval + ") = " + element + "_s(i"
+                indexer = "i"
+                for index in range(element_info[element][1]):
+                    indexer = indexer + "i"
+                    rval = rval + ", " + indexer
+                rval = rval + ");\n"
+                for index in range(element_info[element][1]):
+                    rval = rval + "            }\n"
+
+        rval = rval + "            send_count[therank]++;\n\n"
+        # Slice data should be filled now.
+        # Move from end
+        rval = rval + "            while(rank_slice(end) != myrank && end > 0){\n"
+        rval = rval + "                end--;\n"
+        rval = rval + "            }\n"
+        rval = rval + "            if(end > i){\n"
+        rval = rval + "                rank_slice(i) = rank_slice(end);\n"
+        rval = rval + "                pos_s(i, 0) = pos_s(end, 0);\n"
+        rval = rval + "                pos_s(i, 1) = pos_s(end, 1);\n"
+        rval = rval + "                pos_s(i, 2) = pos_s(end, 2);\n"
+        rval = rval + "                vel_s(i, 0) = vel_s(end, 0);\n"
+        rval = rval + "                vel_s(i, 1) = vel_s(end, 1);\n"
+        rval = rval + "                vel_s(i, 2) = vel_s(end, 2);\n"
+        rval = rval + "                cutoff_s(i) = cutoff_s(end);\n"
+        for element in element_info.keys():
+            if element_info[element][1] == 0:
+                rval = rval + "            " + element + "_s(i) = " + element + "_s(end);\n"
+            else:
+                indexer = "i"
+                for index in range(element_info[element][1]):
+                    indexer = indexer + "i"
+                    rval = rval + "            for(int " + indexer + "=0; " + indexer + " < " + element_info[element][2][index] + "; "
+                    rval = rval + indexer + "++){\n"
+                rval = rval + "            " + element + "_s(i"
+                indexer = "i"
+                for index in range(element_info[element][1]):
+                    indexer = indexer + "i"
+                    rval = rval + ", " + indexer
+                rval = rval + ") = " + element + "_s(end"
+                indexer = "i"
+                for index in range(element_info[element][1]):
+                    indexer = indexer + "i"
+                    rval = rval + ", " + indexer
+                rval = rval + ");\n"
+                for index in range(element_info[element][1]):
+                    rval = rval + "            }\n"
+
+        rval = rval + "            else{\n"
+        rval = rval + "                rank_slice(i) = -1;\n"
+        rval = rval + "                end++;\n"
+        rval = rval + "            }\n"
+        rval = rval + "            continue;\n"
+        rval = rval + "        }\n\n"
+
+#                    // If we've moved too far from the boundary we can stop.
+#                if( i < end && (part_pos_s(i, 0) < (region_max - ( 2.0 * max_movement + sorting_size))) &&
+#                    (part_pos_s(i, 0) > (region_min + (2.0 * max_movement + 2.0*sorting_size)))){
+#                        break;
+#                    }
+        rval = rval + "        }\n"
+
+
+
+        rval = rval + "        for(int i = 0; i < particle_aosoa.size(); i++){\n"
+        rval = rval + "            if(rank_slice(i) != myrank && rank_slice(i) >= 0){\n"
+        rval = rval + "                int therank = rank_slice(i);\n"
+        rval = rval + "                for(int k = 0; k < neighbors.size(); k++){\n"
+        rval = rval + "                    if(therank == neighbors[k]){\n"
+        rval = rval + "                        therank = k;\n"
+        rval = rval + "                        break;\n"
+        rval = rval + "                    }\n"
+        rval = rval + "                }\n"
+        rval = rval + "                int pos = send_count[therank];\n"
+        rval = rval + "            pos_space(therank, pos, 0) = pos_s(i, 0);\n"
+        rval = rval + "            pos_space(therank, pos, 1) = pos_s(i, 1);\n"
+        rval = rval + "            pos_space(therank, pos, 2) = pos_s(i, 2);\n"
+        rval = rval + "            vel_space(therank, pos, 0) = vel_s(i, 0);\n"
+        rval = rval + "            vel_space(therank, pos, 1) = vel_s(i, 1);\n"
+        rval = rval + "            vel_space(therank, pos, 2) = vel_s(i, 2);\n"
+        rval = rval + "            cutoff_space(therank, pos) = cutoff_s(i);\n"
+        
+        for element in element_info.keys():
+            if element_info[element][1] == 0:
+                rval = rval + "            " + element + "_space(therank, pos) = " + element + "_s(i);\n"
+            else:
+                indexer = "i"
+                for index in range(element_info[element][1]):
+                    indexer = indexer + "i"
+                    rval = rval + "            for(int " + indexer + "=0; " + indexer + " < " + element_info[element][2][index] + "; "
+                    rval = rval + indexer + "++){\n"
+                rval = rval + "            " + element + "_space(therank, pos"
+                indexer = "i"
+                for index in range(element_info[element][1]):
+                    indexer = indexer + "i"
+                    rval = rval + ", " + indexer
+                rval = rval + ") = " + element + "_s(i"
+                indexer = "i"
+                for index in range(element_info[element][1]):
+                    indexer = indexer + "i"
+                    rval = rval + ", " + indexer
+                rval = rval + ");\n"
+                for index in range(element_info[element][1]):
+                    rval = rval + "            }\n"
+        # Move from end
+        rval = rval + "            while(rank_slice(end) != myrank && end > 0){\n"
+        rval = rval + "                end--;\n"
+        rval = rval + "            }\n"
+        rval = rval + "            if(end > i){\n"
+        rval = rval + "                rank_slice(i) = rank_slice(end);\n"
+        rval = rval + "                pos_s(i, 0) = pos_s(end, 0);\n"
+        rval = rval + "                pos_s(i, 1) = pos_s(end, 1);\n"
+        rval = rval + "                pos_s(i, 2) = pos_s(end, 2);\n"
+        rval = rval + "                vel_s(i, 0) = vel_s(end, 0);\n"
+        rval = rval + "                vel_s(i, 1) = vel_s(end, 1);\n"
+        rval = rval + "                vel_s(i, 2) = vel_s(end, 2);\n"
+        rval = rval + "                cutoff_s(i) = cutoff_s(end);\n"
+        for element in element_info.keys():
+            if element_info[element][1] == 0:
+                rval = rval + "            " + element + "_s(i) = " + element + "_s(end);\n"
+            else:
+                indexer = "i"
+                for index in range(element_info[element][1]):
+                    indexer = indexer + "i"
+                    rval = rval + "            for(int " + indexer + "=0; " + indexer + " < " + element_info[element][2][index] + "; "
+                    rval = rval + indexer + "++){\n"
+                rval = rval + "            " + element + "_s(i"
+                indexer = "i"
+                for index in range(element_info[element][1]):
+                    indexer = indexer + "i"
+                    rval = rval + ", " + indexer
+                rval = rval + ") = " + element + "_s(end"
+                indexer = "i"
+                for index in range(element_info[element][1]):
+                    indexer = indexer + "i"
+                    rval = rval + ", " + indexer
+                rval = rval + ");\n"
+                for index in range(element_info[element][1]):
+                    rval = rval + "            }\n"
+
+        rval = rval + "            else{\n"
+        rval = rval + "                rank_slice(i) = -1;\n"
+        rval = rval + "                end++;\n"
+        rval = rval + "            }\n"
+        rval = rval + "            continue;\n"
+
+        # At this stage data is collected, so send the data.
+        rval = rval + "            // Data collected, need to send information to neighbours to know what to expect\n"      
+        rval = rval + '''           int *recv_count = (int*) malloc(sizeof(int) * neighbors.size());
+           MPI_Request *requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbors.size() * 2);
+           int req_num = 0;
+           for(int i = 0; i < neighbors.size(); i++){
+                    recv_count[i] = 0;
+                if(neighbors[i] == myrank){
+                    continue;
+                }
+                MPI_Irecv(&recv_count[i], 1, MPI_INT, neighbors[i], 0, MPI_COMM_WORLD, &requests[req_num++]);
+                MPI_Isend(&send_count[i], 1, MPI_INT, neighbors[i], 0, MPI_COMM_WORLD, &requests[req_num++]);
+           }
+           MPI_Waitall(req_num, requests, MPI_STATUSES_IGNORE);
+           MPI_Barrier(MPI_COMM_WORLD);
+           int total_size = 0;
+           for(int i = 0; i < neighbors.size(); i++){
+                total_size += recv_count[i];
+           }
+'''
+
+        # Construct additional buffers
+        # Looks like this is easy generally, can just use size but might be complex depending on 
+        # what the dimensions represent, will check.
+        # .extent(dimension) gets the number of elements in each dimension, so if we have views
+        # of dimension neighbours.size(), fixed_size, [extra dimension sizes] then we can do 
+        # sends of .extent(0) for each neighbour.
+        rval = rval + "        Kokkos::View<double***, MemorySpace> r_pos_space(\"temp_pos\", neighbours.size(), total_size, 3);\n"
+        rval = rval + "        Kokkos::View<double***, MemorySpace> r_vel_space(\"temp_vel\", neighbours.size(), total_size, 3);\n"
+        rval = rval + "        Kokkos::View<double**, MemorySpace> r_cutoff_space(\"temp_cutoff\", neighbours.size(), total_size);\n"
+
+        for element in element_info.keys():
+            if element_info[element][1] == 0:
+                rval = rval + "        Kokkos::View<" + element_info[element[0]]
+                rval = rval + "**"
+                rval = rval + ", MemorySpace> r_" + element + "_space(\"temp_" + element + "\", neighbours.size(), total_size);\n"
+            else:
+                rval = rval + "        Kokkos::View<" + element_info[element[0]]
+                rval = rval + "**" + element_info[element][1]*"*"
+                rval = rval + ", MemorySpace> r_" + element + "_space(\"temp_" + element + "\", neighbours.size(), total_size"
+                for i in range(element_info[element][1]):
+                    rval = rval + ", " + element_info[element][2][i]
+                rval = rval + ");\n"
+        rval = rval + "\n"
+
+        # end of slice creation
+
+        rval = rval + "        free(requests);\n"
+        val = len(element_info.keys()) + 3
+        rval = rval + "        requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbours.size() * 2 * " + val + ");\n"
+        rval = rval + "        req_num = 0;\n"
+        rval = rval + "        int tag = 0;\n"
+
+        # Loop over neighbours and do sends and receives - 2262
+        rval = rval + "        for(int i = 0; i < neighbours.size(); i++){\n"
+        rval = rval + "            if(neighbors[i] != myrank){\n"
+        rval = rval + "                MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(0)*i], recv_count[i]*3,"
+        rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
+        rval = rval + "                MPI_Irecv(&r_vel_space.data()[r_vel_space.extend(0)*i], recv_count[i]*3,"
+        rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
+        rval = rval + "                MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(0)*i], recv_count[i],"
+        rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
+        for element in element_info.keys():
+            mpi_dtype = None
+            if element_info[element[0]] == "int":
+                mpi_dtype = "MPI_INT"
+            elif element_info[element[0]] == "double":
+                mpi_dtype = "MPI_DOUBLE"
+            elif element_info[element[0]] == "float":
+                mpi_dtype = "MPI_FLOAT"
+            if mpi_dtype is None:
+                raise NotImplementedError("Don't know currently how to support datatype "
+                                          + element_info[element[0]] + " for MPI")
+            if element_info[element][1] == 0:
+                rval = rval + "            MPI_Irecv(&r_"+element_+"_space.data()[r_"+element+"_space.extent(0)*i], recv_count[i],"
+                rval = rval + mpi_dtype + ", neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
+            else:
+                rval = rval + "            MPI_Irecv(&r_"+element+"_space.data()[r_"+element+"_space.extent(0)*i], recv_count[i]"
+                for i in range(element_info[element][1]):
+                    rval = rval + " * " + element_info[element][2][i]
+                rval = rval + ", MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
+
+        # Now do sends
+        rval = rval + "            tag = 0;\n"
+        rval = rval + "            MPI_Isend(&pos_space.data()[pos_space.extent(0)*i], send_count[i]*3,"
+        rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
+        rval = rval + "            MPI_Isend(&vel_space.data()[vel_space.extent(0)*i], send_count[i]*3,"
+        rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
+        rval = rval + "            MPI_Isend(&cutoff_space.data()[cutoff_space.extent(0)*i], send_count[i],"
+        rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
+        for element in element_info.keys():
+            mpi_dtype = None
+            if element_info[element[0]] == "int":
+                mpi_dtype = "MPI_INT"
+            elif element_info[element[0]] == "double":
+                mpi_dtype = "MPI_DOUBLE"
+            elif element_info[element[0]] == "float":
+                mpi_dtype = "MPI_FLOAT"
+            if mpi_dtype is None:
+                raise NotImplementedError("Don't know currently how to support datatype "
+                                          + element_info[element[0]] + " for MPI")
+            if element_info[element][1] == 0:
+                rval = rval + "            MPI_Isend("+element+"_space.data()["+element+"_space.extent(0)*i], send_count[i],"
+                rval = rval + mpi_dtype + ", neighbors[i], tag++, MPI_COMM_WORLd, &requests[req_num++]);\n"
+            else:
+                rval = rval + "            MPI_Isend("+element+"_space.data()["+element+"_space.extent(0)*i], send_count[i]"
+                for i in range(element_info[element][1]):
+                    rval = rval + " * " + element_info[element][2][i]
+                rval = rval + ", MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++];\n"
+
+        rval = rval + "        }\n"
+        rval = rval + "    }\n"
+
+        rval = rval + "    MPI_Waitall(req_num, requests, MPI_STATUSES_IGNORE);\n"
+        rval = rval + "    free(requests);\n"
+
+        # Data is here, need to put it in AOSOA
+
+        rval = rval + "    int recvd = 0;\n"
+        rval = rval + "    int sent = 0;\n"
+        rval = rval + "    for(int i = 0; i < neighbors.size(); i++){\n"
+        rval = rval + "        recvd += recv_count[i];\n"
+        rval = rval + "        sent += send_count[i];\n"
+        rval = rval + "    }\n"
+        rval = rval + "    int size_change = recvd - sent;\n"
+
+        rval = rval + "    int current_size =  particle_aosoa.size();\n"
+        rval = rval + "    if(size_change != 0){\n"
+        rval = rval + "        particle_aosoa.resize(current_size+size_change);\n"
+        rval = rval + "    }\n"
+        rval = rval + "    auto new_rank_slice = Cabana::slice<rank>(particle_aosoa, \"new_rank\");\n"
+        rval = rval + "    if(size_change > 0){\n"
+        rval = rval + "        if(sent = 0){\n"
+        rval = rval + "            end = current_size;\n"
+        rval = rval + "        }\n"
+        rval = rval + "        for(int i = 0; i < particle_aosoa.size(); i++){\n"
+        rval = rval + "            new_rank_slice(i) = -1;\n"
+        rval = rval + "        }\n"
+        rval = rval + "    }\n"
+        rval = rval + "        auto new_last_pos_s = Cabana::slice<neighbour_part_old_position>(particle_aosoa, \"new_last_pos\");\n"
+        rval = rval + "        auto new_pos_s = Cabana::slice<core_part_position>(particle_aosoa, \"new_position\");\n"
+        rval = rval + "        auto new_vel_s = Cabana::slice<core_part_velocity>(particle_aosoa, \"new_velocity\");\n"
+        rval = rval + "        auto new_cutoff_s = Cabana::slice<neighbour_part_cutoff>(particle_aosoa, \"new_cutoff\");\n"
+        for element in element_info.keys():
+            rval = rval + "        auto new_" + element + "_s = Cabana::slice<" + element + ">(particle_aosoa, \"new_" + element + "\");\n"
+
+        rval = rval + "    int x = 0;\n"
+        rval = rval + "    for(int j = 0; j < neighbors.size(); j++){\n"
+        rval = rval + "        for(int i = 0; i < recv_count[j]; i++){\n"
+        rval = rval + "            new_pos_s(end+x, 0) = r_pos_slice(j,i,0);\n"
+        rval = rval + "            new_pos_s(end+x, 1) = r_pos_slice(j,i,1);\n"
+        rval = rval + "            new_pos_s(end+x, 2) = r_pos_slice(j,i,2);\n"
+        rval = rval + "            new_vel_s(end+x, 0) = r_vel_slice(j,i,0);\n"
+        rval = rval + "            new_vel_s(end+x, 1) = r_vel_slice(j,i,1);\n"
+        rval = rval + "            new_vel_s(end+x, 2) = r_vel_slice(j,i,2);\n"
+        rval = rval + "            new_cutoff_s(end+x) = r_cutoff_slice(j,i);\n"
+        for element in element_info.keys():
+            if element_info[element][1] == 0:
+                rval = rval + "            new_"+element+"_s(end+x) = r_"+element+"_slice(j,i);\n"
+            else:
+                indexer = "i"
+                for index in range(element_info[element][1]):
+                    indexer = indexer + "i"
+                    rval = rval + "            for(int " + indexer + "=0; " + indexer + " < " + element_info[element][2][index] + "; "
+                    rval = rval + indexer + "++){\n"
+                rval = rval + "            new_" + element + "_s(end+x"
+                indexer = "i"
+                for index in range(element_info[element][1]):
+                    indexer = indexer + "i"
+                    rval = rval + ", " + indexer
+                rval = rval + ") = " + "r_"+element + "_slice(j,i"
+                indexer = "i"
+                for index in range(element_info[element][1]):
+                    indexer = indexer + "i"
+                    rval = rval + ", " + indexer
+                rval = rval + ");\n"
+                for index in range(element_info[element][1]):
+                    rval = rval + "            }\n"
+                pass
+
+        rval = rval + "            x++;\n"
+        rval = rval + "        }\n"
+        rval = rval + "    }\n"
+        rval = rval + "    free(recv_count);\n"
+        rval = rval + "    free(send_count);\n"
+        rval = rval + "}};\n"
+
+        # Ideally we just use the Cabana inbuilt function in the future. At that point this 
+        # call doesn't need to do anything.
+
     def gen_headers(self, config, part_type):
         '''
         Generates the headers required for computation of the system.
@@ -232,15 +719,16 @@ class Cabana_PIR(Backend):
                 extra_includes = coupled_system.get_includes_header()
                 for include in extra_includes:
                     f.write(f"#include {include}\n")
-            f.write("/*using MemorySpace = Kokkos::CudaSpace;*/\n")
-            f.write("using MemorySpace = Kokkos::HostSpace;\n")
+            if HartreeParticleDSL.get_cuda():
+                f.write("using MemorySpace = Kokkos::CudaSpace;\n")
+            else:
+                f.write("using MemorySpace = Kokkos::HostSpace;\n")
             f.write("using ExecutionSpace = Kokkos::DefaultExecutionSpace;\n")
             f.write("using DeviceType = Kokkos::Device<Kokkos::DefaultExecutionSpace, MemorySpace>;\n")
             f.write("using HostType = Kokkos::Device<Kokkos::Serial, Kokkos::HostSpace>;\n")
             f.write("const int VectorLength = 16;\n\n") #This vector length should be chosen better in future
 
             for name in self._global_values:
-#                print(HartreeParticleDSL.global_symbol_table().lookup(name))
                 symbol = HartreeParticleDSL.global_symbol_table().lookup(name)
                 dt_str = Cabana_PIR_Visitor.get_cpp_datatype(symbol.datatype)
                 if self._global_values[name] is not None:
@@ -251,6 +739,11 @@ class Cabana_PIR(Backend):
             f.write(config_output)
             f.write(part_output)
             f.write("#endif")
+
+            # If we are generating for MPI then create the MPI header code
+            if HartreeParticleDSL.get_mpi():
+                f.write(self.mpi_headers(config, part_type))
+
         input_module_header = ""
         if self._input_module is not None:
             input_module_header = self._input_module.gen_code_cabana(part_type) #FIXME
@@ -372,6 +865,9 @@ class Cabana_PIR(Backend):
         #Output the neighbour part type
         output = output + "struct neighbour_part_type{\n"
         output = output + "    double cutoff;\n"
+        if HartreeParticleDSL.get_mpi():
+            output = output + "    int rank;\n"
+            output = output + "    double old_position[3];\n"
         output = output + "};\n\n"
 
         #particle.add_element("core_part_position", "double[3]")
@@ -419,6 +915,9 @@ class Cabana_PIR(Backend):
             output = output + ",\n                 core_part_velocity"
         output = output + ",\n                 core_part_position"
         output = output + ",\n                 neighbour_part_cutoff"
+        if HartreeParticleDSL.get_mpi():
+            output = output + ",\n                 neighbour_part_rank"
+            output = output + ",\n                 neighbour_part_old_position"
         output = output + "\n               };\n"
 
         output = output + "using DataTypes = Cabana::MemberTypes<"
@@ -544,6 +1043,9 @@ class Cabana_PIR(Backend):
         rval = rval + space*current_indent + "auto core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);\n"
         rval = rval + space*current_indent + "auto core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);\n"
         rval = rval + space*current_indent + "auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);\n"
+        if HartreeParticleDSL.get_mpi():
+            output = output + "    auto neighbour_part_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa);\n"
+            output = output + "    auto neighbour_part_old_position_slice = Cabana::slice<neighbour_part_old_position>(particle_aosoa);\n"
         for key in self._particle.particle_type:
             if key != "core_part" and key != "neighbour_part":
                 rval = rval + space*current_indent + f"auto {key}_slice = Cabana::slice<{key}>" + "(particle_aosoa);\n"
@@ -612,7 +1114,6 @@ class Cabana_PIR(Backend):
         except (AttributeError) as err:
             pass
         for system in self._coupled_systems:
-            print(system)
             try:
                 fn = getattr(system, func_call)
                 string = fn(*args, **kwargs)

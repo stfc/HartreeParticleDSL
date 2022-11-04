@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from HartreeParticleDSL.HartreeParticleDSL import get_mpi
+
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IllegalLoopError, UnsupportedCodeError
 
 from HartreeParticleDSL.Particle_IR.nodes.array_mixin import ArrayMixin
+from HartreeParticleDSL.Particle_IR.nodes.assignment import Assignment
 from HartreeParticleDSL.Particle_IR.nodes.funcdef import FuncDef
 from HartreeParticleDSL.Particle_IR.nodes.invoke import Invoke
 from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
@@ -259,6 +262,15 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         rval = ""
         for invoke in node.children:
             # TODO Check if the call updates particle position.
+            name = invoke.value
+            pir_kernel = self._parent._kernels[name]
+            assigns = pir.walk(Assignment)
+            updates_part_pos = False
+            for assign in assigns:
+                if isinstance(assign.lhs, ParticlePositionReference):
+                    updates_part_pos = True
+                # TODO If it contains a "Call" node to an unknown call maybe
+                # this should just be set to True as well?
             rval = rval + f"Kokkos::deep_copy(config.config, config.config_host);\n"
             if len(self._parent.structures) > 0:
                 rval = rval + self._nindent
@@ -271,6 +283,24 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             rval = rval + "\"" + invoke.value + "\");\n"
             # TODO Check if we need to block (i.e. only if kernel dependencies or final kernel)
             rval = rval + self._nindent + "Kokkos::fence();"
+            if updates_part_pos and (self._parent.boundary_condition is not None):
+                bound = self._parent.boundary_condition
+                if len(self._parent.structures) > 0:
+                    rval = rval + self._nindent
+                    rval = rval + f"{invoke.value}.update_structs("
+                    struct_list = []
+                    for struct in self._parent.structures:
+                        struct_list.append(struct)
+                    rval = rval + ", ".join(struct_list) + ");\n"
+                rval = rval + f"{self._nindent}Cabana::simd_parallel_for(simd_policy, {bound.name}"
+                rval = rval + "\"" + bound.name + "\");\n"
+                rval = rval + self._nindent + "Kokkos::fence();"
+                # What if MPI?
+                if get_mpi():
+                    pass
+                    assert False
+                    # TODO  Fix this for general purpose
+                    #rval = rval + "migrator.exchange_data( particle_aosoa, neighbors, myrank, particle_aosoa.size(), dx*10.0, movement_since_remesh, host_field(0).x_min_local, host_field(0).x_max_local);"
         return rval
 
     def visit_arraymember_node(self, node: ArrayMember) -> str:

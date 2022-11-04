@@ -225,3 +225,13 @@ def test_particle_add_element():
         part.add_element("value", "int")
     assert "The variable name value is already in the particle type" in str(excinfo.value)
 
+def test_HPDSL_setters():
+    '''Test the MPI and CUDA setters for the DSL'''
+    HartreeParticleDSL.set_mpi(True)
+    assert HartreeParticleDSL.get_mpi() == True
+    HartreeParticleDSL.set_mpi()
+    assert HartreeParticleDSL.get_mpi() == False
+    HartreeParticleDSL.set_cuda(True)
+    assert HartreeParticleDSL.get_cuda() == True
+    HartreeParticleDSL.set_cuda()
+    assert HartreeParticleDSL.get_cuda() == False
