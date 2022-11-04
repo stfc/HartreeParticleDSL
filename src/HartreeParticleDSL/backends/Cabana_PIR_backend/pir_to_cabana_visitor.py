@@ -14,6 +14,8 @@ from HartreeParticleDSL.Particle_IR.nodes.node import Node
 from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
 from HartreeParticleDSL.Particle_IR.nodes.statement import Return, EmptyStatement
 from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, UnaryOperation
+from HartreeParticleDSL.Particle_IR.nodes.particle_position_reference import \
+        ParticlePositionReference
 from HartreeParticleDSL.Particle_IR.nodes.particle_reference import ParticleReference
 from HartreeParticleDSL.Particle_IR.nodes.pointer_reference import PointerReference
 from HartreeParticleDSL.backends.base_backend.pir_visitor import PIR_Visitor
@@ -264,7 +266,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             # TODO Check if the call updates particle position.
             name = invoke.value
             pir_kernel = self._parent._kernels[name]
-            assigns = pir.walk(Assignment)
+            assigns = pir_kernel.walk(Assignment)
             updates_part_pos = False
             for assign in assigns:
                 if isinstance(assign.lhs, ParticlePositionReference):
