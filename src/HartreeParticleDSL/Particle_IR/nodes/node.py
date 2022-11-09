@@ -513,7 +513,7 @@ class Node:
         return self
 
     # pylint: disable=fixme
-    #TODO copy??
+    # TODO copy function - #64
 
     def validate_constraints(self) -> None:
         '''

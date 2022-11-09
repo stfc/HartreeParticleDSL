@@ -170,5 +170,5 @@ class SymbolTable():
 
     # Future potential requirements
     # remove
-    # merge
+    # merge #63
     # argument_list property

@@ -949,6 +949,10 @@ class Cabana_PIR(Backend):
         output = output + "    double x_min, x_max;\n"
         output = output + "    double y_min, y_max;\n"
         output = output + "    double z_min, z_max;\n"
+        if HartreeParticleDSL.get_mpi():
+            output = output + "    double local_x_min, local_x_max;\n"
+            output = output + "    double local_y_min, local_y_max;\n"
+            output = output + "    double local_z_min, local_z_max;\n"
         output = output + "};\n\n"
 
         output = output + "struct space_type{\n"
@@ -1035,8 +1039,6 @@ class Cabana_PIR(Backend):
  #           self.variable_scope.add_variable(struct, self._structures[struct], False)
             rval = rval + space*current_indent + self._structures[struct] + " " + struct + ";\n"
         # Need to do something with each kernel now.
-#        rval = rval + space*current_indent + "auto core_part_slice = Cabana::slice<core_part_space>(particle_aosoa);\n"
-#        rval = rval + space*current_indent + "auto neighbour_part_slice = Cabana::slice<neighbour_part_space>(particle_aosoa);\n"
 
         # We need the particle type to be able to initialise correctly
         # The initialisation of the core part and neighbour cutoff stuf fis a bit weird, needs to be fixed.
@@ -1072,6 +1074,9 @@ class Cabana_PIR(Backend):
             if len(slice_names) > 0:
                 rval = rval + ","
             rval = rval + ", ".join(slice_names) + ");\n"
+
+
+            #TODO Get box size.
         return rval
 
     def add_coupler(self, coupled_system):

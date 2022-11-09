@@ -17,11 +17,12 @@ class Kern(Node, metaclass=ABCMeta):
     Abstract class representing a general Kernel object.
 
     :param children: List of Nodes to be contained in this Kern region.
-    :type children: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.Node.
+    :type children: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.Node \
+                    or None.
     '''
     # pylint: disable=undefined-variable
 
-    def __init__(self, children: List[Node]=None) -> None:
+    def __init__(self, children: Union[None, List[Node]]=None) -> None:
         super().__init__(children=children)
 
         # If no children were specified, we need to add the Body of this Kern
