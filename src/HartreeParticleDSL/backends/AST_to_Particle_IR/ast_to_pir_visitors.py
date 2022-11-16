@@ -8,7 +8,8 @@ import re
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import ScalarType, BOOL_TYPE,\
-                                                     type_mapping_str, INT_TYPE, STRING_TYPE
+                                                     type_mapping_str, INT_TYPE, STRING_TYPE, \
+                                                     StructureType
 
 from HartreeParticleDSL.Particle_IR.nodes.symbol_to_reference import symbol_to_reference
 
@@ -39,11 +40,37 @@ from HartreeParticleDSL.Particle_IR.nodes.while_loop import While
 from HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol import ScalarTypeSymbol
 from HartreeParticleDSL.Particle_IR.symbols.symbol_map import datatype_to_symbol
 
+from HartreeParticleDSL.HartreeParticleDSL import get_backend
+
+class find_calls_visitor(ast.NodeVisitor):
+    def __init__(self):
+        super().__init__()
+        self._calls = []
+
+    @property
+    def calls(self):
+        return self._calls
+
+    def visit_Call(self, node: ast.Call) -> None:
+        if isinstance(node.func, ast.Name):
+            function_name = node.func.id
+        elif isinstance(node.func, ast.Attribute):
+            temp_node = node.func
+            while isinstance(temp_node, ast.Attribute):
+                function_name = temp_node.attr + "." + function_name
+                temp_node = temp_node.value
+            function_name = temp_node.id + "." + function_name
+            #Remove the . at the end
+            function_name = function_name[:-1]
+        if function_name not in self._calls:
+            self._calls.append(function_name)
+
 class ast_to_pir_visitor(ast.NodeVisitor):
 
     def __init__(self):
         super().__init__()
         self._symbol_table = None
+        self._check_valid = True
 
     def visit_Add(self, node: ast.Add) -> BinaryOperation.BinaryOp:
         return BinaryOperation.BinaryOp.ADDITION
@@ -128,12 +155,14 @@ class ast_to_pir_visitor(ast.NodeVisitor):
 
     def visit_Name(self, node: ast.Name) -> Reference:
         sym = self._symbol_table.lookup(f"{node.id}")
-        if sym is None:
+        if sym is None and self._check_valid:
             raise IRGenerationError("Attempted to access a symbol that has "
                                     "not been defined in this scope. Symbol "
                                     f"name was {node.id}")
 #        if isinstance(sym, ScalarTypeSymbol):
 #            return ScalarReference(sym)
+        if sym is None:
+            return ScalarReference(ScalarTypeSymbol(f"{node.id}", STRING_TYPE))
         if sym.datatype == type_mapping_str["part"]:
             raise IRGenerationError("Particle IR doesn't currently support "
                                     "accessing a full particle type in a "
@@ -185,7 +214,7 @@ class ast_to_pir_visitor(ast.NodeVisitor):
                                             f"{current_mem.name} of structure "
                                             f"type {dtype}.")
                 dtype = dtype.components[current_mem.name]
-                if hasattr(current_mem, "member"):
+                if hasattr(current_mem, "member") and isinstance(dtype, StructureType):
                     current_mem = current_mem.member
                 else:
                     current_mem = None
@@ -285,6 +314,8 @@ class ast_to_pir_visitor(ast.NodeVisitor):
 
     def visit_Call(self, node: ast.Call) -> Union[Call, EmptyStatement, Invoke, Assignment]:
         function_name = ""
+        # Disable symbol checks in calls, because undefined symbols are ok.
+        self._check_valid = False
         if isinstance(node.func, ast.Name):
             function_name = node.func.id
         elif isinstance(node.func, ast.Attribute):
@@ -315,6 +346,7 @@ class ast_to_pir_visitor(ast.NodeVisitor):
                         "name.")
             # Add to symbol table
             sym = self._symbol_table.new_symbol(name, type_mapping_str[var_type], datatype_to_symbol[type(type_mapping_str[var_type])])
+            self._check_valid = True
             if len(node.args) == 2:
                 return EmptyStatement()
             else:
@@ -328,12 +360,15 @@ class ast_to_pir_visitor(ast.NodeVisitor):
             kwargs = {}
             for kwarg in node.keywords:
                 kwargs[kwarg.arg] = self.visit(kwarg.value)
+            self._check_valid = True
             return Call.create(function_name, [kwargs["particle_count"], kwargs["filename"]])
         else:
             args = []
             for arg in node.args:
                 args.append(self.visit(arg))
+            self._check_valid = True
             return Call.create(function_name, args)
+        self._check_valid = True
 
     def visit_Module(self, node: ast.Module) -> Node:
         module_nodes = []
@@ -442,6 +477,15 @@ class ast_to_pir_visitor(ast.NodeVisitor):
 
 class pir_main_visitor(ast_to_pir_visitor):
     def visit_FunctionDef(self, node: ast.FuncDef) -> MainKernel:
+        backend = get_backend()
+        if backend is not None:
+            fcv = find_calls_visitor()
+            fcv.visit(node)
+            calls = fcv.calls
+            extra_symbols = backend.get_extra_symbols(calls)
+        else:
+            extra_symbols = []
+        print("USING MAIN VISITOR!!!")
         body = []
         if node.name != "main":
             raise IRGenerationError("Attempting to create a main function "
@@ -453,12 +497,27 @@ class pir_main_visitor(ast_to_pir_visitor):
         if len(args) != 0:
             raise IRGenerationError("Particle IR expects no arguments to main "
                                     f"function but received {len(args)}.")
+
+        sym = self._symbol_table.new_symbol("config", type_mapping_str["config"],
+                datatype_to_symbol[type(type_mapping_str["config"])])
+        for name, symbol in extra_symbols:
+            self._symbol_table.add(symbol)
+
         for child in node.body:
             main.body.addchild(self.visit(child))
         return main
 
 class pir_pairwise_visitor(ast_to_pir_visitor):
     def visit_FunctionDef(self, node: ast.FuncDef) -> PairwiseKernel:
+        backend = get_backend()
+        if backend is not None:
+            fcv = find_calls_visitor()
+            fcv.visit(node)
+            calls = fcv.calls
+            extra_symbols = backend.get_extra_symbols(calls)
+        else:
+            extra_symbols = []
+
         name = node.name
         kern = PairwiseKernel(name)
         self._symbol_table = kern.symbol_table
@@ -473,6 +532,9 @@ class pir_pairwise_visitor(ast_to_pir_visitor):
             raise IRGenerationError("Pairwise Kernel needs 2 particle "
                                     "arguments in Particle IR.")
 
+        for name, symbol in extra_symbols:
+            self._symbol_table.add(symbol)
+
         for child in node.body:
             kern.body.addchild(self.visit(child))
         kern.arguments = args
@@ -480,6 +542,15 @@ class pir_pairwise_visitor(ast_to_pir_visitor):
 
 class pir_perpart_visitor(ast_to_pir_visitor):
     def visit_FunctionDef(self, node: ast.FuncDef) -> PerPartKernel:
+        backend = get_backend()
+        if backend is not None:
+            fcv = find_calls_visitor()
+            fcv.visit(node)
+            calls = fcv.calls
+            extra_symbols = backend.get_extra_symbols(calls)
+        else:
+            extra_symbols = []
+
         name = node.name
         kernel = PerPartKernel(name)
         self._symbol_table = kernel.symbol_table
@@ -492,6 +563,10 @@ class pir_perpart_visitor(ast_to_pir_visitor):
         if not isinstance(args[0], ParticleReference):
             raise IRGenerationError("First argument to PerPartKernel must "
                                     "be a particle.")
+
+        for name, symbol in extra_symbols:
+            self._symbol_table.add(symbol)
+
         # TODO check for 1 particle reference
         for child in node.body:
             kernel.body.addchild(self.visit(child))

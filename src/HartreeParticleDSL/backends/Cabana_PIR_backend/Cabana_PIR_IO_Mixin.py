@@ -16,6 +16,11 @@ class Cabana_PIR_IO_Mixin(metaclass=ABCMeta):
                                   "implement required function "
                                   "gen_code_cabana")
 
+    def call_get_box_size_pir(self, part_count, filename, current_indent=4):
+        raise NotImplementedError(f"{self.__class__.__name__} does not "
+                                  "implement required function "
+                                  "call_get_box_size_pir")
+
     def call_input_cabana_pir(self, part_count, filename, current_indent=4):
         '''
         Returns the call required to use this IO module for input.
@@ -28,7 +33,7 @@ class Cabana_PIR_IO_Mixin(metaclass=ABCMeta):
         '''
         raise NotImplementedError(f"{self.__class__.__name__} does not "
                                   "implement required function "
-                                  "call_input_cabana")
+                                  "call_input_cabana_pir")
 
     def call_output_cabana_pir(self, part_count, filename):
         '''
@@ -42,7 +47,7 @@ class Cabana_PIR_IO_Mixin(metaclass=ABCMeta):
         '''
         raise NotImplementedError(f"{self.__class__.__name__} does not "
                                   "implement required function "
-                                  "call_output_cabana")
+                                  "call_output_cabana_pir")
 
     def get_includes_cabana_pir(self):
         '''
@@ -56,4 +61,4 @@ class Cabana_PIR_IO_Mixin(metaclass=ABCMeta):
         '''
         raise NotImplementedError(f"{self.__class__.__name__} does not "
                                   "implement required function "
-                                  "get_includes_cabana")
+                                  "get_includes_cabana_pir")

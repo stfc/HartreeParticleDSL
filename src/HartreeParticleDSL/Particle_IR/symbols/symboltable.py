@@ -10,7 +10,7 @@ from typing import Union, Dict
 
 from HartreeParticleDSL import HartreeParticleDSL
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
-from HartreeParticleDSL.Particle_IR.datatypes.datatype import DataType
+from HartreeParticleDSL.Particle_IR.datatypes.datatype import DataType, BASE_PARTICLE_TYPE
 from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
 from HartreeParticleDSL.Particle_IR.nodes.funcdef import FuncDef
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
@@ -64,9 +64,15 @@ class SymbolTable():
         :returns: ordered dictionary of symbols indexed by symbol name.
         :rtype: OrderedDict[str] = :py:class:`HartreeParticleDSL.Particle_IR.symbols.symbol.Symbol`
         '''
+        from HartreeParticleDSL.HartreeParticleDSL import get_backend
         all_symbols = OrderedDict()
+        backend = get_backend()
+        structs = []
+        if backend is not None:
+            structs = backend.structures
         for symbol_name, symbol in self._symbols.items():
-            all_symbols[symbol_name] = symbol
+            if symbol_name not in structs.keys():
+                all_symbols[symbol_name] = symbol
 
         return all_symbols
 
@@ -139,9 +145,12 @@ class SymbolTable():
         if not isinstance(name, str):
             raise TypeError("Expected the name argument to be a string, but got "
                             f"{type(name)}.")
-
-        # TODO Should we look in the global symbol table if we don't find locally?
-        return self._symbols.get(name)
+        symbol = self._symbols.get(name)
+        # Look in the global symbol table if we don't find locally?
+        if symbol is None and not self._is_global:
+            from HartreeParticleDSL.HartreeParticleDSL import global_symbol_table
+            symbol = global_symbol_table().lookup(name)
+        return symbol
 
     def find_or_create(self, name: str, datatype: DataType, symbol_type: type[Symbol]) ->  Symbol:
         '''
@@ -153,7 +162,7 @@ class SymbolTable():
         :param datatype: The data type of the symbol.
         :type datatype: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.datatype.DataType`
         :param symbol_type: The Particle IR type of the symbol to create.
-        :type symbol_type: :py:type:`HartreeParticleDSL.Particle_IR.symbols.symbol.Symbol`
+        :type symbol_type: :py:class:`HartreeParticleDSL.Particle_IR.symbols.symbol.Symbol`
 
         :raises IRGenerationError: if the symbol found doesn't match the datatype requested
         '''
@@ -167,6 +176,22 @@ class SymbolTable():
             return sym
         return self.new_symbol(name=name, datatype=datatype, symbol_type=symbol_type)
 
+
+    def find_particle_symbols(self) -> Dict[str, Symbol]:
+        '''
+        Search for all symbols in the symbol table that are the Particle type.
+        The Particle type is assumed to be the BASE_PARTICLE_TYPE from the
+        Particle_IR.datatypes.datatype module.
+
+        :returns: Dict of all the particle symbols in this symbol table.
+        :rtype: Dict of (str, :py:class:`HartreeParticleDSL.Particle_IR.symbols.symbol.Symbol`) pairs
+        '''
+        return_dict = OrderedDict()
+        for sym in self._symbols:
+            if self._symbols[sym].datatype is BASE_PARTICLE_TYPE:
+                return_dict[sym] = self._symbols[sym]
+
+        return return_dict
 
     # Future potential requirements
     # remove

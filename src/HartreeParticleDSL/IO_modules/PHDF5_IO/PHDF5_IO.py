@@ -1,8 +1,8 @@
 from HartreeParticleDSL.c_types import c_int, c_double, c_float, c_int64_t, \
         c_int32_t, c_int8_t, c_bool
 from HartreeParticleDSL.IO_modules.base_IO_module.IO_module import IO_Module
-from HartreeParticleDSL.backends.Cabana_PIR_backend.Cabana_PIR import Cabana_PIR
-from HartreeParticleDSL.backends.Cabana_PIR_backend.Cabana_IO_Mixin import Cabana_PIR_IO_Mixin
+from HartreeParticleDSL.backends.Cabana_PIR_backend.cabana_pir import Cabana_PIR
+from HartreeParticleDSL.backends.Cabana_PIR_backend.Cabana_PIR_IO_Mixin import Cabana_PIR_IO_Mixin
 from HartreeParticleDSL.HartreeParticleDSLExceptions import UnsupportedCodeError
 
 
@@ -114,7 +114,7 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
         # ============================ get_box_size ===========================
 
 
-        if len(self.inputs) > 0:
+        if len(self._inputs) > 0:
             # Create the hdf5_input function.
             # ============================= HDF5_INPUT ============================
             code = code + self.indent() + "template <class aosoa_class, class aosoa_host_class> void hdf5_input(aosoa_class &non_host_aosoa,\n"
@@ -185,13 +185,13 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
             code = code + self.indent() + "int global_parts = dims[0];\n"
             code = code + self.indent() + "int num_parts = 0;\n"
             code = code + self.indent() + "for(int i = 0; i < global_parts; i++){\n"
-            self.incrementIndent()
+            self.increment_indent()
             code = code + self.indent() + "if(" + condition + "){\n"
-            self.incrementIndent()
+            self.increment_indent()
             code = code + self.indent() + "num_parts++;\n"
-            self.decrementIndent()
+            self.decrement_indent()
             code = code + self.indent() + "}\n"
-            self.decrementIndent()
+            self.decrement_indent()
             code = code + self.indent() + "}\n"
             code = code + self.indent() + "int new_size = static_cast<int>(num_parts);\n"
             code = code + self.indent() + "particle_aosoa.resize(new_size);\n"
@@ -201,16 +201,16 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
             code = code + self.indent() + "int counter = 0;\n"
             code = code + self.indent() + "auto pos_slice = Cabana::slice<part_pos>(particle_aosoa);\n"
             code = code + self.indent() + "for(int i = 0; i < global_parts; i++{\n"
-            self.incrementIndent()
+            self.increment_indent()
             code = code + self.indent() + "if(" + condition + "){\n"
-            self.incrementIndent()
+            self.increment_indent()
             for index, key in enumerate(positions):
                 if key is not None:
                     code = code + f"pos_slice(counter, {index}) = {key}_temp_array[i];\n"
             code = code + self.indent() + "counter++;\n"
-            self.decrementIndent()
+            self.decrement_indent()
             code = code + self.indent() + "}\n"
-            self.decrementIndent()
+            self.decrement_indent()
             code = code + self.indent() + "}\n"
 
             # Ok, now we did the positions we should do anything else that is needed to be read in
@@ -253,14 +253,14 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
                 code = code + self.indent() + "H5Dread({0}_read_var, {1}, memspace, filespace, H5P_DEFAULT, {0}_temp_array);\n".format(key, h5_type)
                 code = code + self.indent() + "count = 0;\n"
                 code = code + self.indent() + "for(int i = 0; i < global_parts; i++){\n"
-                self.incrementIndent()
+                self.increment_indent()
                 code = code + self.indent() + "if(" + condition + "){\n"
-                self.incrementIndent()
+                self.increment_indent()
                 code = code + self.indent() + "{0}_slice(counter{2}) = {1}_temp_array[i];\n".format(key, key, part_indexing)
                 code = code + self.indent() + "counter++;\n"
-                self.decrementIndent()
+                self.decrement_indent()
                 code = code + self.indent() + "}\n"
-                self.decrementIndent()
+                self.decrement_indent()
                 code = code + self.indent() + "}\n"
                 code = code + self.indent() + "free({0}_temp_array);\n".format(key)
                 code = code + self.indent() + "H5Dclose({0}_read_var);\n".format(key)
@@ -281,12 +281,12 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
             # ============================= HDF5_INPUT ============================
 
 
-        if len(self.outputs) > 0:
+        if len(self._outputs) > 0:
             # Create the hdf5_output function.
             # ============================= HDF5_OUTPUT ============================
             code = code + self.indent() + "template <class aosoa_host_class> void hdf5_output(aosoa_host_class &particle_aosoa,\n"
             code = code + self.indent() + "    const char* filename, boundary &box, config_type &config, int myrank, int nranks){\n"
-            self.incrementIndent()
+            self.increment_indent()
 
             # Create the HDF5 file
             code = code + self.indent() + "hid_t acc_template = H5Pcreate(H5P_FILE_ACCESS);\n"
@@ -295,10 +295,10 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
             code = code + self.indent() + "H5Pset_coll_metadata_write(acc_template, 1); //metadata writes are collective\n"
             code = code + self.indent() + "hid_t file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, acc_template);\n"
             code = code + self.indent() + "if(file_id < 0){\n"
-            self.incrementIndent()
+            self.increment_indent()
             code = code + self.indent() + "std::cout << \"[\" << myrank << \"] failed to open \" << filename << \"\\n\";\n"
             code = code + self.indent() + "MPI_Abort(MPI_COMM_WORLD, 1);\n"
-            self.decrementIndent()
+            self.decrement_indent()
             code = code + self.indent() + "}\n\n"
 
 
@@ -309,20 +309,20 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
             code = code + self.indent() + "int my_offset = 0;\n"
 
             code = code + self.indent() + "if(myrank == 0 && nranks > 1){\n"
-            self.incrementIndent()
+            self.increment_indent()
             code = code + self.indent() + "int npart = particle_aosoa.size();"
             code = code + self.indent() + "MPI_Send(&npart, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);\n"
-            self.decrementIndent()
+            self.decrement_indent()
             code = code + self.indent() + "}else if (myrank == nranks-1){\n"
-            self.incrementIndent()
+            self.increment_indent()
             code = code + self.indent() + "MPI_Recv(&my_offset, 1, MPI_INT, myrank-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);\n"
-            self.decrementIndent()
+            self.decrement_indent()
             code = code + self.indent() + "}else{\n"
-            self.incrementIndent()
+            self.increment_indent()
             code = code + self.indent() + "MPI_Recv(&my_offset, 1, MPI_INT, myrank-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);\n"
             code = code + self.indent() + "int npart = my_offset + particle_aosoa.size();\n"
             code = code + self.indent() + "MPI_Send(&npart, 1, MPI_INT, myrank+1, 0, MPI_COMM_WORLD);\n"
-            self.decrementIndent()
+            self.decrement_indent()
             code = code + self.indent() + "}\n"
 
             # More setup stuff
@@ -409,6 +409,16 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
             self.decrement_indent()
             code = code + self.indent() + "}\n"
             # ============================= HDF5_OUTPUT ============================
+
+
+    def call_get_box_size_pir(self, part_count, filename, current_indent=4):
+        '''
+        TODO
+        '''
+        #TODO Documentation
+        rval = " " * current_indent 
+        rval = rval + f"get_box_size(config.config_host.space.box_dims, {filename});\n"
+        return rval
 
     def call_input_cabana_pir(self, part_count, filename, current_indent=4):
         '''

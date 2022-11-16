@@ -3,7 +3,7 @@ from __future__ import annotations
 import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
 from HartreeParticleDSL.backends.base_backend.backend import Backend
 from HartreeParticleDSL.coupled_systems.base_coupler.base_coupler import base_coupler
-from HartreeParticleDSL.backends.Cabana_backend.Cabana_IO_Mixin import Cabana_IO_Mixin
+from HartreeParticleDSL.backends.Cabana_PIR_backend.Cabana_PIR_IO_Mixin import Cabana_PIR_IO_Mixin
 from HartreeParticleDSL.backends.Cabana_PIR_backend.pir_to_cabana_visitor import Cabana_PIR_Visitor
 import HartreeParticleDSL.kernel_types.kernels as kernels
 from HartreeParticleDSL.IO_modules.IO_Exceptions import *
@@ -14,6 +14,7 @@ from HartreeParticleDSL.c_types import c_int, c_double, c_float, c_int64_t, \
                                        c_int32_t, c_int8_t, c_bool
 
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, DataType
+from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
 
 
 class Cabana_PIR(Backend):
@@ -72,19 +73,32 @@ class Cabana_PIR(Backend):
         self._global_values = {}
         self._boundary_condition = None
 
+    #def set_boundary_condition(self, boundary_condition_kernel):
+    #    from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import \
+    #            pir_perpart_visitor
+    #    if not isinstance(boundary_condition_kernel, kernels.perpart_kernel_wrapper):
+    #        raise TypeError("Cannot set boundary condition to a non perpart kernel.")
+
+    #    conv = pir_perpart_visitor()
+    #    pir = conv.visit(boundary_condition_kernel.get_kernel_tree())
+    #    self._boundary_condition = pir
+
+    #@property
+    #def boundary_condition(self) -> PerPartKernel:
+    #    return self._boundary_condition
+
     def set_boundary_condition(self, boundary_condition_kernel):
-        from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import \
-                pir_perpart_visitor
         if not isinstance(boundary_condition_kernel, kernels.perpart_kernel_wrapper):
             raise TypeError("Cannot set boundary condition to a non perpart kernel.")
 
-        conv = pir_perpart_visitor()
-        pir = conv.visit(kernel.get_kernel_tree())
-        self._boundary_condition = pir
+        self._boundary_condition = boundary_condition_kernel.get_kernel_tree()
 
     @property
     def boundary_condition(self) -> PerPartKernel:
-        return self._boundary_condition
+        from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import \
+                pir_perpart_visitor
+        conv = pir_perpart_visitor()
+        return conv.visit(self._boundary_condition)
 
     @property
     def structures(self):
@@ -176,11 +190,11 @@ class Cabana_PIR(Backend):
                                       class
         '''
         # TODO
-        if input_module is not None and not isinstance(input_module, Cabana_IO_Mixin):
+        if input_module is not None and not isinstance(input_module, Cabana_PIR_IO_Mixin):
             raise InvalidIOModuleError(f"{self.__class__.__name__} backend does not support "
                                        f"{input_module.__class__.__name__} IO "
                                        f"module at this time.")
-        if output_module is not None and not isinstance(output_module, Cabana_IO_Mixin):
+        if output_module is not None and not isinstance(output_module, Cabana_PIR_IO_Mixin):
             raise InvalidIOModuleError(f"{self.__class__.__name__} backend does not support "
                                        f"{output_module.__class__.__name__} IO "
                                        f"module at this time.")
@@ -208,12 +222,12 @@ class Cabana_PIR(Backend):
         :rtype: str
         '''
         if self._input_module is not None:
-            input_includes = self._input_module.get_includes_cabana() #FIXME
+            input_includes = self._input_module.get_includes_cabana_pir() #FIXME
             for include in input_includes:
                 if include not in self._includes:
                     self._includes.append(include)
         if self._output_module is not None:
-            output_includes = self._output_module.get_includes_cabana() #FIXME
+            output_includes = self._output_module.get_includes_cabana_pir() #FIXME
             for include in output_includes:
                 if include not in self._includes:
                     self._includes.append(include)
@@ -228,7 +242,6 @@ class Cabana_PIR(Backend):
         Generates the extra header file code required for this backend
         if MPI is enabled.
         '''
-        pass
         #Templated class on aosoa type
         # Needs a space for each member of the particle, e.g.:
 #        template<class aosoa> class Migrator{
@@ -746,14 +759,14 @@ class Cabana_PIR(Backend):
 
         input_module_header = ""
         if self._input_module is not None:
-            input_module_header = self._input_module.gen_code_cabana(part_type) #FIXME
+            input_module_header = self._input_module.gen_code_cabana_pir(part_type) #FIXME
         if input_module_header != "":
             print(input_module_header)
             print("\n")
 
         output_module_header = ""
         if self._output_module is not None:
-            output_module_header = self._output_module.gen_code_cabana(part_type) #FIXME
+            output_module_header = self._output_module.gen_code_cabana_pir(part_type) #FIXME
         if output_module_header != "":
             # Do something later
             print(output_module_header)
@@ -789,6 +802,17 @@ class Cabana_PIR(Backend):
         name = pir.name
         self._kernels_pir[name] = pir
 
+    def get_current_kernel(self):
+        '''
+        Returns the current PIR kernel that has code generation in progress.
+        This is required so coupled systems can create particle accesses correctly.
+
+        :returns: The current PIR kernel
+        :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.kern.Kern`
+        '''
+        return self._current_kernel
+
+
     def print_main(self, function):
         '''
         Generates the Cabana code for the supplied main function.
@@ -797,7 +821,7 @@ class Cabana_PIR(Backend):
         :type function: :py:class:`ast.Module`
         '''
         from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import \
-                ast_to_pir_visitor
+                ast_to_pir_visitor, pir_main_visitor
         from HartreeParticleDSL.Particle_IR.nodes.invoke import Invoke
         from HartreeParticleDSL.Particle_IR.nodes.kernels import MainKernel
         cabana_pir = Cabana_PIR_Visitor(self)
@@ -808,7 +832,7 @@ class Cabana_PIR(Backend):
         # Open an output C++ file
         # Find all the kernels used by this main function and 
         # generate those kernels.
-        conv = ast_to_pir_visitor()
+        conv = pir_main_visitor() # ast_to_pir_visitor()
         pir = conv.visit(function)
         if not isinstance(pir, MainKernel):
             body = pir.body.detach()
@@ -826,7 +850,9 @@ class Cabana_PIR(Backend):
         codes = []
         for name in names:
             kern_pir = self._kernels_pir[name]
+            self._current_kernel = kern_pir
             codes.append(cabana_pir(kern_pir))
+        self._current_kernel = None
 
         main_code = cabana_pir(pir)
 
@@ -1026,22 +1052,61 @@ class Cabana_PIR(Backend):
         # FIXME
         space = " "
         rval = space*current_indent + "Kokkos::ScopeGuard scope_guard(argc, argv);\n"
+        if HartreeParticleDSL.get_mpi():
+            rval = rval + space*current_indent + "MPI_Init_thread( &argc, &argv, MPI_THREAD_FUNNELED, &provided  );\n"
+
         rval = rval + "{\n"
         rval = rval + space*current_indent + "config_type config;\n"
         rval = rval + space*current_indent + "config.config = config_struct_type(\"config\", 1);\n"
         rval = rval + space*current_indent + "config.config_host = Kokkos::create_mirror_view(config.config);\n"
-        rval = rval + space*current_indent + f"{self._input_module.call_input_cabana(int(particle_count), filename, current_indent=current_indent)}\n"
+
+        # Load the base box dimensions
+        rval = rval + self._input_module.call_get_box_size_pir(int(particle_count), filename, current_indent=current_indent)
+
+        # If we have MPI then we load the rank info
+        if HartreeParticleDSL.get_mpi():
+            rval = rval + space*current_indent + "int myrank = 0; MPI_Comm_rank( MPI_COMM_WORLD, &myrank );\n"
+            rval = rval + space*current_indent + "int nranks = 1; MPI_Comm_size( MPI_COMM_WORLD, &nranks );\n"
+        else:
+            rval = rval + space*current_indent + "int myrank = 0;\n"
+            rval = rval + space*current_indent + "int nranks = 1;\n"
+
+        # Create any extra structures that are needed
+        for struct in self._structures.keys():
+            rval = rval + space*current_indent + self._structures[struct] + " " + struct + ";\n"
+
+        # If we have MPI then we need a domain decomposition.
+        # First we check if a coupled system has a preference
+        decomposition_done = False
+        for coupler in self._coupled_systems:
+            if coupler.has_preferred_decomposition():
+                # If the coupler has a preference on domain decomposition then
+                # we intialise the coupled system and then take its domain
+                # decomposition
+                if decomposition_done:
+                    raise NotImplementedError("Can't handle multiple coupled systems with a preferred decomposition")
+                # Initialise the coupler
+                rval = rval + coupler.setup_testcase(filename, current_indent=current_indent)
+                rval = rval + coupler.get_preferred_decomposition("config.config_host.field", current_indent=current_indent)
+                decomposition_done = True
+
+        # If the decomposition wasn't done by the coupler we need to do it here
+        if not decomposition_done:
+            raise NotImplementedError("Can't yet do a decomposition when the coupled system didn't do it for us.")
+
+        # Load the input file.
+        rval = rval + space*current_indent + f"{self._input_module.call_input_cabana_pir(int(particle_count), filename, current_indent=current_indent)}\n"
         rval = rval + space*current_indent + "Cabana::SimdPolicy<VectorLength, ExecutionSpace> simd_policy( 0, particle_aosoa.size());\n"
 
-#        self.variable_scope = variable_scope()
-        for struct in self._structures.keys():
-            # Add this to the variable scope with a special c_type.
- #           self.variable_scope.add_variable(struct, self._structures[struct], False)
-            rval = rval + space*current_indent + self._structures[struct] + " " + struct + ";\n"
+        # For each other coupled system we initialise them now.
+        for coupled in self._coupled_systems:
+            if not coupled.has_preferred_decomposition():
+                rval = rval + coupler.setup_testcase(filename, current_indent=current_indent)
+
         # Need to do something with each kernel now.
 
         # We need the particle type to be able to initialise correctly
-        # The initialisation of the core part and neighbour cutoff stuf fis a bit weird, needs to be fixed.
+        # The initialisation of the core part and neighbour cutoff stuff is a bit weird, needs to be fixed.
         rval = rval + space*current_indent + "auto core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);\n"
         rval = rval + space*current_indent + "auto core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);\n"
         rval = rval + space*current_indent + "auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);\n"
@@ -1076,7 +1141,8 @@ class Cabana_PIR(Backend):
             rval = rval + ", ".join(slice_names) + ");\n"
 
 
-            #TODO Get box size.
+            # TODO Initial MPI Communication and binning of particles
+            # See issue #62
         return rval
 
     def add_coupler(self, coupled_system):
@@ -1126,3 +1192,23 @@ class Cabana_PIR(Backend):
             except (AttributeError) as err:
                 pass
         raise AttributeError
+
+    def get_extra_symbols(self, function_list):
+        '''
+        Returns the list of symbols that need to be added to the symbol table
+        to correctly resolve any function calls from this node.
+
+        :param function_list: List of names of calls used in this function.
+        :type function_list: List of str.
+
+        :returns: The list of tuples (name, Symbol) required for this function.
+        '''
+        # This backend needs to add any structures created.
+        results = []
+        for struct in self._structures.keys():
+            results.append( (struct, StructureSymbol(struct, self._structures[struct])) )
+
+        # Check the coupled systems as well.
+        for system in self._coupled_systems:
+            results.extend(system.get_extra_symbols(function_list))
+        return results

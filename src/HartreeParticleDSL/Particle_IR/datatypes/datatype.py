@@ -291,6 +291,22 @@ _CORE_PART_TYPE.components["position"] = PARTICLE_POSITION_TYPE
 BASE_PARTICLE_TYPE.components["core_part"] = _CORE_PART_TYPE
 
 BASE_CONFIG_TYPE = StructureType()
+_SPACE_TYPE = StructureType()
+_BOUNDARY_TYPE = StructureType()
+_BOUNDARY_TYPE.components["x_min"] = DOUBLE_TYPE
+_BOUNDARY_TYPE.components["x_max"] = DOUBLE_TYPE
+_BOUNDARY_TYPE.components["y_min"] = DOUBLE_TYPE
+_BOUNDARY_TYPE.components["y_max"] = DOUBLE_TYPE
+_BOUNDARY_TYPE.components["z_min"] = DOUBLE_TYPE
+_BOUNDARY_TYPE.components["z_max"] = DOUBLE_TYPE
+_BOUNDARY_TYPE.components["local_x_min"] = DOUBLE_TYPE
+_BOUNDARY_TYPE.components["local_x_max"] = DOUBLE_TYPE
+_BOUNDARY_TYPE.components["local_y_min"] = DOUBLE_TYPE
+_BOUNDARY_TYPE.components["local_y_max"] = DOUBLE_TYPE
+_BOUNDARY_TYPE.components["local_z_min"] = DOUBLE_TYPE
+_BOUNDARY_TYPE.components["local_z_max"] = DOUBLE_TYPE
+_SPACE_TYPE.components["box_dims"] = _BOUNDARY_TYPE
+BASE_CONFIG_TYPE.components["space"] = _SPACE_TYPE
 
 type_mapping_str = {"c_int": INT_TYPE,
                     "c_double": DOUBLE_TYPE,
@@ -318,6 +334,22 @@ def reset_part_and_config():
     BASE_PARTICLE_TYPE.components["core_part"] = _CORE_PART_TYPE
 
     BASE_CONFIG_TYPE = StructureType()
+    _SPACE_TYPE = StructureType()
+    _BOUNDARY_TYPE = StructureType()
+    _BOUNDARY_TYPE.components["x_min"] = DOUBLE_TYPE
+    _BOUNDARY_TYPE.components["x_max"] = DOUBLE_TYPE
+    _BOUNDARY_TYPE.components["y_min"] = DOUBLE_TYPE
+    _BOUNDARY_TYPE.components["y_max"] = DOUBLE_TYPE
+    _BOUNDARY_TYPE.components["z_min"] = DOUBLE_TYPE
+    _BOUNDARY_TYPE.components["z_max"] = DOUBLE_TYPE
+    _BOUNDARY_TYPE.components["local_x_min"] = DOUBLE_TYPE
+    _BOUNDARY_TYPE.components["local_x_max"] = DOUBLE_TYPE
+    _BOUNDARY_TYPE.components["local_y_min"] = DOUBLE_TYPE
+    _BOUNDARY_TYPE.components["local_y_max"] = DOUBLE_TYPE
+    _BOUNDARY_TYPE.components["local_z_min"] = DOUBLE_TYPE
+    _BOUNDARY_TYPE.components["local_z_max"] = DOUBLE_TYPE
+    _SPACE_TYPE.components["box_dims"] = _BOUNDARY_TYPE
+    BASE_CONFIG_TYPE.components["space"] = _SPACE_TYPE
     type_mapping_str["part"] = BASE_PARTICLE_TYPE
     type_mapping_str["config"] = BASE_CONFIG_TYPE
 

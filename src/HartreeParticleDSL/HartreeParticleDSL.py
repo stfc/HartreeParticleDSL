@@ -10,7 +10,8 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import SingletonInstanceErr
                                                             NoBackendError
 
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import StructureType, type_mapping_str, \
-                                                            PARTICLE_POSITION_TYPE, ArrayType
+                                                            PARTICLE_POSITION_TYPE, ArrayType, \
+                                                            DOUBLE_TYPE
 
 class _HartreeParticleDSL():
     '''
@@ -521,6 +522,20 @@ class Config():
         self._pir_type = StructureType()
         space = StructureType()
         self._pir_type.components["space"] = space
+        BOUNDARY_TYPE = StructureType()
+        BOUNDARY_TYPE.components["x_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["x_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["y_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["y_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["z_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["z_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_x_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_x_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_y_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_y_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_z_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_z_max"] = DOUBLE_TYPE
+        space.components["box_dims"] = BOUNDARY_TYPE
         type_mapping_str["config"] = self._pir_type
         #TODO Neighbour config type? Also need to add the struct space_type so
         #the DSL knows how to define them both
@@ -536,6 +551,20 @@ class Config():
         self._pir_type = StructureType()
         space = StructureType()
         self._pir_type.components["space"] = space
+        BOUNDARY_TYPE = StructureType()
+        BOUNDARY_TYPE.components["x_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["x_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["y_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["y_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["z_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["z_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_x_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_x_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_y_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_y_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_z_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_z_max"] = DOUBLE_TYPE
+        space.components["box_dims"] = BOUNDARY_TYPE
         type_mapping_str["config"] = self._pir_type
         #TODO Neighbour config type? Also need to add the struct space_type so
         #the DSL knows how to define them both
