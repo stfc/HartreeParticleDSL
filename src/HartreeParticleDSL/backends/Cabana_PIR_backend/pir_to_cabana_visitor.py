@@ -155,7 +155,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         for slices in self._slices:
             rval = rval + f"{self._nindent}{slices.upper()} _{slices};\n"
         for structure in self._parent.structures:
-            rval = rval + f"{self._nindent}{structure} _{structure};\n"
+            rval = rval + f"{self._nindent}{structure} {structure};\n"
 
         # Constructor
         rval = rval + "\n"
@@ -173,7 +173,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         for slices in self._slices:
             all_slices.append(f"_{slices}({slices})")
         for structure in self._parent.structures:
-            all_slices.append(f"_{structure}({structure.upper()})")
+            all_slices.append(f"{structure}({structure.upper()})")
         classes = ", ".join(all_slices)
         rval = rval + f"{self._nindent}{classes}"
         rval = rval + ", " + f"_{node.arguments[1].symbol.name}({node.arguments[1].symbol.name})" + "{}\n"
@@ -187,7 +187,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             rval = rval + ", ".join(all_structs) + "){\n"
             self.indent()
             for struct in self._parent.structures:
-                rval = rval + self._nindent + "_" + struct + " = " + struct.upper() + ";\n"
+                rval = rval + self._nindent + struct + " = " + struct.upper() + ";\n"
             self.dedent()
             rval = rval + self._nindent + "}\n"
 
@@ -333,8 +333,8 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             current_indent = len(self._nindent)
             indent = len(self._indent)
             return self._parent.call_language_function(func_name, *args,
-                    current_indent=current_indent, indent=indent)
-        except:
+                    current_indent=current_indent, indent=indent).lstrip()
+        except AttributeError:
             pass
         arg_string = ", ".join(args)
         end = ";"
@@ -473,6 +473,14 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         else:
             rstr = rstr + ")"
         return rstr
+
+    def visit_configreference_node(self, node: ConfigReference) -> str:
+        # TODO
+        if self._in_kernel:
+            return f"_{node.symbol.name}.{self._visit(node.member)}"
+        else:
+            return "config.config_host(0)." + self._visit(node.member)
+        assert False
 
     def visit_pointerreference_node(self, node: PointerReference) -> str:
         return f"*{node.symbol.name}"

@@ -10,7 +10,7 @@ from typing import Union, Dict
 
 from HartreeParticleDSL import HartreeParticleDSL
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
-from HartreeParticleDSL.Particle_IR.datatypes.datatype import DataType, BASE_PARTICLE_TYPE
+from HartreeParticleDSL.Particle_IR.datatypes.datatype import DataType, type_mapping_str
 from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
 from HartreeParticleDSL.Particle_IR.nodes.funcdef import FuncDef
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
@@ -188,7 +188,7 @@ class SymbolTable():
         '''
         return_dict = OrderedDict()
         for sym in self._symbols:
-            if self._symbols[sym].datatype is BASE_PARTICLE_TYPE:
+            if self._symbols[sym].datatype is type_mapping_str["part"]:
                 return_dict[sym] = self._symbols[sym]
 
         return return_dict

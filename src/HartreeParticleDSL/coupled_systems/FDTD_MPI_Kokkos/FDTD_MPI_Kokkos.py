@@ -9,6 +9,8 @@ from HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol import ScalarTypeSy
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import StructureType, DOUBLE_TYPE, INT_TYPE,\
         INT32_TYPE
 
+from HartreeParticleDSL.Particle_IR.nodes.particle_position_reference import ParticlePositionReference
+
 PERIODIC = 1
 OTHER=2
 
@@ -217,44 +219,32 @@ class FDTD_MPI_Kokkos(force_solver):
         # We assume the first particle we find is particle 1
         part1_sym = list(particle_symbols.items())[0]
 
-        # Create an Particle_IR access to the part_weight.
-        weight_member = Member(part_weight)
-        weight_ref = ParticleReference(part1_sym, weight_member)
-        
         # create the visitor we need
-        c_vis = Cabana_PIR_Visitor()
+        c_vis = Cabana_PIR_Visitor(backend)
+        # Nasty workaround
+        c_vis._in_kernel = True
 
-        code = code + f"{in_str}" + f"part_weight = " + c_vis(weight_ref) + ";\n"
+        code = code + f"{in_str}" + f"part_weight = " + part_weight + ";\n"
         code = code + f"{in_str}" + f"fcx = idtf * part_weight;" + "\n"
         code = code + f"{in_str}" + f"fcy = idxf * part_weight;" + "\n"
 
-        charge_member = Member(part_charge)
-        charge_ref = ParticleReference(part1_sym, charge_member)
-        code = code + f"{in_str}" + f"part_q = " + c_vis(charge_ref) + ";\n"
-        mass_member = Member(part_mass)
-        mass_ref = ParticleReference(part1_sym, mass_member)
-        code = code + f"{in_str}" + f"part_m = " + c_vis(mass_ref) + ";\n"
+        code = code + f"{in_str}" + f"part_q = " + part_charge + ";\n"
+        code = code + f"{in_str}" + f"part_m = " + part_mass + ";\n"
         code = code + f"{in_str}" + f"part_mc = c * part_m;" + "\n"
         code = code + f"{in_str}" + f"ipart_mc = 1.0 / part_mc;" + "\n"
         code = code + f"{in_str}" + f"cmratio = part_q * dtfac * ipart_mc;" + "\n"
         code = code + f"{in_str}" + f"ccmratio = c * cmratio;" + "\n"
         code = code + in_str + "//Copy out the particle properties\n"
-        x_pos_ref = ParticlePositionReference(part1_sym, 0)
-        code = code + f"{in_str}" + f"part_x = " + c_vis(x_pos_ref) + "- field.field.x_grid_min_local;\n"
+        x_pos_ref = ParticlePositionReference(part1_sym[1], 0)
+        code = code + f"{in_str}" + f"part_x = " + c_vis(x_pos_ref) + " - field.field.x_grid_min_local;\n"
 
-        x_mom_member = Member(part_momentum_x)
-        x_mom_ref = ParticleReference(part1_sym, x_mom_member)
-        code = code + f"{in_str}" + f"part_p_x = " + c_vis(x_mom_ref) + ";\n"
-        y_mom_member = Member(part_momentum_y)
-        y_mom_ref = ParticleReference(part1_sym, y_mom_member)
-        code = code + f"{in_str}" + f"part_p_y = " + c_vis(y_mom_ref) + ";\n"
-        z_mom_member = Member(part_momentum_z)
-        z_mom_ref = ParticleReference(part1_sym, z_mom_member)
-        code = code + f"{in_str}" + f"part_p_z = " + c_vis(z_mom_ref) + ";\n"
+        code = code + f"{in_str}" + f"part_p_x = " + part_momentum_x + ";\n"
+        code = code + f"{in_str}" + f"part_p_y = " + part_momentum_y + ";\n"
+        code = code + f"{in_str}" + f"part_p_z = " + part_momentum_z + ";\n"
 
-        code = code + f"{in_str}" + f"part_ux = " + c_vis(x_mom_ref) + " * ipart_mc;\n"
-        code = code + f"{in_str}" + f"part_uy = " + c_vis(y_mom_ref) + " * ipart_mc;\n"
-        code = code + f"{in_str}" + f"part_uz = " + c_vis(z_mom_ref) + " * ipart_mc;\n"
+        code = code + f"{in_str}" + f"part_ux = " + part_momentum_x + " * ipart_mc;\n"
+        code = code + f"{in_str}" + f"part_uy = " + part_momentum_y + " * ipart_mc;\n"
+        code = code + f"{in_str}" + f"part_uz = " + part_momentum_z + " * ipart_mc;\n"
         code = code + in_str + "//Calculate v(t) from p(t)\n"
         code = code + f"{in_str}" + f"gamma_rel = sqrtf(part_ux*part_ux + part_uy*part_uy + part_uz*part_uz + 1.0);" + "\n"
         code = code + f"{in_str}" + f"root = dtco2 / gamma_rel;" + "\n\n"
@@ -303,9 +293,11 @@ class FDTD_MPI_Kokkos(force_solver):
         particle_symbols = sym_tab.find_particle_symbols()
         # We assume the first particle we find is particle 1
         part1_sym = list(particle_symbols.items())[0]
-        x_pos_ref = ParticlePositionReference(part1_sym, 0)
+        x_pos_ref = ParticlePositionReference(part1_sym[1], 0)
         # create the visitor we need
-        c_vis = Cabana_PIR_Visitor()
+        c_vis = Cabana_PIR_Visitor(backend)
+        # Nasty workaround
+        c_vis._in_kernel = True
 
         code = code + f"{in_str}part_x = " + c_vis(x_pos_ref) + " - field.field.x_grid_min_local;\n"
         code = code + f"{in_str}GatherForcesToGrid_1D(part_weight, part_q, part_x, {delta_x},\n"

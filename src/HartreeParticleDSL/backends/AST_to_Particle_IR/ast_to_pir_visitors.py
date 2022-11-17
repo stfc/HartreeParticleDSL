@@ -18,6 +18,7 @@ from HartreeParticleDSL.Particle_IR.nodes.array_member import ArrayMember
 from HartreeParticleDSL.Particle_IR.nodes.array_mixin import ArrayMixin
 from HartreeParticleDSL.Particle_IR.nodes.array_reference import ArrayReference
 from HartreeParticleDSL.Particle_IR.nodes.call import Call
+from HartreeParticleDSL.Particle_IR.nodes.config_reference import ConfigReference
 from HartreeParticleDSL.Particle_IR.nodes.funcdef import FuncDef
 from HartreeParticleDSL.Particle_IR.nodes.ifelse import IfElseBlock
 from HartreeParticleDSL.Particle_IR.nodes.invoke import Invoke
@@ -221,6 +222,8 @@ class ast_to_pir_visitor(ast.NodeVisitor):
 #            raise NotImplementedError()
         if sym.datatype == type_mapping_str["part"]:
             return ParticleReference(sym, mem)
+        if sym.datatype == type_mapping_str["config"]:
+            return ConfigReference(sym, mem)
         return StructureReference(sym, mem)
 
 
@@ -485,7 +488,6 @@ class pir_main_visitor(ast_to_pir_visitor):
             extra_symbols = backend.get_extra_symbols(calls)
         else:
             extra_symbols = []
-        print("USING MAIN VISITOR!!!")
         body = []
         if node.name != "main":
             raise IRGenerationError("Attempting to create a main function "

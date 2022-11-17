@@ -874,7 +874,7 @@ class Cabana_PIR(Backend):
         raise NotImplementedError("Cabana PIR backend doesn't yet support pairwise interactions")
 
     def initialisation_code(self, particle_count, filename):
-        return self._input_module.call_input_cabana(particle_count, filename)
+        return self._input_module.call_input_cabana_pir(particle_count, filename)
 
     def gen_particle(self, particle):
         # Store the particle for later
@@ -1073,7 +1073,7 @@ class Cabana_PIR(Backend):
 
         # Create any extra structures that are needed
         for struct in self._structures.keys():
-            rval = rval + space*current_indent + self._structures[struct] + " " + struct + ";\n"
+            val = rval + space*current_indent + "struct " + struct + " " + struct + ";\n"
 
         # If we have MPI then we need a domain decomposition.
         # First we check if a coupled system has a preference
@@ -1173,7 +1173,7 @@ class Cabana_PIR(Backend):
         '''
         current_indent = kwargs.get("current_indent", 0)
         code = " " * current_indent
-        code = code + self._output_module.call_output_cabana(0, filename, variable) + "\n"
+        code = code + self._output_module.call_output_cabana_pir(0, filename, variable) + "\n"
         return code
 
     def call_language_function(self, func_call: str, *args, **kwargs) -> str:
@@ -1183,6 +1183,8 @@ class Cabana_PIR(Backend):
             string = fn( *args, **kwargs)
             return string
         except (AttributeError) as err:
+            print(f"Didn't find {func_call} in backend")
+            print(err)
             pass
         for system in self._coupled_systems:
             try:
@@ -1191,6 +1193,7 @@ class Cabana_PIR(Backend):
                 return string
             except (AttributeError) as err:
                 pass
+        print(f"Didn't return for {func_call}")
         raise AttributeError
 
     def get_extra_symbols(self, function_list):
