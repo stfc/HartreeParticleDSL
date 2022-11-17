@@ -433,7 +433,7 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
         rval = rval + indentation + f"hdf5_input<decltype(particle_aosoa), decltype(particle_aosoa_host)>(particle_aosoa, particle_aosoa_host, config, box, {filename});\n"
         return rval
 
-    def call_output_cabana_pir(self, part_count, filename, variable=None):
+    def call_output_cabana_pir(self, part_count, filename, variable=None, current_indent=4, indentation=4):
         '''
         Returns the Cabana_PIR call required to use this IO module for output.
 
@@ -441,16 +441,18 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
         :rtype: str
         '''
         code = "{\n"
+        current_indent = current_indent + indentation
         if variable is not None:
-            code = code + "        char filename[300];\n"
-            code = code + "        sprintf(filename, \"" + f"{filename}%.4d.hdf5" + "\", " + f"{variable});\n        "
+            code = code + current_indent * " " + "char filename[300];\n"
+            code = code + current_indent * " " + "sprintf(filename, \"" + f"{filename}%.4d.hdf5" + "\", " + f"{variable});\n"
         else:
-            code = code + "        char filename[300]" + f" = \"{filename}\";\n"
-        code = code + "         Cabana::deep_copy(particle_aosoa_host, particle_aosoa);\n"
-        code = code + "         int myrank, nranks;\n"
-        code = code + "         MPI_Comm_rank( MPI_COMM_WORLD, &myrank );\n"
-        code = code + "         MPI_Comm_size( MPI_COMM_WORLD, &nranks );\n"
-        code = code + f"        hdf5_output<decltype(particle_aosoa_host)>(particle_aosoa_host, filename, box, config, myrank, nranks);\n"
-        code = code + "}\n"
+            code = code + current_indent * " " + "char filename[300]" + f" = \"{filename}\";\n"
+        code = code + current_indent * " " + "Cabana::deep_copy(particle_aosoa_host, particle_aosoa);\n"
+        code = code + current_indent * " " + "int myrank, nranks;\n"
+        code = code + current_indent * " " + "MPI_Comm_rank( MPI_COMM_WORLD, &myrank );\n"
+        code = code + current_indent * " " + "MPI_Comm_size( MPI_COMM_WORLD, &nranks );\n"
+        code = code + current_indent * " " + "hdf5_output<decltype(particle_aosoa_host)>(particle_aosoa_host, filename, box, config, myrank, nranks);\n"
+        current_indent = current_indent - indentation
+        code = code + current_indent * " " + "}\n"
 
         return code

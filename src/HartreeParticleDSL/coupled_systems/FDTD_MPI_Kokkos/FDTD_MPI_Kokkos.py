@@ -129,14 +129,17 @@ class FDTD_MPI_Kokkos(force_solver):
         return code
 
     def output_grid(self, filename, variable=None, current_indent=0, indent=0):
-        code = "{\n        "
+        code = "\n" + current_indent * " " + "{\n" 
+        current_indent = current_indent + indent
+        code = code + current_indent * " "
         if variable is not None:
             code = code + "char filename[300];\n"
-            code = code + "        sprintf(filename, \"" + f"{filename}%.4d.hdf5" + "\", " + f"{variable});\n        "
+            code = code + current_indent* " " + "sprintf(filename, \"" + f"{filename}%.4d.hdf5" + "\", " + f"{variable});\n"
         else:
             code = code + "char filename[300]" + f" = \"{filename}\";\n"
-        code = code + f"        grid_hdf5_output( field, filename, myrank, nranks);\n"
-        code = code + "        }\n"
+        code = code + current_indent * " " +  f"grid_hdf5_output( field, filename, myrank, nranks);\n"
+        current_indent = current_indent - indent
+        code = code + current_indent * " " + "}\n"
         return code
 
     def get_extra_symbols(self, function_list):

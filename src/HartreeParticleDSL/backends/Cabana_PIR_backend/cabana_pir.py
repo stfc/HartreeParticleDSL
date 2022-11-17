@@ -1173,7 +1173,7 @@ class Cabana_PIR(Backend):
         '''
         current_indent = kwargs.get("current_indent", 0)
         code = " " * current_indent
-        code = code + self._output_module.call_output_cabana_pir(0, filename, variable) + "\n"
+        code = code + self._output_module.call_output_cabana_pir(0, filename, variable, current_indent=current_indent) + "\n"
         return code
 
     def call_language_function(self, func_call: str, *args, **kwargs) -> str:
