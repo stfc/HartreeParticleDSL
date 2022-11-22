@@ -237,7 +237,7 @@ class Cabana_PIR(Backend):
             include_string = include_string + f"#include {include}\n"
         return include_string
 
-    def mpi_headers(self, config, part_type):
+    def mpi_headers(self, config, particle):
         '''
         Generates the extra header file code required for this backend
         if MPI is enabled.
@@ -247,7 +247,7 @@ class Cabana_PIR(Backend):
 #        template<class aosoa> class Migrator{
 #
 #    private:
-        rval = rval + "template<class aosoa> class Migrator{\n"
+        rval = "\n\ntemplate<class aosoa> class Migrator{\n"
         rval = rval + "\n"
         rval = rval + "    private:"
         element_info = {} # element name: [datatype, array_dimension (i.e. 0-N), array_indices]
@@ -266,7 +266,7 @@ class Cabana_PIR(Backend):
                     val = int(array_str[array_str.index("[")+1:array_str.index("]")])
                     array_indices.append(val)
                     array_str = array_str[array_str.index("]")+1:]
-                element_info[element] = [c_type, dimensionality, array_indices]
+                element_info[element] = [c_type[:x], dimensionality, array_indices]
             else:
                 element_info[element] = [c_type, 0, []]
 #        Kokkos::View<int**, MemorySpace> id_space;
@@ -310,20 +310,19 @@ class Cabana_PIR(Backend):
         rval = rval + "            _buffer_size = buffer_size;\n"
         for element in element_info.keys():
             rval = rval + "            " + element + "_space = "
-            rval = rval + "Kokkos::View<" + element_info[element[0]]
+            rval = rval + "Kokkos::View<" + element_info[element][0]
             rval = rval + "**" + element_info[element][1]*"*"
             rval = rval + ", MemorySpace>(\"" + element + "_id\", nr_neighbours, buffer_size"
             #Extra indices?
             for index in element_info[element][2]:
-                rval = rval + ", " + index
+                rval = rval + f", {index}"
             rval = rval + ");\n"
         rval = rval + "            pos_space = Kokkos::View<double***, MemorySpace>(\"temp_pos\", nr_neighbours, buffer_size, 3);\n"
         rval = rval + "            vel_space = Kokkos::View<double***, MemorySpace>(\"temp_velocity\", nr_neighbours, buffer_size, 3);\n"
         rval = rval + "            cutoff_space = Kokkos::View<double**, MemorySpace>(\"temp_cutoff\", nr_neighbours, buffer_size);\n"
         rval = rval + "        }\n\n"
 #       Final function is exchange_data call.
-        rval = rval + "    void exchange_data( aosoa &particle_aosoa, std::vector<int> neighbors, int myrank, int npart, double sorting_size,\n"
-        rval = rval + "                         double max_movement, double region_min, double region_max){\n\n"
+        rval = rval + "    void exchange_data( aosoa &particle_aosoa, std::vector<int> neighbors, int myrank, int npart){\n\n"
         rval = rval + "        auto rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa, \"rank\");\n"
         rval = rval + "        auto last_pos_s = Cabana::slice<neighbour_part_old_position>(particle_aosoa, \"last_pos\");\n"
         rval = rval + "        auto pos_s = Cabana::slice<core_part_position>(particle_aosoa, \"position\");\n"
@@ -334,7 +333,6 @@ class Cabana_PIR(Backend):
 
         rval = rval + "        int *send_count = (int*) malloc(sizeof(int) * neighbours.size());\n"
         rval = rval + "        int count_neighbours = 0;\n"
-        rval = rval + "        double midpoint = (region_max - region_min) / 2.0;\n"
         rval = rval + "        int end = particle_aosoa.size() - 1;\n"
         rval = rval + "        for(int i = 0; i < neighbours.size(); i++){\n"
         rval = rval + "            send_count[i] = 0;\n"
@@ -366,7 +364,7 @@ class Cabana_PIR(Backend):
                 indexer = "i"
                 for index in range(element_info[element][1]):
                     indexer = indexer + "i"
-                    rval = rval + "            for(int " + indexer + "=0; " + indexer + " < " + element_info[element][2][index] + "; "
+                    rval = rval + "            for(int " + indexer + "=0; " + indexer + f" < {element_info[element][2][index]}; "
                     rval = rval + indexer + "++){\n"
                 rval = rval + "            " + element + "_space(therank, pos"
                 indexer = "i"
@@ -404,7 +402,7 @@ class Cabana_PIR(Backend):
                 indexer = "i"
                 for index in range(element_info[element][1]):
                     indexer = indexer + "i"
-                    rval = rval + "            for(int " + indexer + "=0; " + indexer + " < " + element_info[element][2][index] + "; "
+                    rval = rval + "            for(int " + indexer + "=0; " + indexer + f" < {element_info[element][2][index]}; "
                     rval = rval + indexer + "++){\n"
                 rval = rval + "            " + element + "_s(i"
                 indexer = "i"
@@ -461,7 +459,7 @@ class Cabana_PIR(Backend):
                 indexer = "i"
                 for index in range(element_info[element][1]):
                     indexer = indexer + "i"
-                    rval = rval + "            for(int " + indexer + "=0; " + indexer + " < " + element_info[element][2][index] + "; "
+                    rval = rval + "            for(int " + indexer + "=0; " + indexer + f" < {element_info[element][2][index]}; "
                     rval = rval + indexer + "++){\n"
                 rval = rval + "            " + element + "_space(therank, pos"
                 indexer = "i"
@@ -496,7 +494,7 @@ class Cabana_PIR(Backend):
                 indexer = "i"
                 for index in range(element_info[element][1]):
                     indexer = indexer + "i"
-                    rval = rval + "            for(int " + indexer + "=0; " + indexer + " < " + element_info[element][2][index] + "; "
+                    rval = rval + "            for(int " + indexer + "=0; " + indexer + f" < {element_info[element][2][index]}; "
                     rval = rval + indexer + "++){\n"
                 rval = rval + "            " + element + "_s(i"
                 indexer = "i"
@@ -551,15 +549,15 @@ class Cabana_PIR(Backend):
 
         for element in element_info.keys():
             if element_info[element][1] == 0:
-                rval = rval + "        Kokkos::View<" + element_info[element[0]]
+                rval = rval + "        Kokkos::View<" + element_info[element][0]
                 rval = rval + "**"
                 rval = rval + ", MemorySpace> r_" + element + "_space(\"temp_" + element + "\", neighbours.size(), total_size);\n"
             else:
-                rval = rval + "        Kokkos::View<" + element_info[element[0]]
+                rval = rval + "        Kokkos::View<" + element_info[element][0]
                 rval = rval + "**" + element_info[element][1]*"*"
                 rval = rval + ", MemorySpace> r_" + element + "_space(\"temp_" + element + "\", neighbours.size(), total_size"
                 for i in range(element_info[element][1]):
-                    rval = rval + ", " + element_info[element][2][i]
+                    rval = rval + f", {element_info[element][2][i]}"
                 rval = rval + ");\n"
         rval = rval + "\n"
 
@@ -567,7 +565,7 @@ class Cabana_PIR(Backend):
 
         rval = rval + "        free(requests);\n"
         val = len(element_info.keys()) + 3
-        rval = rval + "        requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbours.size() * 2 * " + val + ");\n"
+        rval = rval + "        requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbours.size() * 2 * " + str(val) + ");\n"
         rval = rval + "        req_num = 0;\n"
         rval = rval + "        int tag = 0;\n"
 
@@ -582,23 +580,26 @@ class Cabana_PIR(Backend):
         rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
         for element in element_info.keys():
             mpi_dtype = None
-            if element_info[element[0]] == "int":
+            if element_info[element][0] == "int":
                 mpi_dtype = "MPI_INT"
-            elif element_info[element[0]] == "double":
+            elif element_info[element][0] == "double":
                 mpi_dtype = "MPI_DOUBLE"
-            elif element_info[element[0]] == "float":
+            elif element_info[element][0] == "float":
                 mpi_dtype = "MPI_FLOAT"
+            elif element_info[element][0] == "int64_t":
+                mpi_dtype = "MPI_INT64_T"
             if mpi_dtype is None:
-                raise NotImplementedError("Don't know currently how to support datatype "
-                                          + element_info[element[0]] + " for MPI")
+                raise NotImplementedError("Don't know currently how to support element "
+                                          + element + " with datatype "
+                                          + element_info[element][0] + " for MPI")
             if element_info[element][1] == 0:
-                rval = rval + "            MPI_Irecv(&r_"+element_+"_space.data()[r_"+element+"_space.extent(0)*i], recv_count[i],"
+                rval = rval + "            MPI_Irecv(&r_"+element+"_space.data()[r_"+element+"_space.extent(0)*i], recv_count[i],"
                 rval = rval + mpi_dtype + ", neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
             else:
                 rval = rval + "            MPI_Irecv(&r_"+element+"_space.data()[r_"+element+"_space.extent(0)*i], recv_count[i]"
                 for i in range(element_info[element][1]):
-                    rval = rval + " * " + element_info[element][2][i]
-                rval = rval + ", MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
+                    rval = rval + f" * {element_info[element][2][i]}"
+                rval = rval + ", " + mpi_dtype + ", neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++];\n"
 
         # Now do sends
         rval = rval + "            tag = 0;\n"
@@ -610,12 +611,14 @@ class Cabana_PIR(Backend):
         rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
         for element in element_info.keys():
             mpi_dtype = None
-            if element_info[element[0]] == "int":
+            if element_info[element][0] == "int":
                 mpi_dtype = "MPI_INT"
-            elif element_info[element[0]] == "double":
+            elif element_info[element][0] == "double":
                 mpi_dtype = "MPI_DOUBLE"
-            elif element_info[element[0]] == "float":
+            elif element_info[element][0] == "float":
                 mpi_dtype = "MPI_FLOAT"
+            elif element_info[element][0] == "int64_t":
+                mpi_dtype = "MPI_INT64_T"
             if mpi_dtype is None:
                 raise NotImplementedError("Don't know currently how to support datatype "
                                           + element_info[element[0]] + " for MPI")
@@ -625,8 +628,8 @@ class Cabana_PIR(Backend):
             else:
                 rval = rval + "            MPI_Isend("+element+"_space.data()["+element+"_space.extent(0)*i], send_count[i]"
                 for i in range(element_info[element][1]):
-                    rval = rval + " * " + element_info[element][2][i]
-                rval = rval + ", MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++];\n"
+                    rval = rval + f" * {element_info[element][2][i]}"
+                rval = rval + ", " + mpi_dtype + ", neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++];\n"
 
         rval = rval + "        }\n"
         rval = rval + "    }\n"
@@ -681,7 +684,7 @@ class Cabana_PIR(Backend):
                 indexer = "i"
                 for index in range(element_info[element][1]):
                     indexer = indexer + "i"
-                    rval = rval + "            for(int " + indexer + "=0; " + indexer + " < " + element_info[element][2][index] + "; "
+                    rval = rval + f"            for(int {indexer}=0; {indexer} < {element_info[element][2][index]};"
                     rval = rval + indexer + "++){\n"
                 rval = rval + "            new_" + element + "_s(end+x"
                 indexer = "i"
@@ -705,6 +708,81 @@ class Cabana_PIR(Backend):
         rval = rval + "    free(send_count);\n"
         rval = rval + "}};\n"
 
+
+        rval = rval + "KOKKOS_INLINE_FUNCTION\n"
+        rval = rval + "int get_oneD_rank(int x_r, int y_r, int z_r, int x_ranks, int y_ranks, int z_ranks){\n"
+        rval = rval + "    int oneD_rank = z_r*(x_ranks*y_ranks) + y_r*(x_ranks) + x_r;\n"
+        rval = rval + "}\n"
+
+        rval = rval + "KOKKOS_INLINE_FUNCTION\n"
+        rval = rval + "void get_threeD_rank(int rank, int *x, int *y, int *z, int x_ranks, int y_ranks, int z_ranks){\n"
+        rval = rval + "    int z_r = rank / (x_ranks*y_ranks);\n"
+        rval = rval + "    int y_r = (rank - z_r*x_ranks*y_ranks) / x_ranks;\n"
+        rval = rval + "    int x_r = rank - z_r*x_ranks*y_ranks - y_r*x_ranks;\n"
+        rval = rval + "    *x = x_r;\n"
+        rval = rval + "    *y = y_r;\n"
+        rval = rval + "    *z = z_r;\n"
+        rval = rval + "};\n"
+
+
+        rval = rval + "\n"
+        rval = rval + "template<class PartPosSlice, class RankSlice>\n"
+        rval = rval + "struct _rank_update_functor{\n"
+        rval = rval + "    boundary _box;\n"
+        rval = rval + "    PartPosSlice _part_pos;\n"
+        rval = rval + "    RankSlice _rank;\n"
+        rval = rval + "    int _myrank;\n"
+        rval = rval + "    int _xranks;\n"
+        rval = rval + "    int _yranks;\n"
+        rval = rval + "    int _zranks;\n"
+        rval = rval + "    int _local_x_rank;\n"
+        rval = rval + "    int _local_y_rank;\n"
+        rval = rval + "    int _local_z_rank;\n"
+        rval = rval + "    int _nranks;\n\n"
+        rval = rval + "    KOKKOS_INLINE_FUNCTION\n"
+        rval = rval + "    _rank_update_functor(boundary box, PartPosSlice pos, RankSlice rank, int xranks, int yranks, int zranks, int myrank):\n"
+        rval = rval + "        _box(box), _part_pos(pos), _rank(rank), _xranks(xranks), _yranks(yranks), _zranks(zranks), _myrank(myrank){\n"
+        rval = rval + "        get_threeD_rank(myrank, &_local_x_rank, &_local_y_rank, &_local_z_rank, xranks, yranks, zranks);\n"
+        rval = rval + "    }\n\n"
+        rval = rval + "    KOKKOS_INLINE_FUNCTION\n"
+        rval = rval + "    void operator()(const int ix, const int ij) const{\n"
+        rval = rval + "        int xr, yr, zr;\n"
+        rval = rval + "        get_threeD_rank(_myrank, &xr, &yr, &zr, _xranks, _yranks, _zranks);\n"
+        rval = rval + "        xr = _local_x_rank;\n"
+        rval = rval + "        yr = _local_y_rank;\n"
+        rval = rval + "        zr = _local_z_rank;\n"
+        # Need to compute new ranks BEFORE doing the boundary condition
+        rval = rval + "        if(_part_pos(ix, ij, 0) >= _box.x_max_local){\n"
+        rval = rval + "            xr = xr + 1;\n"
+        rval = rval + "            if( xr > _xranks ) xr = 0;\n"
+        rval = rval + "        }\n"
+        rval = rval + "        if(_part_pos(ix, ij, 0) < _box.x_min_local){\n"
+        rval = rval + "            xr = xr - 1;\n"
+        rval = rval + "            if( xr < 0 ) xr = _xranks-1;\n"
+        rval = rval + "        }\n"
+        rval = rval + "        if(_part_pos(ix, ij, 1) >= _box.y_max_local){\n"
+        rval = rval + "            yr = yr + 1;\n"
+        rval = rval + "            if( yr > _yranks ) yr = 0;\n"
+        rval = rval + "        }\n"
+        rval = rval + "        if(_part_pos(ix, ij, 1) < _box.y_min_local){\n"
+        rval = rval + "            yr = yr - 1;\n"
+        rval = rval + "            if( yr < 0 ) yr = _yranks-1;\n"
+        rval = rval + "        }\n"
+        rval = rval + "        if(_part_pos(ix, ij, 2) >= _box.z_max_local){\n"
+        rval = rval + "            zr = zr + 1;\n"
+        rval = rval + "            if( zr > _zranks ) zr = 0;\n"
+        rval = rval + "        }\n"
+        rval = rval + "        if(_part_pos(ix, ij, 2) < _box.z_min_local){\n"
+        rval = rval + "            zr = zr - 1;\n"
+        rval = rval + "            if( zr < 0 ) zr = _zranks-1;\n"
+        rval = rval + "        }\n"
+        # Turn 3D rank index to 1D index.
+        rval = rval + "        _rank_slice(ix, ij) = get_oneD_rank(xr, yr, zr, _xranks, _yranks, _zranks);\n"
+        rval = rval + "    }};\n\n"
+        assert False
+        # Need to get local rank in 3D.
+
+        return rval
         # Ideally we just use the Cabana inbuilt function in the future. At that point this 
         # call doesn't need to do anything.
 
@@ -979,6 +1057,7 @@ class Cabana_PIR(Backend):
             output = output + "    double local_x_min, local_x_max;\n"
             output = output + "    double local_y_min, local_y_max;\n"
             output = output + "    double local_z_min, local_z_max;\n"
+            output = output + "    int x_ranks, y_ranks, z_ranks;\n"
         output = output + "};\n\n"
 
         output = output + "struct space_type{\n"
@@ -1087,12 +1166,12 @@ class Cabana_PIR(Backend):
                     raise NotImplementedError("Can't handle multiple coupled systems with a preferred decomposition")
                 # Initialise the coupler
                 rval = rval + coupler.setup_testcase(filename, current_indent=current_indent)
-                rval = rval + coupler.get_preferred_decomposition("config.config_host.field", current_indent=current_indent)
+                rval = rval + coupler.get_preferred_decomposition("config.config_host(0).field", current_indent=current_indent)
                 decomposition_done = True
 
         # If the decomposition wasn't done by the coupler we need to do it here
         if not decomposition_done:
-            raise NotImplementedError("Can't yet do a decomposition when the coupled system didn't do it for us.")
+            raise NotImplementedError("Can't yet do a decomposition when coupled systems didn't do it for us.")
 
         # Load the input file.
         rval = rval + space*current_indent + f"{self._input_module.call_input_cabana_pir(int(particle_count), filename, current_indent=current_indent)}\n"
@@ -1103,6 +1182,32 @@ class Cabana_PIR(Backend):
             if not coupled.has_preferred_decomposition():
                 rval = rval + coupler.setup_testcase(filename, current_indent=current_indent)
 
+        # Initialise neighbours list
+        if HartreeParticleDSL.get_mpi():
+            rval = rval + space*current_indent + "std::vector<int> neighbors = {myrank};\n"
+            rval = rval + space*current_indent + "int local_x, local_y, local_z;\n"
+            rval = rval + space*current_indent + "get_threeD_rank(myrank, &local_x, &local_y, &local_z, box.x_ranks, box.y_ranks, box.z_ranks);\n"
+            rval = rval + space*current_indent + "for(int x = local_x - 1; x <= local_x + 1; x++){\n"
+            rval = rval + space*current_indent + "    for(int y = local_y - 1; y <= local_y + 1; y++){\n"
+            rval = rval + space*current_indent + "        for( int z = local_z - 1; z <= local_z + 1; z++){\n"
+            rval = rval + space*current_indent + "            int xr = x; int yr = y; int zr = z;\n"
+            rval = rval + space*current_indent + "            if(xr < 0) xr = box.x_ranks-1;\n"
+            rval = rval + space*current_indent + "            if(xr >= box.x_ranks) xr = 0;\n"
+            rval = rval + space*current_indent + "            if(yr < 0) yr = box.y_ranks-1;\n"
+            rval = rval + space*current_indent + "            if(yr >= box.y_ranks) yr = 0;\n"
+            rval = rval + space*current_indent + "            if(zr < 0) zr = box.z_ranks-1;\n"
+            rval = rval + space*current_indent + "            if(zr >= box.z_ranks) zr = 0;\n"
+            rval = rval + space*current_indent + "            neighbors.push_back(get_oneD_rank(xr, yr, zr, box.x_ranks, box.y_ranks, box.z_ranks));\n"
+            rval = rval + space*current_indent + "        }\n"
+            rval = rval + space*current_indent + "    }\n"
+            rval = rval + space*current_indent + "}\n"
+            rval = rval + space*current_indent + "std::sort( neighbors.begin(), neighbors.end() );\n"
+            rval = rval + space*current_indent + "auto unique_end = std::unique( neighbors.begin(), neighbors.end() );\n"
+            rval = rval + space*current_indent + "neighbors.resize( std::distance( neighbors.begin(), unique_end ) );\n"
+
+            # Initialise the Migrator
+            rval = rval + space*current_indent + "Migrator<decltype(particle_aosoa_host)> _migrator(particle_aosoa.size() / 10, neighbours.size());\n"
+
         # Need to do something with each kernel now.
 
         # We need the particle type to be able to initialise correctly
@@ -1111,8 +1216,8 @@ class Cabana_PIR(Backend):
         rval = rval + space*current_indent + "auto core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);\n"
         rval = rval + space*current_indent + "auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);\n"
         if HartreeParticleDSL.get_mpi():
-            output = output + "    auto neighbour_part_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa);\n"
-            output = output + "    auto neighbour_part_old_position_slice = Cabana::slice<neighbour_part_old_position>(particle_aosoa);\n"
+            rval = rval + "    auto neighbour_part_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa);\n"
+            rval = rval + "    auto neighbour_part_old_position_slice = Cabana::slice<neighbour_part_old_position>(particle_aosoa);\n"
         for key in self._particle.particle_type:
             if key != "core_part" and key != "neighbour_part":
                 rval = rval + space*current_indent + f"auto {key}_slice = Cabana::slice<{key}>" + "(particle_aosoa);\n"
@@ -1215,3 +1320,47 @@ class Cabana_PIR(Backend):
         for system in self._coupled_systems:
             results.extend(system.get_extra_symbols(function_list))
         return results
+
+    def gen_mpi_comm_before_bcs(self, current_indent=4, indent=4) -> str:
+        rval = ""
+        indent_str = current_indent * " " 
+        rval = rval + indent_str + "{\n"
+        indent_str = indent_str + " " * indent
+        rval = rval + indent_str + "_rank_update_functor<decltype(core_part_position_slice), decltype(neighbour_part_rank_slice)> ruf(box,\n"
+        rval = rval + indent_str + "    core_part_position_slice, neighbour_part_rank_slice, box.x_ranks, box.y_ranks, box.z_ranks, myrank);"
+        rval = rval + indent_str + "Cabana::SimdPolicy<VectorLength, ExecutionSpace> temp_policy(0, particle_aosoa.size());\n"
+        rval = rval + indent_str + "Cabana::simd_parallel_for( temp_policy, ruf, \"rank_update_functor\");\n"
+        rval = ravl + indent_str + "Kokkos::fence();\n"
+        rval = rval + current_indent + "}\n"
+        return rval
+
+    def gen_mpi_comm_after_bcs(self, current_indent=4, indent=4) -> str:
+        '''
+        Returns the code required to do the MPI communication for this
+        backend.
+
+        Two steps required for this process.
+        First is to update the rank that each particle should be on. This is
+        done in parallel with a Cabana parallel loop.
+        Second is to call the migrator - currently this is code generated by my
+        code, but ideally we can use Cabana's inbuilt migrate code.
+
+        Once the binning code is also implemented we need to do this code here.
+
+        :returns: The code to do MPI communication for this backend.
+        :rtype: str
+        '''
+        # TODO initialise neighbors somewhere.
+        # TODO Add indentation.
+        #exchange_data( aosoa &particle_aosoa, std::vector<int> neighbors, int myrank, int npart, double sorting_size,
+# 15                          double max_movement, double region_min, double region_max)
+        # TODO 1D_rank = z*(x_ranks*y_ranks) + y*(x_ranks) + x;
+        # TODO z = (int) 1D_rank / (x_ranks*y_ranks);
+        # TODO y = (int) (1D_rank - z*x_ranks*y_ranks) / x_ranks;
+        # TODO x = 1D_rank - z*x_ranks*y_ranks - y*x_ranks;
+        indent_str = current_indent * " "
+        rval = ""
+        rval = rval + current_indent + "Kokkos::deep_copy(particle_aosoa_host, particle_aosoa);\n"
+        rval = rval + current_indent + "_migrator.exchange_data(particle_aosoa_host, neighbors, myrank, particle_aosoa_host.size());\n"
+        rval = rval + current_indent + "Kokkos::deep_copy(particle_aosoa, particle_aosoa_host);\n"
+        return rval

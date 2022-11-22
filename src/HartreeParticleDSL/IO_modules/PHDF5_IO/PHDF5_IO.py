@@ -417,7 +417,7 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
         '''
         #TODO Documentation
         rval = " " * current_indent 
-        rval = rval + f"get_box_size(config.config_host.space.box_dims, {filename});\n"
+        rval = rval + f"get_box_size(config.config_host(0).space.box_dims, {filename});\n"
         return rval
 
     def call_input_cabana_pir(self, part_count, filename, current_indent=4):

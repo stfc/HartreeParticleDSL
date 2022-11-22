@@ -190,8 +190,18 @@ class ast_to_pir_visitor(ast.NodeVisitor):
                                     "not been defined in this scope. Symbol "
                                     f"name was {sym_name}")
         if sym.datatype == type_mapping_str["part"]:
-            if (len(attribute_names) == 2 and attribute_names[0] == "core_part"
+            if (len(attribute_names) >= 2 and attribute_names[0] == "core_part"
                 and attribute_names[1] == "position"):
+                if len(attribute_names) == 3:
+                    if attribute_names[2] == "x":
+                        return ParticlePositionReference(sym, 0)
+                    elif attribute_names[2] == "y":
+                        return ParticlePositionReference(sym, 1)
+                    elif attribute_names[2] == "z":
+                        return ParticlePositionReference(sym, 2)
+                    else:
+                        raise IRGenerationError("Attempted to access unknown element "
+                                f"of particle position. Got {attribute_names[2]}")
                 return ParticlePositionReference(sym, 0)
         if len(attribute_names) == 1:
             # Check validity

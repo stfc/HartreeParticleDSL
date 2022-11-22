@@ -285,6 +285,13 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             rval = rval + "\"" + invoke.value + "\");\n"
             # TODO Check if we need to block (i.e. only if kernel dependencies or final kernel)
             rval = rval + self._nindent + "Kokkos::fence();"
+            print(f"MPI = {get_mpi()}")
+            print(type(self._parent.boundary_condition))
+            print(updates_part_pos)
+            # If we have MPI and move particles do the pre-boundary condition stuff.
+            if updates_part_pos and get_mpi():
+                rval = rval + self._parent.gen_mpi_comm_before_bcs(len(self._nindent), self._indent)
+
             if updates_part_pos and (self._parent.boundary_condition is not None):
                 bound = self._parent.boundary_condition
                 if len(self._parent.structures) > 0:
@@ -297,12 +304,10 @@ class Cabana_PIR_Visitor(PIR_Visitor):
                 rval = rval + f"{self._nindent}Cabana::simd_parallel_for(simd_policy, {bound.name}"
                 rval = rval + "\"" + bound.name + "\");\n"
                 rval = rval + self._nindent + "Kokkos::fence();"
-                # What if MPI?
-                if get_mpi():
-                    pass
-                    assert False
-                    # TODO  Fix this for general purpose
-                    #rval = rval + "migrator.exchange_data( particle_aosoa, neighbors, myrank, particle_aosoa.size(), dx*10.0, movement_since_remesh, host_field(0).x_min_local, host_field(0).x_max_local);"
+            # If we have MPI and move particles do the post-boundary condition stuff
+            if updates_part_pos and get_mpi():
+                rval = rval + self._parent.gen_mpi_comm_after_bcs(len(self._nindent), self._indent)
+                assert False
         return rval
 
     def visit_arraymember_node(self, node: ArrayMember) -> str:

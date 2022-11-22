@@ -12,6 +12,9 @@ void store_domain_decomposition(struct FDTD_field &field, boundary &box){
     box.local_y_max = 0.0;
     box.local_z_min = 0.0;
     box.local_z_max = 0.0;
+    MPI_Comm_size(MPI_COMM_WORLD, &box.x_ranks);
+    box.y_ranks = 1;
+    box.z_ranks = 1;
 }
 
 void load_grid_hdf5(struct FDTD_field &field, char* filename,
