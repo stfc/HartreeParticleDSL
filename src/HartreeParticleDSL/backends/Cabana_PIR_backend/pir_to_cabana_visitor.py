@@ -285,12 +285,9 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             rval = rval + "\"" + invoke.value + "\");\n"
             # TODO Check if we need to block (i.e. only if kernel dependencies or final kernel)
             rval = rval + self._nindent + "Kokkos::fence();"
-            print(f"MPI = {get_mpi()}")
-            print(type(self._parent.boundary_condition))
-            print(updates_part_pos)
             # If we have MPI and move particles do the pre-boundary condition stuff.
             if updates_part_pos and get_mpi():
-                rval = rval + self._parent.gen_mpi_comm_before_bcs(len(self._nindent), self._indent)
+                rval = rval + "\n" + self._parent.gen_mpi_comm_before_bcs(len(self._nindent), len(self._indent))
 
             if updates_part_pos and (self._parent.boundary_condition is not None):
                 bound = self._parent.boundary_condition
@@ -306,8 +303,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
                 rval = rval + self._nindent + "Kokkos::fence();"
             # If we have MPI and move particles do the post-boundary condition stuff
             if updates_part_pos and get_mpi():
-                rval = rval + self._parent.gen_mpi_comm_after_bcs(len(self._nindent), self._indent)
-                assert False
+                rval = rval + "\n" + self._parent.gen_mpi_comm_after_bcs(len(self._nindent), len(self._indent))
         return rval
 
     def visit_arraymember_node(self, node: ArrayMember) -> str:
@@ -404,6 +400,11 @@ class Cabana_PIR_Visitor(PIR_Visitor):
     def visit_literal_node(self, node: Literal) -> str:
         if node.datatype.intrinsic == ScalarType.Intrinsic.CHARACTER:
             return "\"" + node.value + "\""
+        if node.datatype.intrinsic == ScalarType.Intrinsic.BOOLEAN:
+            if node.value == "True":
+                return "true"
+            else:
+                return "false"
         return node.value
 
     def visit_loop_node(self, node: Loop) -> str:

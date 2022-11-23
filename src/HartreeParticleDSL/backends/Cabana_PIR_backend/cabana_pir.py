@@ -247,9 +247,29 @@ class Cabana_PIR(Backend):
 #        template<class aosoa> class Migrator{
 #
 #    private:
+        # Setup indentation
+        current_indent = 0
+        indent = 4
+
+        def get_indent():
+            nonlocal current_indent
+            return current_indent * " "
+
+        def inc_indent():
+            nonlocal current_indent
+            nonlocal indent
+            current_indent = current_indent + indent
+
+        def dec_indent():
+            nonlocal current_indent
+            nonlocal indent
+            current_indent = current_indent - indent
+
         rval = "\n\ntemplate<class aosoa> class Migrator{\n"
+        inc_indent()
         rval = rval + "\n"
-        rval = rval + "    private:"
+        rval = rval + get_indent() + "private:\n"
+        inc_indent()
         element_info = {} # element name: [datatype, array_dimension (i.e. 0-N), array_indices]
         for element in particle.particle_type:
             if element == "core_part" or element == "neighbour_part":
@@ -279,16 +299,17 @@ class Cabana_PIR(Backend):
 #        Kokkos::View<double**, MemorySpace> pz_space;
 #        int _buffer_size;
         for element in element_info.keys():
-            rval = rval + "        Kokkos::View<"
+            rval = rval + get_indent() + "Kokkos::View<"
             rval = rval + element_info[element][0]
             rval = rval + "**" + element_info[element][1]*"*"
             rval = rval + ", Memoryspace> " + element+ "_space;\n"
         # Add position, velocity and neighbour spaces separately
-        rval = rval + "        Kokkos::View<double***, MemorySpace> pos_space;\n"
-        rval = rval + "        Kokkos::View<double***, MemorySpace> vel_space;\n"
-        rval = rval + "        Kokkos::View<double**, MemorySpace> cutoff_space;\n"
-        rval = rval + "        int _buffer_size;\n"
+        rval = rval + get_indent() + "Kokkos::View<double***, MemorySpace> pos_space;\n"
+        rval = rval + get_indent() + "Kokkos::View<double***, MemorySpace> vel_space;\n"
+        rval = rval + get_indent() + "Kokkos::View<double**, MemorySpace> cutoff_space;\n"
+        rval = rval + get_indent() + "int _buffer_size;\n"
         rval = rval + "\n"
+        dec_indent()
 
 
 
@@ -305,11 +326,13 @@ class Cabana_PIR(Backend):
 #            py_space = Kokkos::View<double**, MemorySpace>("temp_py", nr_neighbours, buffer_size);
 #            pz_space = Kokkos::View<double**, MemorySpace>("temp_pz", nr_neighbours, buffer_size);
 #        }
-        rval = rval + "    public:\n"
-        rval = rval + "        Migrator(int buffer_size, int nr_neighbours){\n"
-        rval = rval + "            _buffer_size = buffer_size;\n"
+        rval = rval + get_indent() + "public:\n"
+        inc_indent()
+        rval = rval + get_indent() + "Migrator(int buffer_size, int nr_neighbours){\n"
+        inc_indent()
+        rval = rval + get_indent() + "_buffer_size = buffer_size;\n"
         for element in element_info.keys():
-            rval = rval + "            " + element + "_space = "
+            rval = rval + get_indent() + element + "_space = "
             rval = rval + "Kokkos::View<" + element_info[element][0]
             rval = rval + "**" + element_info[element][1]*"*"
             rval = rval + ", MemorySpace>(\"" + element + "_id\", nr_neighbours, buffer_size"
@@ -317,56 +340,69 @@ class Cabana_PIR(Backend):
             for index in element_info[element][2]:
                 rval = rval + f", {index}"
             rval = rval + ");\n"
-        rval = rval + "            pos_space = Kokkos::View<double***, MemorySpace>(\"temp_pos\", nr_neighbours, buffer_size, 3);\n"
-        rval = rval + "            vel_space = Kokkos::View<double***, MemorySpace>(\"temp_velocity\", nr_neighbours, buffer_size, 3);\n"
-        rval = rval + "            cutoff_space = Kokkos::View<double**, MemorySpace>(\"temp_cutoff\", nr_neighbours, buffer_size);\n"
-        rval = rval + "        }\n\n"
+        rval = rval + get_indent() + "pos_space = Kokkos::View<double***, MemorySpace>(\"temp_pos\", nr_neighbours, buffer_size, 3);\n"
+        rval = rval + get_indent() + "vel_space = Kokkos::View<double***, MemorySpace>(\"temp_velocity\", nr_neighbours, buffer_size, 3);\n"
+        rval = rval + get_indent() + "cutoff_space = Kokkos::View<double**, MemorySpace>(\"temp_cutoff\", nr_neighbours, buffer_size);\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n\n"
+        dec_indent()
 #       Final function is exchange_data call.
-        rval = rval + "    void exchange_data( aosoa &particle_aosoa, std::vector<int> neighbors, int myrank, int npart){\n\n"
-        rval = rval + "        auto rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa, \"rank\");\n"
-        rval = rval + "        auto last_pos_s = Cabana::slice<neighbour_part_old_position>(particle_aosoa, \"last_pos\");\n"
-        rval = rval + "        auto pos_s = Cabana::slice<core_part_position>(particle_aosoa, \"position\");\n"
-        rval = rval + "        auto vel_s = Cabana::slice<core_part_velocity>(particle_aosoa, \"velocity\");\n"
-        rval = rval + "        auto cutoff_s = Cabana::slice<neighbour_part_cutoff>(particle_aosoa, \"cutoff\");\n"
+        rval = rval + get_indent() + "void exchange_data( aosoa &particle_aosoa, std::vector<int> neighbors, int myrank, int npart){\n\n"
+        inc_indent()
+        rval = rval + get_indent() + "auto rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa, \"rank\");\n"
+        rval = rval + get_indent() + "auto last_pos_s = Cabana::slice<neighbour_part_old_position>(particle_aosoa, \"last_pos\");\n"
+        rval = rval + get_indent() + "auto pos_s = Cabana::slice<core_part_position>(particle_aosoa, \"position\");\n"
+        rval = rval + get_indent() + "auto vel_s = Cabana::slice<core_part_velocity>(particle_aosoa, \"velocity\");\n"
+        rval = rval + get_indent() + "auto cutoff_s = Cabana::slice<neighbour_part_cutoff>(particle_aosoa, \"cutoff\");\n"
         for element in element_info.keys():
-            rval = rval + "        auto " + element + "_s = Cabana::slice<" + element + ">(particle_aosoa, \"" + element + "\");\n"
+            rval = rval + get_indent() + "auto " + element + "_s = Cabana::slice<" + element + ">(particle_aosoa, \"" + element + "\");\n"
 
-        rval = rval + "        int *send_count = (int*) malloc(sizeof(int) * neighbours.size());\n"
-        rval = rval + "        int count_neighbours = 0;\n"
-        rval = rval + "        int end = particle_aosoa.size() - 1;\n"
-        rval = rval + "        for(int i = 0; i < neighbours.size(); i++){\n"
-        rval = rval + "            send_count[i] = 0;\n"
-        rval = rval + "        }\n\n"
-        rval = rval + "        for(int i = particle_aosoa.size()-1; i>=0; i--){\n"
-        rval = rval + "            if(rank_slice(i) != myrank && rank_slice(i) >= 0){\n"
-        rval = rval + "                int therank = rank_slice(i);\n"
-        rval = rval + "            for(int k = 0; k < neighbors.size(); k++){\n"
-        rval = rval + "                if(therank == neighbors[k]){\n"
-        rval = rval + "                    therank = k;\n"
-        rval = rval + "                    break;\n"
-        rval = rval + "                }\n"
-        rval = rval + "            }\n"
-        rval = rval + "            int pos = send_count[therank];\n"
+        rval = rval + get_indent() + "int *send_count = (int*) malloc(sizeof(int) * neighbours.size());\n"
+        rval = rval + get_indent() + "int count_neighbours = 0;\n"
+        rval = rval + get_indent() + "int end = particle_aosoa.size() - 1;\n"
+        rval = rval + get_indent() + "for(int i = 0; i < neighbours.size(); i++){\n"
+        inc_indent()
+        rval = rval + get_indent() + "    send_count[i] = 0;\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n\n"
+        rval = rval + get_indent() + "for(int i = particle_aosoa.size()-1; i>=0; i--){\n"
+        inc_indent()
+        rval = rval + get_indent() + "if(rank_slice(i) != myrank && rank_slice(i) >= 0){\n"
+        inc_indent()
+        rval = rval + get_indent() + "int therank = rank_slice(i);\n"
+        rval = rval + get_indent() + "for(int k = 0; k < neighbors.size(); k++){\n"
+        inc_indent()
+        rval = rval + get_indent() + "if(therank == neighbors[k]){\n"
+        inc_indent()
+        rval = rval + get_indent() + "therank = k;\n"
+        rval = rval + get_indent() + "break;\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
+        dec_indent()
+        rval = rval + get_indent() + "int pos = send_count[therank];\n"
 
         # Fill in the slice data
-        rval = rval + "            pos_space(therank, pos, 0) = pos_s(i, 0);\n"
-        rval = rval + "            pos_space(therank, pos, 1) = pos_s(i, 1);\n"
-        rval = rval + "            pos_space(therank, pos, 2) = pos_s(i, 2);\n"
-        rval = rval + "            vel_space(therank, pos, 0) = vel_s(i, 0);\n"
-        rval = rval + "            vel_space(therank, pos, 1) = vel_s(i, 1);\n"
-        rval = rval + "            vel_space(therank, pos, 2) = vel_s(i, 2);\n"
-        rval = rval + "            cutoff_space(therank, pos) = cutoff_s(i);\n"
+        rval = rval + get_indent() + "pos_space(therank, pos, 0) = pos_s(i, 0);\n"
+        rval = rval + get_indent() + "pos_space(therank, pos, 1) = pos_s(i, 1);\n"
+        rval = rval + get_indent() + "pos_space(therank, pos, 2) = pos_s(i, 2);\n"
+        rval = rval + get_indent() + "vel_space(therank, pos, 0) = vel_s(i, 0);\n"
+        rval = rval + get_indent() + "vel_space(therank, pos, 1) = vel_s(i, 1);\n"
+        rval = rval + get_indent() + "vel_space(therank, pos, 2) = vel_s(i, 2);\n"
+        rval = rval + get_indent() + "cutoff_space(therank, pos) = cutoff_s(i);\n"
         
         for element in element_info.keys():
             if element_info[element][1] == 0:
-                rval = rval + "            " + element + "_space(therank, pos) = " + element + "_s(i);\n"
+                rval = rval + get_indent() + element + "_space(therank, pos) = " + element + "_s(i);\n"
             else:
                 indexer = "i"
                 for index in range(element_info[element][1]):
                     indexer = indexer + "i"
-                    rval = rval + "            for(int " + indexer + "=0; " + indexer + f" < {element_info[element][2][index]}; "
+                    rval = rval + get_indent() + "for(int " + indexer + "=0; " + indexer + f" < {element_info[element][2][index]}; "
                     rval = rval + indexer + "++){\n"
-                rval = rval + "            " + element + "_space(therank, pos"
+                    inc_indent()
+                rval = rval + get_indent() + element + "_space(therank, pos"
                 indexer = "i"
                 for index in range(element_info[element][1]):
                     indexer = indexer + "i"
@@ -378,33 +414,38 @@ class Cabana_PIR(Backend):
                     rval = rval + ", " + indexer
                 rval = rval + ");\n"
                 for index in range(element_info[element][1]):
-                    rval = rval + "            }\n"
+                    dec_indent()
+                    rval = rval + get_indent() + "}\n"
 
-        rval = rval + "            send_count[therank]++;\n\n"
+        rval = rval + get_indent() + "send_count[therank]++;\n\n"
         # Slice data should be filled now.
         # Move from end
-        rval = rval + "            while(rank_slice(end) != myrank && end > 0){\n"
-        rval = rval + "                end--;\n"
-        rval = rval + "            }\n"
-        rval = rval + "            if(end > i){\n"
-        rval = rval + "                rank_slice(i) = rank_slice(end);\n"
-        rval = rval + "                pos_s(i, 0) = pos_s(end, 0);\n"
-        rval = rval + "                pos_s(i, 1) = pos_s(end, 1);\n"
-        rval = rval + "                pos_s(i, 2) = pos_s(end, 2);\n"
-        rval = rval + "                vel_s(i, 0) = vel_s(end, 0);\n"
-        rval = rval + "                vel_s(i, 1) = vel_s(end, 1);\n"
-        rval = rval + "                vel_s(i, 2) = vel_s(end, 2);\n"
-        rval = rval + "                cutoff_s(i) = cutoff_s(end);\n"
+        rval = rval + get_indent() + "while(rank_slice(end) != myrank && end > 0){\n"
+        inc_indent()
+        rval = rval + get_indent() + "end--;\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
+        rval = rval + get_indent() + "if(end > i){\n"
+        inc_indent()
+        rval = rval + get_indent() + "rank_slice(i) = rank_slice(end);\n"
+        rval = rval + get_indent() + "pos_s(i, 0) = pos_s(end, 0);\n"
+        rval = rval + get_indent() + "pos_s(i, 1) = pos_s(end, 1);\n"
+        rval = rval + get_indent() + "pos_s(i, 2) = pos_s(end, 2);\n"
+        rval = rval + get_indent() + "vel_s(i, 0) = vel_s(end, 0);\n"
+        rval = rval + get_indent() + "vel_s(i, 1) = vel_s(end, 1);\n"
+        rval = rval + get_indent() + "vel_s(i, 2) = vel_s(end, 2);\n"
+        rval = rval + get_indent() + "cutoff_s(i) = cutoff_s(end);\n"
         for element in element_info.keys():
             if element_info[element][1] == 0:
-                rval = rval + "            " + element + "_s(i) = " + element + "_s(end);\n"
+                rval = rval + get_indent() + element + "_s(i) = " + element + "_s(end);\n"
             else:
                 indexer = "i"
                 for index in range(element_info[element][1]):
                     indexer = indexer + "i"
-                    rval = rval + "            for(int " + indexer + "=0; " + indexer + f" < {element_info[element][2][index]}; "
+                    rval = rval + get_indent() + "for(int " + indexer + "=0; " + indexer + f" < {element_info[element][2][index]}; "
                     rval = rval + indexer + "++){\n"
-                rval = rval + "            " + element + "_s(i"
+                    inc_indent()
+                rval = rval + get_indent() + element + "_s(i"
                 indexer = "i"
                 for index in range(element_info[element][1]):
                     indexer = indexer + "i"
@@ -416,126 +457,56 @@ class Cabana_PIR(Backend):
                     rval = rval + ", " + indexer
                 rval = rval + ");\n"
                 for index in range(element_info[element][1]):
-                    rval = rval + "            }\n"
+                    dec_indent()
+                    rval = rval + get_indent() + "}\n"
 
-        rval = rval + "            else{\n"
-        rval = rval + "                rank_slice(i) = -1;\n"
-        rval = rval + "                end++;\n"
-        rval = rval + "            }\n"
-        rval = rval + "            continue;\n"
-        rval = rval + "        }\n\n"
+        dec_indent()
+        rval = rval + get_indent() + "}else{\n"
+        inc_indent()
+        rval = rval + get_indent() + "rank_slice(i) = -1;\n"
+        rval = rval + get_indent() + "end++;\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
+        rval = rval + get_indent() + "continue;\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n\n"
 
 #                    // If we've moved too far from the boundary we can stop.
 #                if( i < end && (part_pos_s(i, 0) < (region_max - ( 2.0 * max_movement + sorting_size))) &&
 #                    (part_pos_s(i, 0) > (region_min + (2.0 * max_movement + 2.0*sorting_size)))){
 #                        break;
 #                    }
-        rval = rval + "        }\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
 
 
-
-        rval = rval + "        for(int i = 0; i < particle_aosoa.size(); i++){\n"
-        rval = rval + "            if(rank_slice(i) != myrank && rank_slice(i) >= 0){\n"
-        rval = rval + "                int therank = rank_slice(i);\n"
-        rval = rval + "                for(int k = 0; k < neighbors.size(); k++){\n"
-        rval = rval + "                    if(therank == neighbors[k]){\n"
-        rval = rval + "                        therank = k;\n"
-        rval = rval + "                        break;\n"
-        rval = rval + "                    }\n"
-        rval = rval + "                }\n"
-        rval = rval + "                int pos = send_count[therank];\n"
-        rval = rval + "            pos_space(therank, pos, 0) = pos_s(i, 0);\n"
-        rval = rval + "            pos_space(therank, pos, 1) = pos_s(i, 1);\n"
-        rval = rval + "            pos_space(therank, pos, 2) = pos_s(i, 2);\n"
-        rval = rval + "            vel_space(therank, pos, 0) = vel_s(i, 0);\n"
-        rval = rval + "            vel_space(therank, pos, 1) = vel_s(i, 1);\n"
-        rval = rval + "            vel_space(therank, pos, 2) = vel_s(i, 2);\n"
-        rval = rval + "            cutoff_space(therank, pos) = cutoff_s(i);\n"
-        
-        for element in element_info.keys():
-            if element_info[element][1] == 0:
-                rval = rval + "            " + element + "_space(therank, pos) = " + element + "_s(i);\n"
-            else:
-                indexer = "i"
-                for index in range(element_info[element][1]):
-                    indexer = indexer + "i"
-                    rval = rval + "            for(int " + indexer + "=0; " + indexer + f" < {element_info[element][2][index]}; "
-                    rval = rval + indexer + "++){\n"
-                rval = rval + "            " + element + "_space(therank, pos"
-                indexer = "i"
-                for index in range(element_info[element][1]):
-                    indexer = indexer + "i"
-                    rval = rval + ", " + indexer
-                rval = rval + ") = " + element + "_s(i"
-                indexer = "i"
-                for index in range(element_info[element][1]):
-                    indexer = indexer + "i"
-                    rval = rval + ", " + indexer
-                rval = rval + ");\n"
-                for index in range(element_info[element][1]):
-                    rval = rval + "            }\n"
-        # Move from end
-        rval = rval + "            while(rank_slice(end) != myrank && end > 0){\n"
-        rval = rval + "                end--;\n"
-        rval = rval + "            }\n"
-        rval = rval + "            if(end > i){\n"
-        rval = rval + "                rank_slice(i) = rank_slice(end);\n"
-        rval = rval + "                pos_s(i, 0) = pos_s(end, 0);\n"
-        rval = rval + "                pos_s(i, 1) = pos_s(end, 1);\n"
-        rval = rval + "                pos_s(i, 2) = pos_s(end, 2);\n"
-        rval = rval + "                vel_s(i, 0) = vel_s(end, 0);\n"
-        rval = rval + "                vel_s(i, 1) = vel_s(end, 1);\n"
-        rval = rval + "                vel_s(i, 2) = vel_s(end, 2);\n"
-        rval = rval + "                cutoff_s(i) = cutoff_s(end);\n"
-        for element in element_info.keys():
-            if element_info[element][1] == 0:
-                rval = rval + "            " + element + "_s(i) = " + element + "_s(end);\n"
-            else:
-                indexer = "i"
-                for index in range(element_info[element][1]):
-                    indexer = indexer + "i"
-                    rval = rval + "            for(int " + indexer + "=0; " + indexer + f" < {element_info[element][2][index]}; "
-                    rval = rval + indexer + "++){\n"
-                rval = rval + "            " + element + "_s(i"
-                indexer = "i"
-                for index in range(element_info[element][1]):
-                    indexer = indexer + "i"
-                    rval = rval + ", " + indexer
-                rval = rval + ") = " + element + "_s(end"
-                indexer = "i"
-                for index in range(element_info[element][1]):
-                    indexer = indexer + "i"
-                    rval = rval + ", " + indexer
-                rval = rval + ");\n"
-                for index in range(element_info[element][1]):
-                    rval = rval + "            }\n"
-
-        rval = rval + "            else{\n"
-        rval = rval + "                rank_slice(i) = -1;\n"
-        rval = rval + "                end++;\n"
-        rval = rval + "            }\n"
-        rval = rval + "            continue;\n"
 
         # At this stage data is collected, so send the data.
-        rval = rval + "            // Data collected, need to send information to neighbours to know what to expect\n"      
-        rval = rval + '''           int *recv_count = (int*) malloc(sizeof(int) * neighbors.size());
-           MPI_Request *requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbors.size() * 2);
-           int req_num = 0;
-           for(int i = 0; i < neighbors.size(); i++){
-                    recv_count[i] = 0;
-                if(neighbors[i] == myrank){
-                    continue;
-                }
-                MPI_Irecv(&recv_count[i], 1, MPI_INT, neighbors[i], 0, MPI_COMM_WORLD, &requests[req_num++]);
-                MPI_Isend(&send_count[i], 1, MPI_INT, neighbors[i], 0, MPI_COMM_WORLD, &requests[req_num++]);
-           }
-           MPI_Waitall(req_num, requests, MPI_STATUSES_IGNORE);
-           MPI_Barrier(MPI_COMM_WORLD);
-           int total_size = 0;
-           for(int i = 0; i < neighbors.size(); i++){
-                total_size += recv_count[i];
-           }
-'''
+        rval = rval + get_indent() + "// Data collected, need to send information to neighbours to know what to expect\n"      
+        rval = rval + get_indent() + "int *recv_count = (int*) malloc(sizeof(int) * neighbors.size());\n"
+        rval = rval + get_indent() + "MPI_Request *requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbors.size() * 2);\n"
+        rval = rval + get_indent() + "int req_num = 0;\n"
+        rval = rval + get_indent() + "for(int i = 0; i < neighbors.size(); i++){\n"
+        inc_indent()
+        rval = rval + get_indent() + "recv_count[i] = 0;\n"
+        rval = rval + get_indent() + "if(neighbors[i] == myrank){\n"
+        inc_indent()
+        rval = rval + get_indent() + "continue;\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
+        rval = rval + get_indent() + "MPI_Irecv(&recv_count[i], 1, MPI_INT, neighbors[i], 0, MPI_COMM_WORLD, &requests[req_num++]);\n"
+        rval = rval + get_indent() + "MPI_Isend(&send_count[i], 1, MPI_INT, neighbors[i], 0, MPI_COMM_WORLD, &requests[req_num++]);\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
+        rval = rval + get_indent() + "MPI_Waitall(req_num, requests, MPI_STATUSES_IGNORE);\n"
+        rval = rval + get_indent() + "MPI_Barrier(MPI_COMM_WORLD);\n"
+        rval = rval + get_indent() + "int total_size = 0;\n"
+        rval = rval + get_indent() + "for(int i = 0; i < neighbors.size(); i++){\n"
+        inc_indent()
+        rval = rval + get_indent() + "     total_size += recv_count[i];\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
+
 
         # Construct additional buffers
         # Looks like this is easy generally, can just use size but might be complex depending on 
@@ -543,17 +514,17 @@ class Cabana_PIR(Backend):
         # .extent(dimension) gets the number of elements in each dimension, so if we have views
         # of dimension neighbours.size(), fixed_size, [extra dimension sizes] then we can do 
         # sends of .extent(0) for each neighbour.
-        rval = rval + "        Kokkos::View<double***, MemorySpace> r_pos_space(\"temp_pos\", neighbours.size(), total_size, 3);\n"
-        rval = rval + "        Kokkos::View<double***, MemorySpace> r_vel_space(\"temp_vel\", neighbours.size(), total_size, 3);\n"
-        rval = rval + "        Kokkos::View<double**, MemorySpace> r_cutoff_space(\"temp_cutoff\", neighbours.size(), total_size);\n"
+        rval = rval + get_indent() + "Kokkos::View<double***, MemorySpace> r_pos_space(\"temp_pos\", neighbours.size(), total_size, 3);\n"
+        rval = rval + get_indent() + "Kokkos::View<double***, MemorySpace> r_vel_space(\"temp_vel\", neighbours.size(), total_size, 3);\n"
+        rval = rval + get_indent() + "Kokkos::View<double**, MemorySpace> r_cutoff_space(\"temp_cutoff\", neighbours.size(), total_size);\n"
 
         for element in element_info.keys():
             if element_info[element][1] == 0:
-                rval = rval + "        Kokkos::View<" + element_info[element][0]
+                rval = rval + get_indent() + "Kokkos::View<" + element_info[element][0]
                 rval = rval + "**"
                 rval = rval + ", MemorySpace> r_" + element + "_space(\"temp_" + element + "\", neighbours.size(), total_size);\n"
             else:
-                rval = rval + "        Kokkos::View<" + element_info[element][0]
+                rval = rval + get_indent() + "Kokkos::View<" + element_info[element][0]
                 rval = rval + "**" + element_info[element][1]*"*"
                 rval = rval + ", MemorySpace> r_" + element + "_space(\"temp_" + element + "\", neighbours.size(), total_size"
                 for i in range(element_info[element][1]):
@@ -563,20 +534,22 @@ class Cabana_PIR(Backend):
 
         # end of slice creation
 
-        rval = rval + "        free(requests);\n"
+        rval = rval + get_indent() + "free(requests);\n"
         val = len(element_info.keys()) + 3
-        rval = rval + "        requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbours.size() * 2 * " + str(val) + ");\n"
-        rval = rval + "        req_num = 0;\n"
-        rval = rval + "        int tag = 0;\n"
+        rval = rval + get_indent() + "requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbours.size() * 2 * " + str(val) + ");\n"
+        rval = rval + get_indent() + "req_num = 0;\n"
+        rval = rval + get_indent() + "int tag = 0;\n"
 
         # Loop over neighbours and do sends and receives - 2262
-        rval = rval + "        for(int i = 0; i < neighbours.size(); i++){\n"
-        rval = rval + "            if(neighbors[i] != myrank){\n"
-        rval = rval + "                MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(0)*i], recv_count[i]*3,"
+        rval = rval + get_indent() + "for(int i = 0; i < neighbours.size(); i++){\n"
+        inc_indent()
+        rval = rval + get_indent() + "if(neighbors[i] != myrank){\n"
+        inc_indent()
+        rval = rval + get_indent() + "MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(0)*i], recv_count[i]*3,"
         rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
-        rval = rval + "                MPI_Irecv(&r_vel_space.data()[r_vel_space.extend(0)*i], recv_count[i]*3,"
+        rval = rval + get_indent() + "MPI_Irecv(&r_vel_space.data()[r_vel_space.extend(0)*i], recv_count[i]*3,"
         rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
-        rval = rval + "                MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(0)*i], recv_count[i],"
+        rval = rval + get_indent() + "MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(0)*i], recv_count[i],"
         rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
         for element in element_info.keys():
             mpi_dtype = None
@@ -593,21 +566,21 @@ class Cabana_PIR(Backend):
                                           + element + " with datatype "
                                           + element_info[element][0] + " for MPI")
             if element_info[element][1] == 0:
-                rval = rval + "            MPI_Irecv(&r_"+element+"_space.data()[r_"+element+"_space.extent(0)*i], recv_count[i],"
+                rval = rval + get_indent() + "MPI_Irecv(&r_"+element+"_space.data()[r_"+element+"_space.extent(0)*i], recv_count[i],"
                 rval = rval + mpi_dtype + ", neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
             else:
-                rval = rval + "            MPI_Irecv(&r_"+element+"_space.data()[r_"+element+"_space.extent(0)*i], recv_count[i]"
+                rval = rval + get_indent() + "MPI_Irecv(&r_"+element+"_space.data()[r_"+element+"_space.extent(0)*i], recv_count[i]"
                 for i in range(element_info[element][1]):
                     rval = rval + f" * {element_info[element][2][i]}"
                 rval = rval + ", " + mpi_dtype + ", neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++];\n"
 
         # Now do sends
-        rval = rval + "            tag = 0;\n"
-        rval = rval + "            MPI_Isend(&pos_space.data()[pos_space.extent(0)*i], send_count[i]*3,"
+        rval = rval + get_indent() + "tag = 0;\n"
+        rval = rval + get_indent() + "MPI_Isend(&pos_space.data()[pos_space.extent(0)*i], send_count[i]*3,"
         rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
-        rval = rval + "            MPI_Isend(&vel_space.data()[vel_space.extent(0)*i], send_count[i]*3,"
+        rval = rval + get_indent() + "MPI_Isend(&vel_space.data()[vel_space.extent(0)*i], send_count[i]*3,"
         rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
-        rval = rval + "            MPI_Isend(&cutoff_space.data()[cutoff_space.extent(0)*i], send_count[i],"
+        rval = rval + get_indent() + "MPI_Isend(&cutoff_space.data()[cutoff_space.extent(0)*i], send_count[i],"
         rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
         for element in element_info.keys():
             mpi_dtype = None
@@ -623,70 +596,84 @@ class Cabana_PIR(Backend):
                 raise NotImplementedError("Don't know currently how to support datatype "
                                           + element_info[element[0]] + " for MPI")
             if element_info[element][1] == 0:
-                rval = rval + "            MPI_Isend("+element+"_space.data()["+element+"_space.extent(0)*i], send_count[i],"
+                rval = rval + get_indent() + "MPI_Isend("+element+"_space.data()["+element+"_space.extent(0)*i], send_count[i],"
                 rval = rval + mpi_dtype + ", neighbors[i], tag++, MPI_COMM_WORLd, &requests[req_num++]);\n"
             else:
-                rval = rval + "            MPI_Isend("+element+"_space.data()["+element+"_space.extent(0)*i], send_count[i]"
+                rval = rval + get_indent() + "MPI_Isend("+element+"_space.data()["+element+"_space.extent(0)*i], send_count[i]"
                 for i in range(element_info[element][1]):
                     rval = rval + f" * {element_info[element][2][i]}"
                 rval = rval + ", " + mpi_dtype + ", neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++];\n"
 
-        rval = rval + "        }\n"
-        rval = rval + "    }\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
 
-        rval = rval + "    MPI_Waitall(req_num, requests, MPI_STATUSES_IGNORE);\n"
-        rval = rval + "    free(requests);\n"
+        rval = rval + get_indent() + "MPI_Waitall(req_num, requests, MPI_STATUSES_IGNORE);\n"
+        rval = rval + get_indent() + "free(requests);\n"
 
         # Data is here, need to put it in AOSOA
 
-        rval = rval + "    int recvd = 0;\n"
-        rval = rval + "    int sent = 0;\n"
-        rval = rval + "    for(int i = 0; i < neighbors.size(); i++){\n"
-        rval = rval + "        recvd += recv_count[i];\n"
-        rval = rval + "        sent += send_count[i];\n"
-        rval = rval + "    }\n"
-        rval = rval + "    int size_change = recvd - sent;\n"
-
-        rval = rval + "    int current_size =  particle_aosoa.size();\n"
-        rval = rval + "    if(size_change != 0){\n"
-        rval = rval + "        particle_aosoa.resize(current_size+size_change);\n"
-        rval = rval + "    }\n"
-        rval = rval + "    auto new_rank_slice = Cabana::slice<rank>(particle_aosoa, \"new_rank\");\n"
-        rval = rval + "    if(size_change > 0){\n"
-        rval = rval + "        if(sent = 0){\n"
-        rval = rval + "            end = current_size;\n"
-        rval = rval + "        }\n"
-        rval = rval + "        for(int i = 0; i < particle_aosoa.size(); i++){\n"
-        rval = rval + "            new_rank_slice(i) = -1;\n"
-        rval = rval + "        }\n"
-        rval = rval + "    }\n"
-        rval = rval + "        auto new_last_pos_s = Cabana::slice<neighbour_part_old_position>(particle_aosoa, \"new_last_pos\");\n"
-        rval = rval + "        auto new_pos_s = Cabana::slice<core_part_position>(particle_aosoa, \"new_position\");\n"
-        rval = rval + "        auto new_vel_s = Cabana::slice<core_part_velocity>(particle_aosoa, \"new_velocity\");\n"
-        rval = rval + "        auto new_cutoff_s = Cabana::slice<neighbour_part_cutoff>(particle_aosoa, \"new_cutoff\");\n"
+        rval = rval + get_indent() + "int recvd = 0;\n"
+        rval = rval + get_indent() + "int sent = 0;\n"
+        rval = rval + get_indent() + "for(int i = 0; i < neighbors.size(); i++){\n"
+        inc_indent()
+        rval = rval + get_indent() + "recvd += recv_count[i];\n"
+        rval = rval + get_indent() + "sent += send_count[i];\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
+        rval = rval + get_indent() + "int size_change = recvd - sent;\n"
+        rval = rval + get_indent() + "int current_size =  particle_aosoa.size();\n"
+        rval = rval + get_indent() + "if(size_change != 0){\n"
+        inc_indent()
+        rval = rval + get_indent() + "particle_aosoa.resize(current_size+size_change);\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
+        rval = rval + get_indent() + "auto new_rank_slice = Cabana::slice<rank>(particle_aosoa, \"new_rank\");\n"
+        rval = rval + get_indent() + "if(size_change > 0){\n"
+        inc_indent()
+        rval = rval + get_indent() + "if(sent = 0){\n"
+        inc_indent()
+        rval = rval + get_indent() + "end = current_size;\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
+        rval = rval + get_indent() + "for(int i = 0; i < particle_aosoa.size(); i++){\n"
+        inc_indent()
+        rval = rval + get_indent() + "new_rank_slice(i) = -1;\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
+        rval = rval + get_indent() + "auto new_last_pos_s = Cabana::slice<neighbour_part_old_position>(particle_aosoa, \"new_last_pos\");\n"
+        rval = rval + get_indent() + "auto new_pos_s = Cabana::slice<core_part_position>(particle_aosoa, \"new_position\");\n"
+        rval = rval + get_indent() + "auto new_vel_s = Cabana::slice<core_part_velocity>(particle_aosoa, \"new_velocity\");\n"
+        rval = rval + get_indent() + "auto new_cutoff_s = Cabana::slice<neighbour_part_cutoff>(particle_aosoa, \"new_cutoff\");\n"
         for element in element_info.keys():
-            rval = rval + "        auto new_" + element + "_s = Cabana::slice<" + element + ">(particle_aosoa, \"new_" + element + "\");\n"
+            rval = rval + get_indent() + "auto new_" + element + "_s = Cabana::slice<" + element + ">(particle_aosoa, \"new_" + element + "\");\n"
 
-        rval = rval + "    int x = 0;\n"
-        rval = rval + "    for(int j = 0; j < neighbors.size(); j++){\n"
-        rval = rval + "        for(int i = 0; i < recv_count[j]; i++){\n"
-        rval = rval + "            new_pos_s(end+x, 0) = r_pos_slice(j,i,0);\n"
-        rval = rval + "            new_pos_s(end+x, 1) = r_pos_slice(j,i,1);\n"
-        rval = rval + "            new_pos_s(end+x, 2) = r_pos_slice(j,i,2);\n"
-        rval = rval + "            new_vel_s(end+x, 0) = r_vel_slice(j,i,0);\n"
-        rval = rval + "            new_vel_s(end+x, 1) = r_vel_slice(j,i,1);\n"
-        rval = rval + "            new_vel_s(end+x, 2) = r_vel_slice(j,i,2);\n"
-        rval = rval + "            new_cutoff_s(end+x) = r_cutoff_slice(j,i);\n"
+        rval = rval + get_indent() + "int x = 0;\n"
+        rval = rval + get_indent() + "for(int j = 0; j < neighbors.size(); j++){\n"
+        inc_indent()
+        rval = rval + get_indent() + "for(int i = 0; i < recv_count[j]; i++){\n"
+        inc_indent()
+        rval = rval + get_indent() + "new_pos_s(end+x, 0) = r_pos_slice(j,i,0);\n"
+        rval = rval + get_indent() + "new_pos_s(end+x, 1) = r_pos_slice(j,i,1);\n"
+        rval = rval + get_indent() + "new_pos_s(end+x, 2) = r_pos_slice(j,i,2);\n"
+        rval = rval + get_indent() + "new_vel_s(end+x, 0) = r_vel_slice(j,i,0);\n"
+        rval = rval + get_indent() + "new_vel_s(end+x, 1) = r_vel_slice(j,i,1);\n"
+        rval = rval + get_indent() + "new_vel_s(end+x, 2) = r_vel_slice(j,i,2);\n"
+        rval = rval + get_indent() + "new_cutoff_s(end+x) = r_cutoff_slice(j,i);\n"
         for element in element_info.keys():
             if element_info[element][1] == 0:
-                rval = rval + "            new_"+element+"_s(end+x) = r_"+element+"_slice(j,i);\n"
+                rval = rval + get_indent() + "new_"+element+"_s(end+x) = r_"+element+"_slice(j,i);\n"
             else:
                 indexer = "i"
                 for index in range(element_info[element][1]):
                     indexer = indexer + "i"
-                    rval = rval + f"            for(int {indexer}=0; {indexer} < {element_info[element][2][index]};"
+                    rval = rval + get_indent() + f"for(int {indexer}=0; {indexer} < {element_info[element][2][index]};"
                     rval = rval + indexer + "++){\n"
-                rval = rval + "            new_" + element + "_s(end+x"
+                    inc_indent()
+                rval = rval + get_indent() + "new_" + element + "_s(end+x"
                 indexer = "i"
                 for index in range(element_info[element][1]):
                     indexer = indexer + "i"
@@ -698,15 +685,19 @@ class Cabana_PIR(Backend):
                     rval = rval + ", " + indexer
                 rval = rval + ");\n"
                 for index in range(element_info[element][1]):
-                    rval = rval + "            }\n"
+                    dec_indent()
+                    rval = rval + get_indent() + "}\n"
                 pass
 
-        rval = rval + "            x++;\n"
-        rval = rval + "        }\n"
-        rval = rval + "    }\n"
-        rval = rval + "    free(recv_count);\n"
-        rval = rval + "    free(send_count);\n"
-        rval = rval + "}};\n"
+        rval = rval + get_indent() + "x++;\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
+        rval = rval + get_indent() + "free(recv_count);\n"
+        rval = rval + get_indent() + "free(send_count);\n"
+        dec_indent()
+        rval = rval + get_indent() + "}};\n\n"
 
 
         rval = rval + "KOKKOS_INLINE_FUNCTION\n"
@@ -779,12 +770,10 @@ class Cabana_PIR(Backend):
         # Turn 3D rank index to 1D index.
         rval = rval + "        _rank_slice(ix, ij) = get_oneD_rank(xr, yr, zr, _xranks, _yranks, _zranks);\n"
         rval = rval + "    }};\n\n"
-        assert False
-        # Need to get local rank in 3D.
 
         return rval
         # Ideally we just use the Cabana inbuilt function in the future. At that point this 
-        # call doesn't need to do anything.
+        # call doesn't need to do as much.
 
     def gen_headers(self, config, part_type):
         '''
@@ -839,16 +828,18 @@ class Cabana_PIR(Backend):
         if self._input_module is not None:
             input_module_header = self._input_module.gen_code_cabana_pir(part_type) #FIXME
         if input_module_header != "":
-            print(input_module_header)
-            print("\n")
+            with open('part.h', "a") as f:
+                f.write(input_module_header)
+                f.write("\n")
 
         output_module_header = ""
-        if self._output_module is not None:
+        if self._output_module is not None and self._input_module is not self._output_module:
             output_module_header = self._output_module.gen_code_cabana_pir(part_type) #FIXME
         if output_module_header != "":
             # Do something later
-            print(output_module_header)
-            print("\n")
+            with open('part.h', "a") as f:
+                f.write(output_module_header)
+                f.write("\n")
 
     def gen_kernel(self, kernel):
         '''
@@ -957,22 +948,7 @@ class Cabana_PIR(Backend):
     def gen_particle(self, particle):
         # Store the particle for later
         self._particle = particle
-        # I have performance concerns about putting a struct inside the AoSoA
-        # but it may be ok, we will see.
-        # Output the core part type
         output = ""
-        output = output + "struct core_part_type{\n"
-        output = output + "    double position[3];\n"
-        output = output + "    double velocity[3];\n"
-        output = output + "};\n\n"
-
-        #Output the neighbour part type
-        output = output + "struct neighbour_part_type{\n"
-        output = output + "    double cutoff;\n"
-        if HartreeParticleDSL.get_mpi():
-            output = output + "    int rank;\n"
-            output = output + "    double old_position[3];\n"
-        output = output + "};\n\n"
 
         #particle.add_element("core_part_position", "double[3]")
 #        particle.add_element("core_part_velocity", "double[3]")
@@ -1042,6 +1018,9 @@ class Cabana_PIR(Backend):
             output = output + ",\n    double[3]"
         output = output + ",\n    double[3]"
         output = output + ",\n    double"
+        if HartreeParticleDSL.get_mpi():
+            output = output + ",\n    double"
+            output = output + ",\n    double[3]"
         output = output + ">;\n"
 
         return output
@@ -1097,7 +1076,7 @@ class Cabana_PIR(Backend):
         return output
 
     def cleanup(self, *args, current_indent, **kwargs):
-        rval = "}\n"
+        rval = "\n}\n" # Choosing no indentation for this } to match the outer one.
         return rval
 
     def println(self, string, *args, **kwargs):
@@ -1288,8 +1267,6 @@ class Cabana_PIR(Backend):
             string = fn( *args, **kwargs)
             return string
         except (AttributeError) as err:
-            print(f"Didn't find {func_call} in backend")
-            print(err)
             pass
         for system in self._coupled_systems:
             try:
@@ -1298,7 +1275,6 @@ class Cabana_PIR(Backend):
                 return string
             except (AttributeError) as err:
                 pass
-        print(f"Didn't return for {func_call}")
         raise AttributeError
 
     def get_extra_symbols(self, function_list):
@@ -1327,11 +1303,11 @@ class Cabana_PIR(Backend):
         rval = rval + indent_str + "{\n"
         indent_str = indent_str + " " * indent
         rval = rval + indent_str + "_rank_update_functor<decltype(core_part_position_slice), decltype(neighbour_part_rank_slice)> ruf(box,\n"
-        rval = rval + indent_str + "    core_part_position_slice, neighbour_part_rank_slice, box.x_ranks, box.y_ranks, box.z_ranks, myrank);"
+        rval = rval + indent_str + "    core_part_position_slice, neighbour_part_rank_slice, box.x_ranks, box.y_ranks, box.z_ranks, myrank);\n"
         rval = rval + indent_str + "Cabana::SimdPolicy<VectorLength, ExecutionSpace> temp_policy(0, particle_aosoa.size());\n"
         rval = rval + indent_str + "Cabana::simd_parallel_for( temp_policy, ruf, \"rank_update_functor\");\n"
-        rval = ravl + indent_str + "Kokkos::fence();\n"
-        rval = rval + current_indent + "}\n"
+        rval = rval + indent_str + "Kokkos::fence();\n"
+        rval = rval + current_indent * " " + "}\n"
         return rval
 
     def gen_mpi_comm_after_bcs(self, current_indent=4, indent=4) -> str:
@@ -1360,7 +1336,7 @@ class Cabana_PIR(Backend):
         # TODO x = 1D_rank - z*x_ranks*y_ranks - y*x_ranks;
         indent_str = current_indent * " "
         rval = ""
-        rval = rval + current_indent + "Kokkos::deep_copy(particle_aosoa_host, particle_aosoa);\n"
-        rval = rval + current_indent + "_migrator.exchange_data(particle_aosoa_host, neighbors, myrank, particle_aosoa_host.size());\n"
-        rval = rval + current_indent + "Kokkos::deep_copy(particle_aosoa, particle_aosoa_host);\n"
+        rval = rval + indent_str + "Kokkos::deep_copy(particle_aosoa_host, particle_aosoa);\n"
+        rval = rval + indent_str + "_migrator.exchange_data(particle_aosoa_host, neighbors, myrank, particle_aosoa_host.size());\n"
+        rval = rval + indent_str + "Kokkos::deep_copy(particle_aosoa, particle_aosoa_host);\n"
         return rval

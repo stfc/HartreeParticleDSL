@@ -136,7 +136,10 @@ class FDTD_MPI_Kokkos(force_solver):
             code = code + "char filename[300];\n"
             code = code + current_indent* " " + "sprintf(filename, \"" + f"{filename}%.4d.hdf5" + "\", " + f"{variable});\n"
         else:
-            code = code + "char filename[300]" + f" = \"{filename}\";\n"
+            if "\"" in filename:
+                code = code + "char filename[300]" + f" = {filename};\n"
+            else:
+                code = code + "char filename[300]" + f" = \"{filename}\";\n"
         code = code + current_indent * " " +  f"grid_hdf5_output( field, filename, myrank, nranks);\n"
         current_indent = current_indent - indent
         code = code + current_indent * " " + "}\n"

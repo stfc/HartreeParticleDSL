@@ -59,62 +59,62 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
         :type part_type: Particle
         '''
         code = ""
-        # Generate the function to get the box size from the hdf5 file first.
-        # ============================ get_box_size ===========================
-        code = code + self.indent() + "void get_box_size(boundary &box, const char* filename){\n"
-        self.increment_indent()
-        code = code + self.indent() + "hid_t file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);\n"
-        code = code + self.indent() + "if( file_id < 0 ){\n"
-        self.increment_indent()
-        code = code + self.indent() + "std::cout << \"Failed to open file \" << filename << \"\\n\";\n"
-        code = code + self.indent() + "exit(1);\n"
-        self.decrement_indent()
-        code = code + self.indent() + "}\n"
-        code = code + self.indent() + "hid_t temp_space;\n"
-        code = code + self.indent() + "hsize_t dims[1];\n\n"
-
-        # Load the box size
-        code = code + self.indent() + "hid_t boxsize = H5Dopen2(file_id, \"Box_Size\", H5P_DEFAULT);\n"
-        code = code + self.indent() + "temp_space = H5Dget_space(boxsize);\n"
-        code = code + self.indent() + "H5Sget_simple_extent_dims(temp_space, dims, NULL);\n"
-        code = code + self.indent() + "int size_box = dims[0];\n"
-        code = code + self.indent() + "double* box_temp = (double*) malloc(sizeof(double) * size_box);\n"
-        code = code + self.indent() + "H5Dread(boxinfo, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, box_temp);\n"
-        code = code + self.indent() + "box.x_min = box_temp[0];\n"
-        code = code + self.indent() + "box.x_max = box_temp[1];\n"
-        code = code + self.indent() + "if(size_box > 2){\n"
-        self.increment_indent()
-        code = code + self.indent() + "box.y_min = box_temp[2];\n"
-        code = code + self.indent() + "box.y_max = box_temp[3];\n"
-        self.decrement_indent()
-        code = code + self.indent() + "}else{\n"
-        self.increment_indent()
-        code = code + self.indent() + "box.y_min = 0.0;\n"
-        code = code + self.indent() + "box.y_max = 0.0;\n"
-        self.decrement_indent()
-        code = code + self.indent() + "}\n"
-        code = code + self.indent() + "if(size_box > 4){\n"
-        self.increment_indent()
-        code = code + self.indent() + "box.z_min = box_temp[4];\n"
-        code = code + self.indent() + "box.z_max = box_temp[5];\n"
-        self.decrement_indent()
-        code = code + self.indent() + "}else{\n"
-        self.increment_indent()
-        code = code + self.indent() + "box.z_min = 0.0;\n"
-        code = code + self.indent() + "box.z_max = 0.0;\n"
-        self.decrement_indent()
-        code = code + self.indent() + "}\n\n"
-
-        # Clean up
-        code = code + self.indent() + "free(box_temp);\n"
-        code = code + self.indent() + "H5Dclose(boxinfo);\n"
-        code = code + self.indent() + "H5Fclose(file_id);\n"
-        self.decrement_indent()
-        code = code + "}\n\n"
-        # ============================ get_box_size ===========================
-
-
         if len(self._inputs) > 0:
+            # Generate the function to get the box size from the hdf5 file first.
+            # ============================ get_box_size ===========================
+            code = code + self.indent() + "void get_box_size(boundary &box, const char* filename){\n"
+            self.increment_indent()
+            code = code + self.indent() + "hid_t file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);\n"
+            code = code + self.indent() + "if( file_id < 0 ){\n"
+            self.increment_indent()
+            code = code + self.indent() + "std::cout << \"Failed to open file \" << filename << \"\\n\";\n"
+            code = code + self.indent() + "exit(1);\n"
+            self.decrement_indent()
+            code = code + self.indent() + "}\n"
+            code = code + self.indent() + "hid_t temp_space;\n"
+            code = code + self.indent() + "hsize_t dims[1];\n\n"
+
+            # Load the box size
+            code = code + self.indent() + "hid_t boxsize = H5Dopen2(file_id, \"Box_Size\", H5P_DEFAULT);\n"
+            code = code + self.indent() + "temp_space = H5Dget_space(boxsize);\n"
+            code = code + self.indent() + "H5Sget_simple_extent_dims(temp_space, dims, NULL);\n"
+            code = code + self.indent() + "int size_box = dims[0];\n"
+            code = code + self.indent() + "double* box_temp = (double*) malloc(sizeof(double) * size_box);\n"
+            code = code + self.indent() + "H5Dread(boxinfo, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, box_temp);\n"
+            code = code + self.indent() + "box.x_min = box_temp[0];\n"
+            code = code + self.indent() + "box.x_max = box_temp[1];\n"
+            code = code + self.indent() + "if(size_box > 2){\n"
+            self.increment_indent()
+            code = code + self.indent() + "box.y_min = box_temp[2];\n"
+            code = code + self.indent() + "box.y_max = box_temp[3];\n"
+            self.decrement_indent()
+            code = code + self.indent() + "}else{\n"
+            self.increment_indent()
+            code = code + self.indent() + "box.y_min = 0.0;\n"
+            code = code + self.indent() + "box.y_max = 0.0;\n"
+            self.decrement_indent()
+            code = code + self.indent() + "}\n"
+            code = code + self.indent() + "if(size_box > 4){\n"
+            self.increment_indent()
+            code = code + self.indent() + "box.z_min = box_temp[4];\n"
+            code = code + self.indent() + "box.z_max = box_temp[5];\n"
+            self.decrement_indent()
+            code = code + self.indent() + "}else{\n"
+            self.increment_indent()
+            code = code + self.indent() + "box.z_min = 0.0;\n"
+            code = code + self.indent() + "box.z_max = 0.0;\n"
+            self.decrement_indent()
+            code = code + self.indent() + "}\n\n"
+
+            # Clean up
+            code = code + self.indent() + "free(box_temp);\n"
+            code = code + self.indent() + "H5Dclose(boxinfo);\n"
+            code = code + self.indent() + "H5Fclose(file_id);\n"
+            self.decrement_indent()
+            code = code + "}\n\n"
+            # ============================ get_box_size ===========================
+
+
             # Create the hdf5_input function.
             # ============================= HDF5_INPUT ============================
             code = code + self.indent() + "template <class aosoa_class, class aosoa_host_class> void hdf5_input(aosoa_class &non_host_aosoa,\n"
@@ -206,7 +206,7 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
             self.increment_indent()
             for index, key in enumerate(positions):
                 if key is not None:
-                    code = code + f"pos_slice(counter, {index}) = {key}_temp_array[i];\n"
+                    code = code + self.indent() + f"pos_slice(counter, {index}) = {key}_temp_array[i];\n"
             code = code + self.indent() + "counter++;\n"
             self.decrement_indent()
             code = code + self.indent() + "}\n"
@@ -410,6 +410,8 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
             code = code + self.indent() + "}\n"
             # ============================= HDF5_OUTPUT ============================
 
+        return code
+
 
     def call_get_box_size_pir(self, part_count, filename, current_indent=4):
         '''
@@ -446,7 +448,10 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
             code = code + current_indent * " " + "char filename[300];\n"
             code = code + current_indent * " " + "sprintf(filename, \"" + f"{filename}%.4d.hdf5" + "\", " + f"{variable});\n"
         else:
-            code = code + current_indent * " " + "char filename[300]" + f" = \"{filename}\";\n"
+            if "\"" in filename:
+                code = code + current_indent * " " + "char filename[300]" + f" = {filename};\n"
+            else:
+                code = code + current_indent * " " + "char filename[300]" + f" = \"{filename}\";\n"
         code = code + current_indent * " " + "Cabana::deep_copy(particle_aosoa_host, particle_aosoa);\n"
         code = code + current_indent * " " + "int myrank, nranks;\n"
         code = code + current_indent * " " + "MPI_Comm_rank( MPI_COMM_WORLD, &myrank );\n"
