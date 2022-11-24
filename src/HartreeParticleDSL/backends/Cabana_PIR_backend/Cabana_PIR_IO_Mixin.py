@@ -62,3 +62,18 @@ class Cabana_PIR_IO_Mixin(metaclass=ABCMeta):
         raise NotImplementedError(f"{self.__class__.__name__} does not "
                                   "implement required function "
                                   "get_includes_cabana_pir")
+
+    def get_header_includes_cabana_pir(self):
+        '''
+        Returns the includes required for the header to use this IO module for
+        Cabana PIR.
+
+        :raises NotImplementedError: Abstract method that must be
+                                     overriden by children
+
+        :returns: The header includes for this IO module.
+        :rtype: List of str
+        '''
+        raise NotImplementedError(f"{self.__class__.__name__} does not "
+                                  "implement required function "
+                                  "get_header_includes_cabana_pir")

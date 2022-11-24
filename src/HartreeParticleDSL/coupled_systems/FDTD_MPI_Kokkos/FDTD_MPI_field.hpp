@@ -8,7 +8,7 @@ using MemorySpace = Kokkos::HostSpace;
 using field_type = Kokkos::View<double* , MemorySpace>;
 using scatter_field_type = Kokkos::Experimental::ScatterView<double*>;
 
-struct field{
+struct field_struc{
     double hdt;
     double hdtx;
     double cnx;
@@ -23,7 +23,7 @@ struct field{
 };
 
 struct FDTD_field{
-    struct field field;
+    struct field_struc field;
     field_type ex;
     field_type ey;
     field_type ez;

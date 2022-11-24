@@ -68,7 +68,7 @@ class FDTD_MPI_Kokkos(force_solver):
         self._includes.append("\"FDTD_MPI_boundaries.hpp\"")
         self._includes.append("\"FDTD_MPI_interpolation.hpp\"")
         self._includes.append("\"FDTD_MPI_step.hpp\"")
-        self._includes.append("\"FDTD_MPI_init_cabana.hpp\"")
+        self._includes.append("\"FDTD_MPI_init.hpp\"")
         self._includes.append("\"FDTD_MPI_IO_HDF5.hpp\"")
 
         self._includes_header = []
@@ -93,7 +93,10 @@ class FDTD_MPI_Kokkos(force_solver):
     def setup_testcase(self, filename, current_indent=0, indent=0):
         in_str = " " * current_indent
         # Can filename be a variable? Need to check
-        code = in_str + "load_grid(field, \"" + f"{filename}" + "\", myrank, nranks, box);\n"
+        if "\"" in filename:
+            code = in_str + "load_grid_hdf5(field, " + f"{filename}" + ", myrank, nranks, config.config_host(0).space.box_dims);\n"
+        else:
+            code = in_str + "load_grid_hdf5(field, \"" + f"{filename}" + "\", myrank, nranks, config.config_host(0).space.box_dims);\n"
         # Letting the particle IO load the particles for now.
         code = code + in_str + "update_e_field_functor _efield_func(field, field.nx);\n"
         code = code + in_str + "update_b_field_functor _bfield_func(field, field.nx);\n"
@@ -307,16 +310,16 @@ class FDTD_MPI_Kokkos(force_solver):
 
         code = code + f"{in_str}part_x = " + c_vis(x_pos_ref) + " - field.field.x_grid_min_local;\n"
         code = code + f"{in_str}GatherForcesToGrid_1D(part_weight, part_q, part_x, {delta_x},\n"
-        code = code + f"{in_str}{in_str}" + f"cell_x1, gx, hx, field.jx, field.jy, field.jz, idt, {part_vy}, {part_vz}, idx, dtco2, idtf, idxf,\n"
+        code = code + f"{in_str}{in_str}" + f"cell_x1, gx, hx, field.scatter_jx, field.scatter_jy, field.scatter_jz, idt, {part_vy}, {part_vz}, idx, dtco2, idtf, idxf,\n"
         code = code + f"{in_str}{in_str}" + "field.nx, fcx, fcy, field.ng);\n"
         return code
 
     def has_preferred_decomposition(self):
         return True
 
-    def get_preferred_decomposition(self, field_str, current_indent=0, indent=0) -> str:
+    def get_preferred_decomposition(self, box_str, current_indent=0, indent=0) -> str:
         '''
         Returns the call to the coupled system which places the preferred
         domain decomposition into the system's boundary object.
         '''
-        return " " * current_indent + f"store_domain_decomposition({field_str}, box);\n"
+        return " " * current_indent + f"store_domain_decomposition(field, {box_str});\n"

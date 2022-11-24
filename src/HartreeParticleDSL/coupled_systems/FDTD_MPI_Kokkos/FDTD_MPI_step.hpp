@@ -26,43 +26,43 @@ struct update_e_field_functor{
         //Assuming non cpml
         if(_field.field.field_order == 2){
            cx1 = _field.field.cnx;
-           _field.ex(ix) = _field.ex(ix) - field.field.fac * _field.jx(ix);
+           _field.ex(ix) = _field.ex(ix) - _field.field.fac * _field.jx(ix);
            int m1 = ix-1;
-           _field.ey(ix) = _field.ey(ix) - cx1 * (_field.bz(ix) - _field.bz(m1)) - field.field.fac * _field.jy(ix);
-           _field.ez(ix) = _field.ez(ix) + cx1 * (_field.by(ix) - _field.by(m1)) - field.field.fac * _field.jz(ix);
-        }else if(field.field.field_order == 4){
+           _field.ey(ix) = _field.ey(ix) - cx1 * (_field.bz(ix) - _field.bz(m1)) - _field.field.fac * _field.jy(ix);
+           _field.ez(ix) = _field.ez(ix) + cx1 * (_field.by(ix) - _field.by(m1)) - _field.field.fac * _field.jz(ix);
+        }else if(_field.field.field_order == 4){
             c1 = 9.0/8.0;
             c2 = -1.0 / 24.0;
-            cx1 = c1 * field.field.cnx;
-            cx2 = c2 * field.field.cnx;
-            _field.ex(ix) = _field.ex(ix) - field.field.fac * _field.jx(ix);
+            cx1 = c1 * _field.field.cnx;
+            cx2 = c2 * _field.field.cnx;
+            _field.ex(ix) = _field.ex(ix) - _field.field.fac * _field.jx(ix);
             int m1 = ix-1;
             int m2 = ix-2;
             int p1 = ix+1;
             _field.ey(ix) = _field.ey(ix) - cx1 * (_field.bz(ix) - _field.bz(m1)) - cx2 *
-                             (_field.bz(p1) - _field.bz(m2)) - field.field.fac * _field.jy(ix);
+                             (_field.bz(p1) - _field.bz(m2)) - _field.field.fac * _field.jy(ix);
             _field.ez(ix) = _field.ez(ix) + cx1 * (_field.by(ix) - _field.by(m1)) + cx2 *
-                             (_field.by(p1) - _field.by(m2)) - field.field.fac * _field.jz(ix);
+                             (_field.by(p1) - _field.by(m2)) - _field.field.fac * _field.jz(ix);
         }else{
             c1 = 75.0/64.0;
             c2 = -25.0 / 384.0;
             c3 = 3.0 / 640.0;
-            cx1 = c1 * field.field.cnx;
-            cx2 = c2 * field.field.cnx;
-            cx3 = c3 * field.field.cnx;
+            cx1 = c1 * _field.field.cnx;
+            cx2 = c2 * _field.field.cnx;
+            cx3 = c3 * _field.field.cnx;
 
             int m1 = ix-1;
             int m2 = ix-2;
             int m3 = ix-3;
             int p1 = ix+1;
             int p2 = ix+2;
-            _field.ex(ix) = _field.ex(ix) - field.field.fac * _field.jx(ix);
+            _field.ex(ix) = _field.ex(ix) - _field.field.fac * _field.jx(ix);
             _field.ey(ix) = _field.ey(ix) - cx1 * (_field.bz(ix) - _field.bz(m1))
                    - cx2 * (_field.bz(p1) - _field.bz(m2)) - cx3 * (_field.bz(p2) - _field.bz(m3)) -
-                   field.field.fac * _field.jy(ix);
+                   _field.field.fac * _field.jy(ix);
             _field.ez(ix) = _field.ez(ix) + cx1 * (_field.by(ix) - _field.by(m1))
                    + cx1 * (_field.by(p1) - _field.by(m2)) + cx3 * (_field.by(p2) - _field.by(m3)) -
-                   field.field.fac * _field.jy(ix);
+                   _field.field.fac * _field.jy(ix);
         }
     }
 };
@@ -85,18 +85,18 @@ struct update_b_field_functor{
         double c1, c2, c3;
         double cx1, cx2, cx3;
         //Assuming non cpml and using maxwell_solver_yee
-        if(field.field.field_order == 2){
+        if(_field.field.field_order == 2){
             //Yee solver
-            cx1 = field.field.hdtx;
+            cx1 = _field.field.hdtx;
             int p1 = ix+1;
             _field.by(ix) = _field.by(ix) + cx1 * (_field.ez(p1) - _field.ez(ix));
             _field.bz(ix) = _field.bz(ix) - cx1 * (_field.ey(p1) - _field.ey(ix));
-        }else if(field.field.field_order == 4){
+        }else if(_field.field.field_order == 4){
             c1 = 9.0/8.0;
             c2 = -1.0 / 24.0;
 
-            cx1 = c1 * field.field.hdtx;
-            cx2 = c2 * field.field.hdtx;
+            cx1 = c1 * _field.field.hdtx;
+            cx2 = c2 * _field.field.hdtx;
 
             int m1 = ix-1;
             int p1 = ix+1;
@@ -109,9 +109,9 @@ struct update_b_field_functor{
             c2 = -25.0 / 384.0;
             c3 = 3.0 / 640.0;
 
-            cx1 = c1 * field.field.hdtx;
-            cx2 = c2 * field.field.hdtx;
-            cx3 = c3 * field.field.hdtx;
+            cx1 = c1 * _field.field.hdtx;
+            cx2 = c2 * _field.field.hdtx;
+            cx3 = c3 * _field.field.hdtx;
 
             int m1 = ix-1;
             int m2 = ix-2;

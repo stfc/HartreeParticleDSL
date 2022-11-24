@@ -1,5 +1,5 @@
 #include <Kokkos_Core.hpp>
-#include <Kokkos_Scatterview.hpp>
+#include <Kokkos_ScatterView.hpp>
 #include "mpi.h"
 #include "FDTD_MPI_field.hpp"
 #include "hdf5.h"

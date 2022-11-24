@@ -5,19 +5,19 @@
 #include <Kokkos_Random.hpp>
 #include <Kokkos_ScatterView.hpp>
 
-#include "FDTD_field.hpp"
-#include "FDTD_step.hpp"
+#include "FDTD_MPI_field.hpp"
+#include "FDTD_MPI_step.hpp"
 
 KOKKOS_INLINE_FUNCTION
-void interpolate_from_grid_tophat(double part_weight, double part_q, double part_m,
-                                  double *part_x, double part_px, double part_py, double part_pz,
-                                  double *ex_part, double *ey_part, double *ez_part,
-                                  double *bx_part, double *by_part, double *bz_part,
-                                  double cell_x_r, int *cell_x1, double *gx, double *hx,
-                                  field_type ex, field_type ey, field_type ez,
-                                  field_type bx, field_type by, field_type bz, double idt,
-                                  double idx, double dtco2, double idtf, double idxf,
-                                  int nx, double fcx, double fcy, int ng){
+void interpolate_from_grid_tophat_1D(double part_weight, double part_q, double part_m,
+                                     double *part_x, double part_px, double part_py, double part_pz,
+                                     double *ex_part, double *ey_part, double *ez_part,
+                                     double *bx_part, double *by_part, double *bz_part,
+                                     double cell_x_r, int *cell_x1, double *gx, double *hx,
+                                     field_type ex, field_type ey, field_type ez,
+                                     field_type bx, field_type by, field_type bz, double idt,
+                                     double idx, double dtco2, double idtf, double idxf,
+                                     int nx, double fcx, double fcy, int ng){
 
     double part_mc = c * part_m;
     double ipart_mc = 1.0 / part_mc;
@@ -54,13 +54,13 @@ void interpolate_from_grid_tophat(double part_weight, double part_q, double part
 }
 
 KOKKOS_INLINE_FUNCTION
-void GatherForcesToGrid(double part_weight, double part_q,
-                        double part_x, double delta_x,
-                        int cell_x1, double *gx, double *hx,
-                        scatter_field_type scatter_jx, scatter_field_type scatter_jy, scatter_field_type scatter_jz,
-                        double idt, double part_vy, double part_vz,
-                        double idx, double dtco2, double idtf, double idxf,
-                        int nx, int id, double fcx, double fcy, int jng){
+void GatherForcesToGrid_1D(double part_weight, double part_q,
+                           double part_x, double delta_x,
+                           int cell_x1, double *gx, double *hx,
+                           scatter_field_type scatter_jx, scatter_field_type scatter_jy, scatter_field_type scatter_jz,
+                           double idt, double part_vy, double part_vz,
+                           double idx, double dtco2, double idtf, double idxf,
+                           int nx, double fcx, double fcy, int jng){
 
     //Move particle to t + 1.5dt;
     part_x = part_x + delta_x;

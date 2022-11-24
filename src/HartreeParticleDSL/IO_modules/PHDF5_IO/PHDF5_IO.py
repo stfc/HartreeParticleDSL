@@ -39,9 +39,22 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
     def decrement_indent(self):
         self._current_indent = self._current_indent - self._indent
 
+    def get_header_includes_cabana_pir(self):
+        '''
+        Returns the includes required for the header to use this IO module for
+        Cabana PIR.
+
+        :returns: The header includes for this IO module.
+        :rtype: List of str
+        '''
+        includes = []
+        includes.append("\"hdf5.h\"")
+        includes.append("\"mpi.h\"")
+        return includes
+
     def get_includes_cabana_pir(self):
         '''
-        Returns the includes required to use this IO module for Cabana.
+        Returns the includes required to use this IO module for Cabana PIR.
 
         :returns: The includes for this IO module.
         :rtype: List of str
@@ -80,7 +93,7 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
             code = code + self.indent() + "H5Sget_simple_extent_dims(temp_space, dims, NULL);\n"
             code = code + self.indent() + "int size_box = dims[0];\n"
             code = code + self.indent() + "double* box_temp = (double*) malloc(sizeof(double) * size_box);\n"
-            code = code + self.indent() + "H5Dread(boxinfo, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, box_temp);\n"
+            code = code + self.indent() + "H5Dread(boxsize, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, box_temp);\n"
             code = code + self.indent() + "box.x_min = box_temp[0];\n"
             code = code + self.indent() + "box.x_max = box_temp[1];\n"
             code = code + self.indent() + "if(size_box > 2){\n"
@@ -108,7 +121,7 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
 
             # Clean up
             code = code + self.indent() + "free(box_temp);\n"
-            code = code + self.indent() + "H5Dclose(boxinfo);\n"
+            code = code + self.indent() + "H5Dclose(boxsize);\n"
             code = code + self.indent() + "H5Fclose(file_id);\n"
             self.decrement_indent()
             code = code + "}\n\n"
@@ -199,8 +212,8 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
 
             # Now copy in the positions
             code = code + self.indent() + "int counter = 0;\n"
-            code = code + self.indent() + "auto pos_slice = Cabana::slice<part_pos>(particle_aosoa);\n"
-            code = code + self.indent() + "for(int i = 0; i < global_parts; i++{\n"
+            code = code + self.indent() + "auto pos_slice = Cabana::slice<core_part_position>(particle_aosoa);\n"
+            code = code + self.indent() + "for(int i = 0; i < global_parts; i++){\n"
             self.increment_indent()
             code = code + self.indent() + "if(" + condition + "){\n"
             self.increment_indent()
@@ -432,7 +445,7 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
         rval = "/* Create structures of size 1 to initialise, the HDF5 function will resize them */\n"
         rval = rval + indentation + f"Cabana::AoSoA<DataTypes, DeviceType, VectorLength> particle_aosoa( \"particle_list\", 1);\n"
         rval = rval + indentation + f"Cabana::AoSoA<DataTypes, HostType, VectorLength> particle_aosoa_host( \"particle_list_host\", 1);\n"
-        rval = rval + indentation + f"hdf5_input<decltype(particle_aosoa), decltype(particle_aosoa_host)>(particle_aosoa, particle_aosoa_host, config, box, {filename});\n"
+        rval = rval + indentation + f"hdf5_input<decltype(particle_aosoa), decltype(particle_aosoa_host)>(particle_aosoa, particle_aosoa_host, config, config.config_host(0).space.box_dims, {filename});\n"
         return rval
 
     def call_output_cabana_pir(self, part_count, filename, variable=None, current_indent=4, indentation=4):
@@ -456,7 +469,7 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
         code = code + current_indent * " " + "int myrank, nranks;\n"
         code = code + current_indent * " " + "MPI_Comm_rank( MPI_COMM_WORLD, &myrank );\n"
         code = code + current_indent * " " + "MPI_Comm_size( MPI_COMM_WORLD, &nranks );\n"
-        code = code + current_indent * " " + "hdf5_output<decltype(particle_aosoa_host)>(particle_aosoa_host, filename, box, config, myrank, nranks);\n"
+        code = code + current_indent * " " + "hdf5_output<decltype(particle_aosoa_host)>(particle_aosoa_host, filename, config.config_host(0).space.box_dims, config, myrank, nranks);\n"
         current_indent = current_indent - indentation
         code = code + current_indent * " " + "}\n"
 

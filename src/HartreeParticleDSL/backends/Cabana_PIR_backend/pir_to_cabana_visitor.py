@@ -155,7 +155,11 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         for slices in self._slices:
             rval = rval + f"{self._nindent}{slices.upper()} _{slices};\n"
         for structure in self._parent.structures:
-            rval = rval + f"{self._nindent}{structure} {structure};\n"
+            if self._parent._structures[structure] in type_mapping_str.values():
+                typename = [k for k, v in type_mapping_str.items() if v == self._parent._structures[structure]][0]
+            else:
+                typename = structure
+            rval = rval + f"{self._nindent}{typename} {structure};\n"
 
         # Constructor
         rval = rval + "\n"
@@ -166,7 +170,11 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             all_slices.append(f"{slices.upper()} {slices}")
         all_slices.append("config_struct_type " + node.arguments[1].symbol.name)
         for structure in self._parent.structures:
-            all_slices.append(f"{structure} {structure.upper()}")
+            if self._parent._structures[structure] in type_mapping_str.values():
+                typename = [k for k, v in type_mapping_str.items() if v == self._parent._structures[structure]][0]
+            else:
+                typename = structure
+            all_slices.append(f"{typename} {structure.upper()}")
         classes = ", ".join(all_slices)
         rval = rval + classes + "):\n"
         all_slices = []
@@ -183,7 +191,11 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             rval = rval + f"\n{self._nindent}void update_structs("
             all_structs = []
             for struct in self._parent.structures:
-                all_structs.append(struct + " " + struct.upper())
+                if self._parent._structures[structure] in type_mapping_str.values():
+                    typename = [k for k, v in type_mapping_str.items() if v == self._parent._structures[structure]][0]
+                else:
+                    typename = structure
+                all_structs.append(typename + " " + struct.upper())
             rval = rval + ", ".join(all_structs) + "){\n"
             self.indent()
             for struct in self._parent.structures:
@@ -298,7 +310,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
                     for struct in self._parent.structures:
                         struct_list.append(struct)
                     rval = rval + ", ".join(struct_list) + ");\n"
-                rval = rval + f"{self._nindent}Cabana::simd_parallel_for(simd_policy, {bound.name}"
+                rval = rval + f"{self._nindent}Cabana::simd_parallel_for(simd_policy, {bound.name}, "
                 rval = rval + "\"" + bound.name + "\");\n"
                 rval = rval + self._nindent + "Kokkos::fence();"
             # If we have MPI and move particles do the post-boundary condition stuff
@@ -483,7 +495,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
     def visit_configreference_node(self, node: ConfigReference) -> str:
         # TODO
         if self._in_kernel:
-            return f"_{node.symbol.name}.{self._visit(node.member)}"
+            return f"_{node.symbol.name}(0).{self._visit(node.member)}"
         else:
             return "config.config_host(0)." + self._visit(node.member)
         assert False
