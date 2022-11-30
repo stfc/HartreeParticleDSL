@@ -13,9 +13,9 @@ void kokkos_fdtd_initialize_1D(FDTD_field &field, int nx, int ng){
     field.jy = field_type("jy", nx + 2*ng);
     field.jz = field_type("jz", nx + 2*ng);
 
-    field.scatter_jx = scatter_field_type(config.jx);
-    field.scatter_jy = scatter_field_type(config.jy);
-    field.scatter_jz = scatter_field_type(config.jz);
+    field.scatter_jx = scatter_field_type(field.jx);
+    field.scatter_jy = scatter_field_type(field.jy);
+    field.scatter_jz = scatter_field_type(field.jz);
 }
 
 void kokkos_fdtd_cleanup_1D(FDTD_field &field){

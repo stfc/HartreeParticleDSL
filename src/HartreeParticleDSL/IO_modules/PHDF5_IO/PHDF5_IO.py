@@ -9,13 +9,13 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import UnsupportedCodeError
 # New style module to go with Cabana_PIR and MPI.
 class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
     '''Implementation of the Parallel HDF5 IO Module.'''
-    type_map = {c_int: "H5T_STD_I32LE",
-                c_double : "H5T_NATIVE_DOUBLE",
-                c_float : "H5T_NATIVE_FLOAT",
-                c_int64_t : "H5T_STD_I64LE",
-                c_int32_t : "H5T_STD_I32LE",
-                c_int8_t : "H5T_STD_I8LE",
-                c_bool : "H5T_NATIVE_HBOOL"}
+    type_map = {"int": "H5T_STD_I32LE",
+                "double" : "H5T_NATIVE_DOUBLE",
+                "float" : "H5T_NATIVE_FLOAT",
+                "int64_t" : "H5T_STD_I64LE",
+                "int32_t" : "H5T_STD_I32LE",
+                "int8_t" : "H5T_STD_I8LE",
+                "bool" : "H5T_NATIVE_HBOOL"}
 
     def __init__(self, indent=4):
         super().__init__()
@@ -232,8 +232,8 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
                 if key in positions:
                     continue
                 code = code + self.indent() + "hid_t {0}_read_var = H5Dopen2(file_id, \"{0}\", H5P_DEFAULT);\n".format(key)
-                code = code + self.indent() + "filespace = H5Dget_space({0}_read_var);\n".format(key)
-                code = code + self.indent() + "H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offsets, NULL, shape, NULL);\n"
+                code = code + self.indent() + "space = H5Dget_space({0}_read_var);\n".format(key)
+#                code = code + self.indent() + "H5Sselect_hyperslab(space, H5S_SELECT_SET, offsets, NULL, shape, NULL);\n"
                 # Find the type of the variable from the particle structure
                 part_elem = self._inputs[key]
                 part_indexing = ""
@@ -244,15 +244,15 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
                     if temp_string == "velocity.x" or temp_string == "velocity[0]":
                         part_elem = "core_part_velocity"
                         part_indexing = ", 0"
-                        elem_type = c_double
+                        elem_type = "double"
                     elif temp_string == "velocity.y" or temp_string == "velocity[1]":
                         part_elem = "core_part_velocity"
                         part_indexing = ", 1"
-                        elem_type = c_double
+                        elem_type = "double"
                     elif temp_string == "velocity.z" or temp_string == "velocity[2]":
                         part_elem = "core_part_velocity"
                         part_indexing = ", 2"
-                        elem_type = c_double
+                        elem_type = "double"
                 elif part_elem.startswith("neighbour_part"):
                     assert False
                 else:
@@ -263,8 +263,8 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
                 elem_type = Cabana_PIR._type_map[elem_type]
                 code = code + self.indent() + "auto {0}_slice = Cabana::slice<{1}>(particle_aosoa);\n".format(key, part_elem)
                 code = code + self.indent() + "{0}* {1}_temp_array = ({0}*) malloc(sizeof({0}) * global_parts);\n".format(elem_type, key)
-                code = code + self.indent() + "H5Dread({0}_read_var, {1}, memspace, filespace, H5P_DEFAULT, {0}_temp_array);\n".format(key, h5_type)
-                code = code + self.indent() + "count = 0;\n"
+                code = code + self.indent() + "H5Dread({0}_read_var, {1}, H5S_ALL, space, H5P_DEFAULT, {0}_temp_array);\n".format(key, h5_type)
+                code = code + self.indent() + "counter = 0;\n"
                 code = code + self.indent() + "for(int i = 0; i < global_parts; i++){\n"
                 self.increment_indent()
                 code = code + self.indent() + "if(" + condition + "){\n"
@@ -288,7 +288,7 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
                 if key is not None:
                     code = code + self.indent() + f"free({key}_temp_array);\n"
             code = code + self.indent() + "H5Fclose(file_id);\n"
-            code = code + self.indent() + "Cabana::deep_copy(particle_aosoa, non_host_aosoa);\n"
+            code = code + self.indent() + "Cabana::deep_copy(non_host_aosoa, particle_aosoa);\n"
             self.decrement_indent()
             code = code + self.indent() + "}\n\n"
             # ============================= HDF5_INPUT ============================
@@ -375,27 +375,27 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
                     if temp_string == "position.x" or temp_string == "position[0]":
                         part_elem = "core_part_position"
                         part_indexing = ", 0"
-                        elem_type = c_double
+                        elem_type = "double"
                     elif temp_string == "position.y" or temp_string == "position[1]":
                         part_elem = "core_part_position"
                         part_indexing = ", 1"
-                        elem_type = c_double
+                        elem_type = "double"
                     elif temp_string == "position.z" or temp_string == "position[2]":
                         part_elem = "core_part_position"
                         part_indexing = ", 2"
-                        elem_type = c_double
+                        elem_type = "double"
                     elif temp_string == "velocity.x" or temp_string == "velocity[0]":
                         part_elem = "core_part_velocity"
                         part_indexing = ", 0"
-                        elem_type = c_double
+                        elem_type = "double"
                     elif temp_string == "velocity.y" or temp_string == "velocity[1]":
                         part_elem = "core_part_velocity"
                         part_indexing = ", 1"
-                        elem_type = c_double
+                        elem_type = "double"
                     elif temp_string == "velocity.z" or temp_string == "velocity[2]":
                         part_elem = "core_part_velocity"
                         part_indexing = ", 2"
-                        elem_type = c_double
+                        elem_type = "double"
                 elif part_elem.startswith("neighbour_part"):
                     pass
                 else:
@@ -459,7 +459,11 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
         current_indent = current_indent + indentation
         if variable is not None:
             code = code + current_indent * " " + "char filename[300];\n"
-            code = code + current_indent * " " + "sprintf(filename, \"" + f"{filename}%.4d.hdf5" + "\", " + f"{variable});\n"
+            if "\"" in filename:
+                rep_filename = filename.replace("\"", "")
+                code = code + current_indent * " " + "sprintf(filename, \"" + f"{rep_filename}%.4d.hdf5" + "\""+ f", {variable});\n"
+            else:
+                code = code + current_indent * " " + "sprintf(filename, \"" + f"{filename}%.4d.hdf5" + "\", " + f"{variable});\n"
         else:
             if "\"" in filename:
                 code = code + current_indent * " " + "char filename[300]" + f" = {filename};\n"

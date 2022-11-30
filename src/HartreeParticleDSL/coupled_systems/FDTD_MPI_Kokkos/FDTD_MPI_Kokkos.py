@@ -92,11 +92,14 @@ class FDTD_MPI_Kokkos(force_solver):
 
     def setup_testcase(self, filename, current_indent=0, indent=0):
         in_str = " " * current_indent
+        # For now these are fixed, but will eventually depend on interpolation type
+        code = in_str + "field.ng = 4;\n"
+        code = code + in_str + "field.jng = 4;\n"
         # Can filename be a variable? Need to check
         if "\"" in filename:
-            code = in_str + "load_grid_hdf5(field, " + f"{filename}" + ", myrank, nranks, config.config_host(0).space.box_dims);\n"
+            code = code + in_str + "load_grid_hdf5(field, " + f"{filename}" + ", myrank, nranks, config.config_host(0).space.box_dims);\n"
         else:
-            code = in_str + "load_grid_hdf5(field, \"" + f"{filename}" + "\", myrank, nranks, config.config_host(0).space.box_dims);\n"
+            code = code + in_str + "load_grid_hdf5(field, \"" + f"{filename}" + "\", myrank, nranks, config.config_host(0).space.box_dims);\n"
         # Letting the particle IO load the particles for now.
         code = code + in_str + "update_e_field_functor _efield_func(field, field.nx);\n"
         code = code + in_str + "update_b_field_functor _bfield_func(field, field.nx);\n"
@@ -137,7 +140,11 @@ class FDTD_MPI_Kokkos(force_solver):
         code = code + current_indent * " "
         if variable is not None:
             code = code + "char filename[300];\n"
-            code = code + current_indent* " " + "sprintf(filename, \"" + f"{filename}%.4d.hdf5" + "\", " + f"{variable});\n"
+            if "\"" in filename:
+                rep_filename = filename.replace("\"", "")
+            else:
+                rep_filename = filename
+            code = code + current_indent* " " + "sprintf(filename, \"" + f"{rep_filename}%.4d.hdf5" + "\", " + f"{variable});\n"
         else:
             if "\"" in filename:
                 code = code + "char filename[300]" + f" = {filename};\n"

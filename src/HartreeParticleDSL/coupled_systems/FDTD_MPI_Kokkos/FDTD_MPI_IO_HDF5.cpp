@@ -4,6 +4,7 @@
 #include "FDTD_MPI_field.hpp"
 #include "hdf5.h"
 #include "unistd.h"
+#include "part.h"
 
 void store_domain_decomposition(struct FDTD_field &field, boundary &box){
     box.local_x_min = field.field.x_min_local;
@@ -51,7 +52,7 @@ void load_grid_hdf5(struct FDTD_field &field, char* filename,
             (field.nx)++;
         }
     }
-    int min_local_cell = (myrank * (field.nxglobal / nranks));
+    field.min_local_cell = (myrank * (field.nxglobal / nranks));
     if(field.nxglobal % nranks != 0){
         if( myrank > field.nxglobal % nranks ){
             field.min_local_cell += (field.nxglobal % nranks);
@@ -60,10 +61,10 @@ void load_grid_hdf5(struct FDTD_field &field, char* filename,
         }
     }
     //Exclusive
-    field.max_local_cell = field.min_local_cell + field.nxlocal;
+    field.max_local_cell = field.min_local_cell + field.nx;
 
     //Now we got the local grid info, load the local grid.
-    size_grid = field.nxlocal;
+    size_grid = field.nx;
     field.ex = field_type("ex", size_grid + 2*field.ng);
     field.ey = field_type("ey", size_grid + 2*field.ng);
     field.ez = field_type("ez", size_grid + 2*field.ng);
@@ -92,7 +93,7 @@ void load_grid_hdf5(struct FDTD_field &field, char* filename,
     //already done hid_t f_ex = H5Dopen2(file_id, "Electric_Field_Ex", H5P_DEFAULT);
     H5Dread(f_ex, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, ex_temp_array);
     for(int i = 0; i < size_grid; i++){
-        host_ex(i+field.ng) = ex_temp_array[min_local_cell + i];
+        host_ex(i+field.ng) = ex_temp_array[field.min_local_cell + i];
     }
     free(ex_temp_array);
     H5Dclose(f_ex);
@@ -102,7 +103,7 @@ void load_grid_hdf5(struct FDTD_field &field, char* filename,
         double* ey_temp_array = (double*) malloc(sizeof(double) * field.nxglobal);
         H5Dread(f_ey, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, ey_temp_array);
         for(int i = 0; i < size_grid; i++){
-            host_ey(i+field.ng) = ey_temp_array[min_local_cell + i];
+            host_ey(i+field.ng) = ey_temp_array[field.min_local_cell + i];
         }
         free(ey_temp_array);
         H5Dclose(f_ey);
@@ -118,7 +119,7 @@ void load_grid_hdf5(struct FDTD_field &field, char* filename,
         double* ez_temp_array = (double*) malloc(sizeof(double) * field.nxglobal);
         H5Dread(f_ez, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, ez_temp_array);
         for(int i = 0; i < size_grid; i++){
-            host_ez(i+field.ng) = ez_temp_array[min_local_cell + i];
+            host_ez(i+field.ng) = ez_temp_array[field.min_local_cell + i];
         }
         free(ez_temp_array);
         H5Dclose(f_ez);
@@ -130,10 +131,10 @@ void load_grid_hdf5(struct FDTD_field &field, char* filename,
 
     hid_t f_bx = H5Dopen2(file_id, "Magnetic_Field_Bx", H5P_DEFAULT);
     if(f_bx >= 0){
-        double* bx_temp_array = (double*) malloc(sizeof(double) * *nxglobal);
+        double* bx_temp_array = (double*) malloc(sizeof(double) * field.nxglobal);
         H5Dread(f_bx, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, bx_temp_array);
         for(int i = 0; i < size_grid; i++){
-            host_bx(i+field.ng) = bx_temp_array[min_local_cell + i];
+            host_bx(i+field.ng) = bx_temp_array[field.min_local_cell + i];
         }
         free(bx_temp_array);
         H5Dclose(f_bx);
@@ -145,10 +146,10 @@ void load_grid_hdf5(struct FDTD_field &field, char* filename,
 
     hid_t f_by = H5Dopen2(file_id, "Magnetic_Field_By", H5P_DEFAULT);
     if(f_by >= 0){
-        double* by_temp_array = (double*) malloc(sizeof(double) * *nxglobal);
+        double* by_temp_array = (double*) malloc(sizeof(double) * field.nxglobal);
         H5Dread(f_by, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, by_temp_array);
         for(int i = 0; i < size_grid; i++){
-            host_by(i+field.ng) = by_temp_array[min_local_cell + i];
+            host_by(i+field.ng) = by_temp_array[field.min_local_cell + i];
         }
         free(by_temp_array);
         H5Dclose(f_by);
@@ -160,11 +161,10 @@ void load_grid_hdf5(struct FDTD_field &field, char* filename,
 
     hid_t f_bz = H5Dopen2(file_id, "Magnetic_Field_Bz", H5P_DEFAULT);
     if(f_bz >= 0){
-        double* bz_temp_array = (double*) malloc(sizeof(double) * *nxglobal);
+        double* bz_temp_array = (double*) malloc(sizeof(double) * field.nxglobal);
         H5Dread(f_bz, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, bz_temp_array);
-        printf("Read %i elements into host_bz, size of kokkos ds is %i\n", size_grid, host_bz.size());
         for(int i = 0; i < size_grid; i++){
-            host_bz(i+field.ng) = bz_temp_array[min_local_cell + i];
+            host_bz(i+field.ng) = bz_temp_array[field.min_local_cell + i];
         }
         free(bz_temp_array);
         H5Dclose(f_bz);
@@ -243,11 +243,10 @@ void grid_hdf5_output(struct FDTD_field field, char* filename, int myrank, int n
     int grid_size = field.nx;
     double* temp = (double*)malloc(sizeof(double) * grid_size);
     int ng = field.ng;
-    int grid_size = field.nx;
     hsize_t h_dims[1];
     h_dims[0] = grid_size;
     hsize_t nxg = field.nxglobal;
-    global_dim = H5Screate_simple(1, &nxg, NULL);
+    hid_t global_dim = H5Screate_simple(1, &nxg, NULL);
 
     int my_offset = 0;
     if(myrank == 0 && nranks > 1){
@@ -271,7 +270,7 @@ void grid_hdf5_output(struct FDTD_field field, char* filename, int myrank, int n
 
     h_dims[0] = grid_size;
 
-    memspace = H5Screate_simple(1, h_dims, NULL);
+    hid_t memspace = H5Screate_simple(1, h_dims, NULL);
 
     //Offset in memspace is 0
     offset[0] = 0;

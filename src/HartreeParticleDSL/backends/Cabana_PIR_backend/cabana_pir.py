@@ -24,12 +24,19 @@ class Cabana_PIR(Backend):
     parallel particle simulations.
     '''
     _type_map = {c_int : "int",
-            c_double : "double",
+            "int" : "int",
+            c_double : "double", # Is this used?
+            "double" : "double",
             c_float : "float",
+            "float" : "float",
             c_int64_t : "int64_t",
+            "int64_t" : "int64_t",
             c_int32_t : "int32_t",
+            "int32_t" : "int32_t",
             c_int8_t : "int8_t",
+            "int8_t" : "int8_t",
             c_bool : "bool",
+            "bool" : "bool"
             }
     _type_sizes = {_type_map[c_int] : 4,
             _type_map[c_double] : 8,
@@ -822,9 +829,9 @@ class Cabana_PIR(Backend):
                 symbol = HartreeParticleDSL.global_symbol_table().lookup(name)
                 dt_str = Cabana_PIR_Visitor.get_cpp_datatype(symbol.datatype)
                 if self._global_values[name] is not None:
-                    f.write(f"{dt_str} {name} = {self._global_values[name]};\n")
+                    f.write(f"extern {dt_str} {name};\n")
                 else:
-                    f.write(f"{dt_str} {name};\n")
+                    f.write(f"extern {dt_str} {name};\n")
 
             f.write(config_output)
             f.write(part_output)
@@ -833,22 +840,6 @@ class Cabana_PIR(Backend):
             if HartreeParticleDSL.get_mpi():
                 f.write(self.mpi_headers(config, part_type))
 
-        input_module_header = ""
-        if self._input_module is not None:
-            input_module_header = self._input_module.gen_code_cabana_pir(part_type) #FIXME
-        if input_module_header != "":
-            with open('part.h', "a") as f:
-                f.write(input_module_header)
-                f.write("\n")
-
-        output_module_header = ""
-        if self._output_module is not None and self._input_module is not self._output_module:
-            output_module_header = self._output_module.gen_code_cabana_pir(part_type) #FIXME
-        if output_module_header != "":
-            # Do something later
-            with open('part.h', "a") as f:
-                f.write(output_module_header)
-                f.write("\n")
         with open('part.h', "a") as f:
             f.write("#endif")
 
@@ -944,6 +935,27 @@ class Cabana_PIR(Backend):
 
         with open('code.cpp', 'w') as f:
             f.write(includes + "\n")
+            for name in self._global_values:
+                symbol = HartreeParticleDSL.global_symbol_table().lookup(name)
+                dt_str = Cabana_PIR_Visitor.get_cpp_datatype(symbol.datatype)
+                if self._global_values[name] is not None:
+                    f.write(f"{dt_str} {name} = {self._global_values[name]};\n")
+                else:
+                    f.write(f"{dt_str} {name};\n")
+            input_module_header = ""
+            if self._input_module is not None:
+                input_module_header = self._input_module.gen_code_cabana_pir(self._part_type) #FIXME
+            if input_module_header != "":
+                f.write(input_module_header)
+                f.write("\n")
+
+            output_module_header = ""
+            if self._output_module is not None and self._input_module is not self._output_module:
+                output_module_header = self._output_module.gen_code_cabana_pir(self._part_type) #FIXME
+            if output_module_header != "":
+                # Do something later
+                f.write(output_module_header)
+                f.write("\n")
             for code in codes:
                 f.write(code + "\n")
             f.write(main_code)
