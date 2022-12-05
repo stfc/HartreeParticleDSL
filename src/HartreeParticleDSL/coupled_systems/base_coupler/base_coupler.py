@@ -10,3 +10,12 @@ class base_coupler(metaclass=ABCMeta):
 
     def get_extra_symbols(self, function_list):
         return []
+
+    def copy_files():
+        raise NotImplementedError()
+
+    def compilation_files():
+        return []
+
+    def get_required_packages():
+        return []

@@ -469,6 +469,7 @@ class Cabana_PIR(Backend):
                     dec_indent()
                     rval = rval + get_indent() + "}\n"
 
+        rval = rval + get_indent() + "rank_slice(end) = -1;\n"
         dec_indent()
         rval = rval + get_indent() + "}else{\n"
         inc_indent()
@@ -522,7 +523,7 @@ class Cabana_PIR(Backend):
         # what the dimensions represent, will check.
         # .extent(dimension) gets the number of elements in each dimension, so if we have views
         # of dimension neighbours.size(), fixed_size, [extra dimension sizes] then we can do 
-        # sends of .extent(0) for each neighbour.
+        # sends of .extent(1) for each neighbour.
         rval = rval + get_indent() + "Kokkos::View<double***, MemorySpace> r_pos_space(\"temp_pos\", neighbors.size(), total_size, 3);\n"
         rval = rval + get_indent() + "Kokkos::View<double***, MemorySpace> r_vel_space(\"temp_vel\", neighbors.size(), total_size, 3);\n"
         rval = rval + get_indent() + "Kokkos::View<double**, MemorySpace> r_cutoff_space(\"temp_cutoff\", neighbors.size(), total_size);\n"
@@ -554,11 +555,12 @@ class Cabana_PIR(Backend):
         inc_indent()
         rval = rval + get_indent() + "if(neighbors[i] != myrank){\n"
         inc_indent()
-        rval = rval + get_indent() + "MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(0)*i], recv_count[i]*3,"
+        rval = rval + get_indent() + "tag = 0;\n"
+        rval = rval + get_indent() + "MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*i], recv_count[i]*3,"
         rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
-        rval = rval + get_indent() + "MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(0)*i], recv_count[i]*3,"
+        rval = rval + get_indent() + "MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*i], recv_count[i]*3,"
         rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
-        rval = rval + get_indent() + "MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(0)*i], recv_count[i],"
+        rval = rval + get_indent() + "MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(1)*i], recv_count[i],"
         rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
         for element in element_info.keys():
             mpi_dtype = None
@@ -575,21 +577,24 @@ class Cabana_PIR(Backend):
                                           + element + " with datatype "
                                           + element_info[element][0] + " for MPI")
             if element_info[element][1] == 0:
-                rval = rval + get_indent() + "MPI_Irecv(&r_"+element+"_space.data()[r_"+element+"_space.extent(0)*i], recv_count[i],"
+                rval = rval + get_indent() + "MPI_Irecv(&r_"+element+"_space.data()[r_"+element+"_space.extent(1)*i], recv_count[i],"
                 rval = rval + mpi_dtype + ", neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
             else:
-                rval = rval + get_indent() + "MPI_Irecv(&r_"+element+"_space.data()[r_"+element+"_space.extent(0)*i], recv_count[i]"
+                rval = rval + get_indent() + "MPI_Irecv(&r_"+element+"_space.data()[r_"+element+"_space.extent(1)"
+                for i in range(element_info[element][1]):
+                    rval = rval + f" * r_" + element + "_space.extent(" + str(i+2) + ")"
+                rval = rval + " * i], recv_count[i]"
                 for i in range(element_info[element][1]):
                     rval = rval + f" * {element_info[element][2][i]}"
                 rval = rval + ", " + mpi_dtype + ", neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
 
         # Now do sends
         rval = rval + get_indent() + "tag = 0;\n"
-        rval = rval + get_indent() + "MPI_Isend(&pos_space.data()[pos_space.extent(0)*i], send_count[i]*3,"
+        rval = rval + get_indent() + "MPI_Isend(&pos_space.data()[pos_space.extent(1)*i], send_count[i]*3,"
         rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
-        rval = rval + get_indent() + "MPI_Isend(&vel_space.data()[vel_space.extent(0)*i], send_count[i]*3,"
+        rval = rval + get_indent() + "MPI_Isend(&vel_space.data()[vel_space.extent(1)*i], send_count[i]*3,"
         rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
-        rval = rval + get_indent() + "MPI_Isend(&cutoff_space.data()[cutoff_space.extent(0)*i], send_count[i],"
+        rval = rval + get_indent() + "MPI_Isend(&cutoff_space.data()[cutoff_space.extent(1)*i], send_count[i],"
         rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
         for element in element_info.keys():
             mpi_dtype = None
@@ -605,10 +610,13 @@ class Cabana_PIR(Backend):
                 raise NotImplementedError("Don't know currently how to support datatype "
                                           + element_info[element[0]] + " for MPI")
             if element_info[element][1] == 0:
-                rval = rval + get_indent() + "MPI_Isend(&"+element+"_space.data()["+element+"_space.extent(0)*i], send_count[i],"
+                rval = rval + get_indent() + "MPI_Isend(&"+element+"_space.data()["+element+"_space.extent(1)*i], send_count[i],"
                 rval = rval + mpi_dtype + ", neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
             else:
-                rval = rval + get_indent() + "MPI_Isend(&"+element+"_space.data()["+element+"_space.extent(0)*i], send_count[i]"
+                rval = rval + get_indent() + "MPI_Isend(&"+element+"_space.data()["+element+"_space.extent(1)"
+                for i in range(element_info[element][1]):
+                    rval = rval + f" * r_" + element + "_space.extent(" + str(i+2) + ")"
+                rval = rval + " * i], send_count[i]"
                 for i in range(element_info[element][1]):
                     rval = rval + f" * {element_info[element][2][i]}"
                 rval = rval + ", " + mpi_dtype + ", neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
@@ -639,6 +647,11 @@ class Cabana_PIR(Backend):
         dec_indent()
         rval = rval + get_indent() + "}\n"
         rval = rval + get_indent() + "auto new_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa, \"new_rank\");\n"
+        rval = rval + get_indent() + "for(int i = particle_aosoa.size() - 1; i > end; i--){\n"
+        inc_indent()
+        rval = rval + get_indent() + "new_rank_slice(i) = -1;\n"
+        dec_indent()
+        rval = rval + get_indent() + "}\n"
         rval = rval + get_indent() + "if(size_change > 0){\n"
         inc_indent()
         rval = rval + get_indent() + "if(sent = 0){\n"
@@ -646,6 +659,7 @@ class Cabana_PIR(Backend):
         rval = rval + get_indent() + "end = current_size;\n"
         dec_indent()
         rval = rval + get_indent() + "}\n"
+        rval = rval + get_indent() + "while(end < current_size && end < particle_aosoa.size() && new_rank_slice(end) != -1 ) end++;\n"
         rval = rval + get_indent() + "for(int i = 0; i < particle_aosoa.size(); i++){\n"
         inc_indent()
         rval = rval + get_indent() + "new_rank_slice(i) = -1;\n"
@@ -712,6 +726,7 @@ class Cabana_PIR(Backend):
         rval = rval + "KOKKOS_INLINE_FUNCTION\n"
         rval = rval + "int get_oneD_rank(int x_r, int y_r, int z_r, int x_ranks, int y_ranks, int z_ranks){\n"
         rval = rval + "    int oneD_rank = z_r*(x_ranks*y_ranks) + y_r*(x_ranks) + x_r;\n"
+        rval = rval + "    return oneD_rank;\n"
         rval = rval + "}\n"
 
         rval = rval + "KOKKOS_INLINE_FUNCTION\n"
@@ -754,7 +769,7 @@ class Cabana_PIR(Backend):
         # Need to compute new ranks BEFORE doing the boundary condition
         rval = rval + "        if(_part_pos.access(ix, ij, 0) >= _box.local_x_max){\n"
         rval = rval + "            xr = xr + 1;\n"
-        rval = rval + "            if( xr > _xranks ) xr = 0;\n"
+        rval = rval + "            if( xr >= _xranks ) xr = 0;\n"
         rval = rval + "        }\n"
         rval = rval + "        if(_part_pos.access(ix, ij, 0) < _box.local_x_min){\n"
         rval = rval + "            xr = xr - 1;\n"
@@ -762,7 +777,7 @@ class Cabana_PIR(Backend):
         rval = rval + "        }\n"
         rval = rval + "        if(_part_pos.access(ix, ij, 1) >= _box.local_y_max){\n"
         rval = rval + "            yr = yr + 1;\n"
-        rval = rval + "            if( yr > _yranks ) yr = 0;\n"
+        rval = rval + "            if( yr >= _yranks ) yr = 0;\n"
         rval = rval + "        }\n"
         rval = rval + "        if(_part_pos.access(ix, ij, 1) < _box.local_y_min){\n"
         rval = rval + "            yr = yr - 1;\n"
@@ -770,7 +785,7 @@ class Cabana_PIR(Backend):
         rval = rval + "        }\n"
         rval = rval + "        if(_part_pos.access(ix, ij, 2) >= _box.local_z_max){\n"
         rval = rval + "            zr = zr + 1;\n"
-        rval = rval + "            if( zr > _zranks ) zr = 0;\n"
+        rval = rval + "            if( zr >= _zranks ) zr = 0;\n"
         rval = rval + "        }\n"
         rval = rval + "        if(_part_pos.access(ix, ij, 2) < _box.local_z_min){\n"
         rval = rval + "            zr = zr - 1;\n"
@@ -900,6 +915,14 @@ class Cabana_PIR(Backend):
         # Find where the output files should go
         # Generate the header file into that directory
         self.gen_headers(self._config, self._part_type)
+
+        # Copy related files from the coupled systems
+        for sys in self._coupled_systems:
+            sys.copy_files()
+
+        # TODO Generate makefile
+        # self._gen_makefile()
+
         # Open an output C++ file
         # Find all the kernels used by this main function and 
         # generate those kernels.
@@ -1046,7 +1069,7 @@ class Cabana_PIR(Backend):
         output = output + ",\n    double[3]"
         output = output + ",\n    double"
         if HartreeParticleDSL.get_mpi():
-            output = output + ",\n    double"
+            output = output + ",\n    int"
             output = output + ",\n    double[3]"
         output = output + ">;\n"
 
@@ -1367,17 +1390,96 @@ class Cabana_PIR(Backend):
         :returns: The code to do MPI communication for this backend.
         :rtype: str
         '''
-        # TODO initialise neighbors somewhere.
-        # TODO Add indentation.
-        #exchange_data( aosoa &particle_aosoa, std::vector<int> neighbors, int myrank, int npart, double sorting_size,
-# 15                          double max_movement, double region_min, double region_max)
-        # TODO 1D_rank = z*(x_ranks*y_ranks) + y*(x_ranks) + x;
-        # TODO z = (int) 1D_rank / (x_ranks*y_ranks);
-        # TODO y = (int) (1D_rank - z*x_ranks*y_ranks) / x_ranks;
-        # TODO x = 1D_rank - z*x_ranks*y_ranks - y*x_ranks;
         indent_str = current_indent * " "
         rval = ""
         rval = rval + indent_str + "Cabana::deep_copy(particle_aosoa_host, particle_aosoa);\n"
         rval = rval + indent_str + "_migrator.exchange_data(particle_aosoa_host, neighbors, myrank, particle_aosoa_host.size());\n"
+        rval = rval + indent_str + "particle_aosoa.resize(particle_aosoa_host.size());\n"
         rval = rval + indent_str + "Cabana::deep_copy(particle_aosoa, particle_aosoa_host);\n"
+
+        # TODO Need to remake slices and SimdPolicy as well.
+        rval = rval + indent_str + "core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);\n"
+        rval = rval + indent_str + "core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);\n"
+        rval = rval + indent_str + "neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);\n"
+        if HartreeParticleDSL.get_mpi():
+            rval = rval + indent_str + "neighbour_part_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa);\n"
+            rval = rval + indent_str + "neighbour_part_old_position_slice = Cabana::slice<neighbour_part_old_position>(particle_aosoa);\n"
+        for key in self._particle.particle_type:
+            if key != "core_part" and key != "neighbour_part":
+                rval = rval + indent_str + f"{key}_slice = Cabana::slice<{key}>" + "(particle_aosoa);\n\n"
+
+        rval = rval + indent_str + f"simd_policy = Cabana::SimdPolicy<VectorLength, ExecutionSpace>(0, particle_aosoa.size());\n\n"
+
+
+        # Generate the functors
+        for key in self._kernel_slices.keys():
+            rval = rval + indent_str + f"{key} = {key}_functor"
+            slice_names = []
+            for slices in self._kernel_slices[key]:
+                slice_names.append(f"decltype({slices}_slice)")
+            if len(slice_names) > 0:
+                rval = rval + "<"
+                rval = rval + ", ".join(slice_names) + ">"
+
+            rval = rval + f"("
+            slice_names = []
+            for slices in self._kernel_slices[key]:
+                slice_names.append(f"{slices}_slice")
+            rval = rval + ", ".join(slice_names) + ", config.config"
+            slice_names = []
+            for struct in self._structures.keys():
+                slice_names.append(struct)
+            if len(slice_names) > 0:
+                rval = rval + ","
+            rval = rval + ", ".join(slice_names) + ");\n" 
         return rval
+
+    def _gen_makefile(self):
+        raise NotImplementedError()
+        with open("CMakeLists.txt", "w") as f:
+            #TODO set project
+            import os
+            project_name = os.path.split(os.getcwd())[-1]
+            #TODO
+            output = "cmake_minimum_required (VERSION 3.10)\n"
+            output = output + f"project ({project_name})\n"
+            output = output + "set(Kokkos_DIR \"$ENV{Kokkos_ROOT}\" CACHE STRING \"Kokkos root directory\")\n"
+            required_packages = []
+            required_packages.append("Kokkos")
+            required_packages.append("Cabana")
+            if get_mpi():
+                required_packages.append("MPI")
+            # TODO IF we have GPU we need CUDAToolkit
+            # Check with IO and coupled systems for their needs
+            for sys in self._coupled_systems:
+                sys_req_pack = sys.get_required_packages()
+                for req in sys_req_pack:
+                    if req not in required_packages:
+                        required_packages.append(req)
+                
+            for package in required_packages:
+                output = output + f"find_package({package}, REQUIRED)\n"
+
+            if get_mpi():
+                output = output + "include_directories(SYSTEM ${MPI_INCLUDE_PATH})\n"
+
+            compiled_files = ["code.cpp"]
+            for sys in self._coupled_systems:
+                sys_files = sys.compilation_files()
+                for fil in sys_files:
+                    if fil not in compiled_files:
+                        compiled_files.append(fil)
+            
+            output = output + "add_executable(" + project_name + ".exe "
+            output = output + " ".join(compiled_files) + ")\n"
+
+#target_link_libraries(Cabana_PIC.exe ${HDF5_C_LIBRARIES})
+            link_libraries = ["Cabana::cabanacore", "Kokkos::kokkos"]
+            if get_mpi():
+                link_libraries.append("${MPI_C_LIBRARIES}")
+            # TODO If we have GPU we need CUDArt or something
+            # TODO Implement coupled system and IO requirements
+            for lib in link_libraries:
+                output = output + "target_link_libraries(" + project_name + ".exe" + lib + ")\n"
+
+            f.write(output)

@@ -198,6 +198,16 @@ void load_grid_hdf5(struct FDTD_field &field, char* filename,
     field.field.x_max_local = field.max_local_cell * field.dx;
     field.field.x_grid_min_local = field.field.x_min_local + field.dx/2.0;
     field.field.x_grid_max_local = field.field.x_max_local - field.dx/2.0;
+
+    field.field.field_order = 2;
+    field.field.fng = (double)(field.field.field_order) / 2.0;
+    if (field.field.field_order == 2){
+        field.field.cfl = 1.0;
+    }else if(field.field.field_order == 4){
+        field.field.cfl = 6.0/7.0;
+    }else{
+        field.field.cfl = 120.0/149.0;
+    }
 }
 
 

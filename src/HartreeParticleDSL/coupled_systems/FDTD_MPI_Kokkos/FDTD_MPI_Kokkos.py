@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from shutil import copy
+import inspect
+import os
+
 from HartreeParticleDSL.coupled_systems.generic_force_solver.force_solver import force_solver
 from HartreeParticleDSL.HartreeParticleDSL import get_backend
 
@@ -111,6 +115,11 @@ class FDTD_MPI_Kokkos(force_solver):
         code = in_str + "kokkos_fdtd_cleanup_1D(field);\n"
         return code
 
+    def call_finish_initialisation_grid(self, current_indent=0, indent=0):
+        in_str = " " * current_indent
+        code = in_str + "bfield_final_bcs(field.bx, field.by, field.bz, field.nx, field.ng);\n"
+        return code
+
     def call_eb_fields_first_halfstep(self, current_indent=0, indent=0):
         in_str = " " * current_indent
         code = in_str + "update_eb_fields_half_1D(field, field.nx, field.ng, config.config_host(0).dt, config.config_host(0).dx,\n"
@@ -130,7 +139,13 @@ class FDTD_MPI_Kokkos(force_solver):
 
     def call_finish_current(self, current_indent=0, indent=0):
         in_str = " " * current_indent
-        code = in_str + "current_finish(field.jx, field.jy, field.jz,\n"
+        code = in_str + "Kokkos::Experimental::contribute(field.jx, field.scatter_jx);\n"
+        code = code + in_str + "Kokkos::Experimental::contribute(field.jy, field.scatter_jy);\n"
+        code = code + in_str + "Kokkos::Experimental::contribute(field.jz, field.scatter_jz);\n"
+        code = code + in_str + "field.scatter_jx.reset();\n"
+        code = code + in_str + "field.scatter_jy.reset();\n"
+        code = code + in_str + "field.scatter_jz.reset();\n"
+        code = code + in_str + "current_finish(field.jx, field.jy, field.jz,\n"
         code = code + in_str + "               field.nx, field.ng);\n"
         return code
 
@@ -330,3 +345,28 @@ class FDTD_MPI_Kokkos(force_solver):
         domain decomposition into the system's boundary object.
         '''
         return " " * current_indent + f"store_domain_decomposition(field, {box_str});\n"
+
+    def copy_files(self):
+        files = ['FDTD_MPI_IO_HDF5.cpp',
+                 'FDTD_MPI_IO_HDF5.hpp',
+                 'FDTD_MPI_boundaries.cpp',
+                 'FDTD_MPI_boundaries.hpp',
+                 'FDTD_MPI_field.hpp',
+                 'FDTD_MPI_init.cpp',
+                 'FDTD_MPI_init.hpp',
+                 'FDTD_MPI_interpolation.hpp',
+                 'FDTD_MPI_step.cpp',
+                 'FDTD_MPI_step.hpp']
+        BASEPATH = os.path.dirname(inspect.getfile(FDTD_MPI_Kokkos))
+        for f in files:
+            copy(BASEPATH + "/" + f, "./" + f)
+
+    def compilation_files():
+        files = ['FDTD_MPI_IO_HDF5.cpp',
+                 'FDTD_MPI_boundaries.cpp',
+                 'FDTD_MPI_init.cpp',
+                 'FDTD_MPI_step.cpp']
+        return files
+
+    def get_required_packages():
+        return ["Kokkos"]
