@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from HartreeParticleDSL.HartreeParticleDSL import set_mpi
+
 from HartreeParticleDSL.backends.Cabana_PIR_backend.pir_to_cabana_visitor import *
 from HartreeParticleDSL.backends.Cabana_PIR_backend.cabana_pir import *
 from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import *
@@ -451,6 +453,7 @@ def test_pir_cabana_particle_references_and_perpart():
     xs = StructureType()
     xs.add("boo", INT_TYPE)
     backend.add_structure(xs, "xs")
+    type_mapping_str["abc"] = xs
     # Create a perpart_kernel
     v = pir_perpart_visitor()
     type_mapping_str["part"].add("subpart", INT_TYPE)
@@ -470,13 +473,13 @@ struct x_functor{
     SUBPART _subpart;
     SUBARRAY _subarray;
     CORE_PART_POSITION _core_part_position;
-    xs xs;
+    abc xs;
 
     KOKKOS_INLINE_FUNCTION
-     x_functor( SUBPART subpart, SUBARRAY subarray, CORE_PART_POSITION core_part_position, config_struct_type c, xs XS):
+     x_functor( SUBPART subpart, SUBARRAY subarray, CORE_PART_POSITION core_part_position, config_struct_type c, abc XS):
     _subpart(subpart), _subarray(subarray), _core_part_position(core_part_position), xs(XS), _c(c){}
 
-    void update_structs(xs XS){
+    void update_structs(abc XS){
         xs = XS;
     }
 
@@ -488,6 +491,7 @@ struct x_functor{
 };
 '''
     assert correct == out
+    del(type_mapping_str["abc"])
 
     assert pir == backend._kernels["x"]
 
@@ -608,4 +612,40 @@ def test_pir_cabana_mainkernel():
 '''
     assert correct == out
 
-    # TODO Add structures
+    set_mpi(True)
+    pir = v.visit(c)
+    out = cpir(pir)
+    correct = '''int main( int argc, char* argv[] ){
+    Kokkos::deep_copy(config.config, config.config_host);
+    x.update_structs(xs);
+    Cabana::simd_parallel_for(simd_policy, x, "x");
+    Kokkos::fence();
+    {
+        _rank_update_functor<decltype(core_part_position_slice), decltype(neighbour_part_rank_slice)> ruf(
+            config.config_host(0).space.box_dims, core_part_position_slice, neighbour_part_rank_slice,
+            config.config_host(0).space.box_dims.x_ranks,
+            config.config_host(0).space.box_dims.y_ranks,
+            config.config_host(0).space.box_dims.z_ranks, myrank);
+        Cabana::SimdPolicy<VectorLength, ExecutionSpace> temp_policy(0, particle_aosoa.size());
+        Cabana::simd_parallel_for( temp_policy, ruf, "rank_update_functor");
+        Kokkos::fence();
+    }
+
+    Cabana::deep_copy(particle_aosoa_host, particle_aosoa);
+    _migrator.exchange_data(particle_aosoa_host, neighbors, myrank, particle_aosoa_host.size());
+    particle_aosoa.resize(particle_aosoa_host.size());
+    Cabana::deep_copy(particle_aosoa, particle_aosoa_host);
+    core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);
+    core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
+    neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
+    neighbour_part_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa);
+    neighbour_part_old_position_slice = Cabana::slice<neighbour_part_old_position>(particle_aosoa);
+    simd_policy = Cabana::SimdPolicy<VectorLength, ExecutionSpace>(0, particle_aosoa.size());
+
+    x = x_functor<decltype(subpart_slice), decltype(core_part_position_slice)>(subpart_slice, core_part_position_slice, config.config,xs);
+
+}
+'''
+    assert correct == out
+    set_mpi(False)
+    # TODO Add structure

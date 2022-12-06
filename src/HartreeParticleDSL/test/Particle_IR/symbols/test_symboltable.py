@@ -1,8 +1,9 @@
 import pytest
 from HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol import ScalarTypeSymbol
+from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import ScalarType
-from HartreeParticleDSL.Particle_IR.datatypes.datatype import DOUBLE_TYPE, FLOAT_TYPE
+from HartreeParticleDSL.Particle_IR.datatypes.datatype import DOUBLE_TYPE, FLOAT_TYPE, type_mapping_str
 from HartreeParticleDSL.Particle_IR.symbols.symboltable import SymbolTable
 from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
@@ -85,3 +86,13 @@ def test_symbol_table_errors():
         sym_tab.lookup(123)
     assert ("Expected the name argument to be a string, but got <class 'int'>."
             in str(excinfo.value))
+
+def test_find_particle_symbols():
+    class test_kern(Kern):
+        pass
+    tks = test_kern()
+    sym_tab = SymbolTable(tks)
+    a = sym_tab.new_symbol("a", type_mapping_str["part"], StructureSymbol)
+
+    x = sym_tab.find_particle_symbols()
+    assert x["a"] == a

@@ -331,7 +331,6 @@ class Node:
         for index, child in enumerate(self.parent.children):
             if child is self:
                 return index
-        return self.START_POSITION
 
     @property
     def abs_position(self) -> int:

@@ -1407,9 +1407,10 @@ class Cabana_PIR(Backend):
         if HartreeParticleDSL.get_mpi():
             rval = rval + indent_str + "neighbour_part_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa);\n"
             rval = rval + indent_str + "neighbour_part_old_position_slice = Cabana::slice<neighbour_part_old_position>(particle_aosoa);\n"
-        for key in self._particle.particle_type:
-            if key != "core_part" and key != "neighbour_part":
-                rval = rval + indent_str + f"{key}_slice = Cabana::slice<{key}>" + "(particle_aosoa);\n\n"
+        if self._particle is not None:
+            for key in self._particle.particle_type:
+                if key != "core_part" and key != "neighbour_part":
+                    rval = rval + indent_str + f"{key}_slice = Cabana::slice<{key}>" + "(particle_aosoa);\n\n"
 
         rval = rval + indent_str + f"simd_policy = Cabana::SimdPolicy<VectorLength, ExecutionSpace>(0, particle_aosoa.size());\n\n"
 

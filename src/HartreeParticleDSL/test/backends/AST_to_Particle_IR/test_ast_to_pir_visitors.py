@@ -3,10 +3,13 @@ from __future__ import annotations
 import pytest
 
 from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import *
+from HartreeParticleDSL.backends.base_backend.backend import Backend
 
 import inspect
 import textwrap
 import ast
+
+from HartreeParticleDSL.HartreeParticleDSL import set_backend
 
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 
@@ -18,6 +21,7 @@ from HartreeParticleDSL.Particle_IR.nodes.array_reference import ArrayReference
 from HartreeParticleDSL.Particle_IR.nodes.assignment import Assignment
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
 from HartreeParticleDSL.Particle_IR.nodes.call import Call
+from HartreeParticleDSL.Particle_IR.nodes.config_reference import ConfigReference
 from HartreeParticleDSL.Particle_IR.nodes.funcdef import FuncDef
 from HartreeParticleDSL.Particle_IR.nodes.ifelse import IfElseBlock
 from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
@@ -34,6 +38,18 @@ from HartreeParticleDSL.Particle_IR.nodes.while_loop import While
 from HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol import ScalarTypeSymbol
 from HartreeParticleDSL.c_types import c_double, c_int
 
+
+def test_find_calls_visitor():
+    def a():
+        my_call()
+        my_call.the_call()
+    c = ast.parse(textwrap.dedent(inspect.getsource(a)))
+    v = find_calls_visitor()
+    v.visit(c)
+
+    calls = v.calls
+    assert "my_call" in calls
+    assert "my_call.the_call" in calls
 
 def test_visit_str():
     pass
@@ -452,6 +468,36 @@ def test_visit_Attribute():
     assert ("Attempted to access a symbol that has not been defined in this "
             "scope. Symbol name was b" in str(excinfo.value))
 
+    part = type_mapping_str["part"]
+    config = type_mapping_str["config"]
+    def aj(a: part, conf: config):
+        a.core_part.position.x = 1.0
+        a.core_part.position.y = 2.0
+        a.core_part.position.z = 3.0
+        conf.space.box_dims.x_min = 1.0
+    c = ast.parse(textwrap.dedent(inspect.getsource(aj)))
+    out = v.visit(c)
+    assign1 = out.body.children[0]
+    assert isinstance(assign1.lhs, ParticlePositionReference)
+    assert assign1.lhs.dimension == 0
+    assign2 = out.body.children[1]
+    assert isinstance(assign2.lhs, ParticlePositionReference)
+    assert assign2.lhs.dimension == 1
+    assign3 = out.body.children[2]
+    assert isinstance(assign3.lhs, ParticlePositionReference)
+    assert assign3.lhs.dimension == 2
+    assign4 = out.body.children[3]
+    assert isinstance(assign4.lhs, ConfigReference)
+
+    def ak(a: part):
+        a.core_part.position.p = 1.0
+    c = ast.parse(textwrap.dedent(inspect.getsource(ak)))
+    with pytest.raises(IRGenerationError) as excinfo:
+       out = v.visit(c)
+    assert ("Attempted to access unknown element of particle position. "
+            "Got p" in str(excinfo.value))
+
+
 
 def test_visit_Assign():
     v = ast_to_pir_visitor()
@@ -539,6 +585,13 @@ def test_visit_arg_and_arguments_and_FunctionDef(capsys):
     with pytest.raises(IRGenerationError) as excinfo:
         out = v.visit(c)
     assert ("Argument has unexpected type. Got fake." in str(excinfo.value))
+
+    def main():
+        create_variable(c_int, c)
+    c = ast.parse(textwrap.dedent(inspect.getsource(main)))
+    out = v.visit(c)
+    symbols = out.symbol_table.get_symbols()
+    assert "config" in symbols
 
 def test_visit_If():
     v = ast_to_pir_visitor()
@@ -1043,6 +1096,11 @@ def test_main_visitor():
     assert ("Particle IR expects no arguments to main function but "
             "received 1." in str(excinfo.value))
 
+    class temp_Backend(Backend):
+        def get_extra_symbols(self, arg):
+            return [ ("b", ScalarTypeSymbol("b", INT_TYPE))]
+    set_backend(temp_Backend())
+    
     def a():
         create_variable(c_int, a)
 
@@ -1054,26 +1112,36 @@ def test_main_visitor():
 
     def main():
         create_variable(c_int, a)
+        b = 1
 
     c = ast.parse(textwrap.dedent(inspect.getsource(main)))
     out = v.visit(c)
 
     assert isinstance(out, MainKernel)
-    assert len(out.body.children) == 1
+    assert len(out.body.children) == 2
     assert isinstance(out.body.children[0], EmptyStatement)
+    assert isinstance(out.body.children[1], Assignment)
+    assert out.body.children[1].lhs.symbol.name == "b"
 
 def test_pairwise_visitor():
     v = pir_pairwise_visitor()
 
+    class temp_Backend(Backend):
+        def get_extra_symbols(self, arg):
+            return [ ("b", ScalarTypeSymbol("b", INT_TYPE))]
+    set_backend(temp_Backend())
+
     def x(arg: part, arg2: part, c: c_int):
         create_variable(c_int, a)
+        b = 1
 
     c = ast.parse(textwrap.dedent(inspect.getsource(x)))
     out = v.visit(c)
 
     assert isinstance(out.arguments[0], ParticleReference)
     assert isinstance(out.arguments[1], ParticleReference)
-    assert len(out.body.children) == 1
+    assert len(out.body.children) == 2
+    assert out.body.children[1].lhs.symbol.name == "b"
 
     def y(arg: part):
         create_variable(c_int, a)
@@ -1094,14 +1162,21 @@ def test_pairwise_visitor():
 def test_perpart_visitor():
     v = pir_perpart_visitor()
 
+    class temp_Backend(Backend):
+        def get_extra_symbols(self, arg):
+            return [ ("b", ScalarTypeSymbol("b", INT_TYPE))]
+    set_backend(temp_Backend())
+
     def x(arg: part, c: c_int):
         create_variable(c_int, a)
+        b = 1
 
     c = ast.parse(textwrap.dedent(inspect.getsource(x)))
     out = v.visit(c)
 
     assert isinstance(out.arguments[0], ParticleReference)
-    assert len(out.body.children) == 1
+    assert len(out.body.children) == 2
+    assert out.body.children[1].lhs.symbol.name == "b"
 
     def y(arg: part):
         create_variable(c_int, a)

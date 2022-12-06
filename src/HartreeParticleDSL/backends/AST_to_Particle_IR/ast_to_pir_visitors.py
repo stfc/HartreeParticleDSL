@@ -57,6 +57,7 @@ class find_calls_visitor(ast.NodeVisitor):
             function_name = node.func.id
         elif isinstance(node.func, ast.Attribute):
             temp_node = node.func
+            function_name = ""
             while isinstance(temp_node, ast.Attribute):
                 function_name = temp_node.attr + "." + function_name
                 temp_node = temp_node.value
@@ -381,7 +382,6 @@ class ast_to_pir_visitor(ast.NodeVisitor):
                 args.append(self.visit(arg))
             self._check_valid = True
             return Call.create(function_name, args)
-        self._check_valid = True
 
     def visit_Module(self, node: ast.Module) -> Node:
         module_nodes = []
@@ -491,13 +491,12 @@ class ast_to_pir_visitor(ast.NodeVisitor):
 class pir_main_visitor(ast_to_pir_visitor):
     def visit_FunctionDef(self, node: ast.FuncDef) -> MainKernel:
         backend = get_backend()
+        extra_symbols = []
         if backend is not None:
             fcv = find_calls_visitor()
             fcv.visit(node)
             calls = fcv.calls
             extra_symbols = backend.get_extra_symbols(calls)
-        else:
-            extra_symbols = []
         body = []
         if node.name != "main":
             raise IRGenerationError("Attempting to create a main function "
@@ -522,13 +521,12 @@ class pir_main_visitor(ast_to_pir_visitor):
 class pir_pairwise_visitor(ast_to_pir_visitor):
     def visit_FunctionDef(self, node: ast.FuncDef) -> PairwiseKernel:
         backend = get_backend()
+        extra_symbols = []
         if backend is not None:
             fcv = find_calls_visitor()
             fcv.visit(node)
             calls = fcv.calls
             extra_symbols = backend.get_extra_symbols(calls)
-        else:
-            extra_symbols = []
 
         name = node.name
         kern = PairwiseKernel(name)
@@ -555,13 +553,12 @@ class pir_pairwise_visitor(ast_to_pir_visitor):
 class pir_perpart_visitor(ast_to_pir_visitor):
     def visit_FunctionDef(self, node: ast.FuncDef) -> PerPartKernel:
         backend = get_backend()
+        extra_symbols = []
         if backend is not None:
             fcv = find_calls_visitor()
             fcv.visit(node)
             calls = fcv.calls
             extra_symbols = backend.get_extra_symbols(calls)
-        else:
-            extra_symbols = []
 
         name = node.name
         kernel = PerPartKernel(name)
