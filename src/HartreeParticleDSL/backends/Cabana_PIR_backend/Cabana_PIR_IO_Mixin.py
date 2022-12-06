@@ -35,7 +35,7 @@ class Cabana_PIR_IO_Mixin(metaclass=ABCMeta):
                                   "implement required function "
                                   "call_input_cabana_pir")
 
-    def call_output_cabana_pir(self, part_count, filename):
+    def call_output_cabana_pir(self, part_count, filename, variable, current_indent=4):
         '''
         Returns the call required to use this IO module for output.
 

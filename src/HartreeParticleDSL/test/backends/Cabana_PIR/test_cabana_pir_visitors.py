@@ -10,7 +10,7 @@ from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymb
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, ScalarType, \
         StructureType, ArrayType, PointerType, \
         INT_TYPE, FLOAT_TYPE, DOUBLE_TYPE, INT64_TYPE, INT32_TYPE, BOOL_TYPE, STRING_TYPE, \
-        BASE_PARTICLE_TYPE
+        BASE_PARTICLE_TYPE, reset_part_and_config
 
 import ast
 import inspect
@@ -29,7 +29,7 @@ def test_pir_cabana_visit_break():
     b = Cabana_PIR_Visitor(None)
     out = b(pir)
     correct = '''void a(){
-    while(True){
+    while(true){
         break;
     }
 }
@@ -82,7 +82,7 @@ def test_pir_cabana_visit_return():
     pir = astpir.visit(c)
     out = cpir(pir)
     correct = '''bool f(){
-    return False;
+    return false;
 }
 '''
     assert correct == out
@@ -226,7 +226,7 @@ def test_pir_cabana_visit_ifdef():
 
     correct = '''void a(){
     int b;
-    if(True){
+    if(true){
         b = 1;
     }else{
         b = 2;
@@ -297,7 +297,7 @@ def test_pir_cabana_visit_while():
     pir = astpir.visit(c)
     out = cpir(pir)
     correct = '''void a(){
-    while(True){
+    while(true){
         break;
     }
 }
@@ -470,14 +470,14 @@ struct x_functor{
     SUBPART _subpart;
     SUBARRAY _subarray;
     CORE_PART_POSITION _core_part_position;
-    xs _xs;
+    xs xs;
 
     KOKKOS_INLINE_FUNCTION
      x_functor( SUBPART subpart, SUBARRAY subarray, CORE_PART_POSITION core_part_position, config_struct_type c, xs XS):
-    _subpart(subpart), _subarray(subarray), _core_part_position(core_part_position), _xs(XS), _c(c){}
+    _subpart(subpart), _subarray(subarray), _core_part_position(core_part_position), xs(XS), _c(c){}
 
     void update_structs(xs XS){
-        _xs = XS;
+        xs = XS;
     }
 
     void operator()(const int i, const int a) const{
@@ -513,14 +513,14 @@ struct x_functor{
 struct y_functor{
     config_struct_type _c;
     CORE_PART_POSITION _core_part_position;
-    xs _xs;
+    xs xs;
 
     KOKKOS_INLINE_FUNCTION
      y_functor( CORE_PART_POSITION core_part_position, config_struct_type c, xs XS):
-    _core_part_position(core_part_position), _xs(XS), _c(c){}
+    _core_part_position(core_part_position), xs(XS), _c(c){}
 
     void update_structs(xs XS){
-        _xs = XS;
+        xs = XS;
     }
 
     void operator()(const int i, const int a) const{
@@ -580,6 +580,8 @@ def test_pir_cabana_mainkernel():
 
     # Create a perpart_kernel
     v2 = pir_perpart_visitor()
+    reset_part_and_config()
+    type_mapping_str["part"].add("subpart", INT_TYPE)
     # subpart still exists from previous tests.
     def x(arg: part, c: c_int):
         arg.subpart = 1

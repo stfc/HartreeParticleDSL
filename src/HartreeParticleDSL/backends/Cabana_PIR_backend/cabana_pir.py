@@ -106,6 +106,8 @@ class Cabana_PIR(Backend):
     def boundary_condition(self) -> PerPartKernel:
         from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import \
                 pir_perpart_visitor
+        if self._boundary_condition is None:
+            return None
         conv = pir_perpart_visitor()
         return conv.visit(self._boundary_condition_tree)
 
@@ -1194,22 +1196,23 @@ class Cabana_PIR(Backend):
 
         # If we have MPI then we need a domain decomposition.
         # First we check if a coupled system has a preference
-        decomposition_done = False
-        for coupler in self._coupled_systems:
-            if coupler.has_preferred_decomposition():
-                # If the coupler has a preference on domain decomposition then
-                # we intialise the coupled system and then take its domain
-                # decomposition
-                if decomposition_done:
-                    raise NotImplementedError("Can't handle multiple coupled systems with a preferred decomposition")
-                # Initialise the coupler
-                rval = rval + coupler.setup_testcase(filename, current_indent=current_indent)
-                rval = rval + coupler.get_preferred_decomposition("config.config_host(0).space.box_dims", current_indent=current_indent)
-                decomposition_done = True
+        if HartreeParticleDSL.get_mpi():
+            decomposition_done = False
+            for coupler in self._coupled_systems:
+                if coupler.has_preferred_decomposition():
+                    # If the coupler has a preference on domain decomposition then
+                    # we intialise the coupled system and then take its domain
+                    # decomposition
+                    if decomposition_done:
+                        raise NotImplementedError("Can't handle multiple coupled systems with a preferred decomposition")
+                    # Initialise the coupler
+                    rval = rval + coupler.setup_testcase(filename, current_indent=current_indent)
+                    rval = rval + coupler.get_preferred_decomposition("config.config_host(0).space.box_dims", current_indent=current_indent)
+                    decomposition_done = True
 
-        # If the decomposition wasn't done by the coupler we need to do it here
-        if not decomposition_done:
-            raise NotImplementedError("Can't yet do a decomposition when coupled systems didn't do it for us.")
+            # If the decomposition wasn't done by the coupler we need to do it here
+            if not decomposition_done:
+                raise NotImplementedError("Can't yet do a decomposition when coupled systems didn't do it for us.")
 
         # Load the input file.
         rval = rval + space*current_indent + f"{self._input_module.call_input_cabana_pir(int(particle_count), filename, current_indent=current_indent)}\n"

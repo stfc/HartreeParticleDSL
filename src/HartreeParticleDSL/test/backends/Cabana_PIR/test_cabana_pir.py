@@ -172,13 +172,16 @@ class coupler_test2(base_coupler):
     def get_includes_header(self):
         return ["a"]
 
-class dummy_module(IO_Module, Cabana_IO_Mixin):
+class dummy_module(IO_Module, Cabana_PIR_IO_Mixin):
 
     def __init__(self):
         pass
 
     def gen_code_cabana(self, part):
         return "hello"
+
+    def get_header_includes_cabana_pir(self):
+        return []
 
 
 def test_cabana_pir_gen_headers(capsys):
@@ -193,7 +196,6 @@ def test_cabana_pir_gen_headers(capsys):
     backend.create_global_variable(INT_TYPE, "hello", "0")
     backend.create_global_variable(INT_TYPE, "hello2")
     backend.gen_headers(config, part)
-    assert "hello\n\n\nhello" in capsys.readouterr().out
     f_str = ""
     with open('part.h', 'r') as f:
         f_str = f.readlines()
@@ -209,8 +211,8 @@ using DeviceType = Kokkos::Device<Kokkos::DefaultExecutionSpace, MemorySpace>;
 using HostType = Kokkos::Device<Kokkos::Serial, Kokkos::HostSpace>;
 const int VectorLength = 16;
 
-int hello = 0;
-int hello2;
+extern int hello;
+extern int hello2;
 struct boundary{
     double x_min, x_max;
     double y_min, y_max;
@@ -236,15 +238,6 @@ struct config_type{
     config_struct_type config;
     config_struct_host config_host;
 };
-struct core_part_type{
-    double position[3];
-    double velocity[3];
-};
-
-struct neighbour_part_type{
-    double cutoff;
-};
-
 enum FieldNames{core_part_velocity = 0,
                  core_part_position,
                  neighbour_part_cutoff
@@ -311,16 +304,19 @@ def test_print_main():
     kernel = kernels.perpart_interaction(kern2)
     backend.gen_kernel(kernel)
     m = ast.parse(inspect.getsource(main))
+    HartreeParticleDSL.set_mpi(False)
     backend.print_main(m)
     with open('code.cpp') as f:
         out = f.read()
         correct = '''int main( int argc, char* argv[] ){
     int a;
-        Kokkos::ScopeGuard scope_guard(argc, argv);
+    Kokkos::ScopeGuard scope_guard(argc, argv);
 {
     config_type config;
     config.config = config_struct_type("config", 1);
     config.config_host = Kokkos::create_mirror_view(config.config);
+    int myrank = 0;
+    int nranks = 1;
     Cabana::AoSoA<DataTypes, DeviceType, VectorLength> particle_aosoa( "particle_list", 0);
     Cabana::AoSoA<DataTypes, HostType, VectorLength> particle_aosoa_host( "particle_list_host", 0);
     random_io<decltype(particle_aosoa_host)>(particle_aosoa_host, config);
@@ -387,16 +383,7 @@ def test_cabana_pir_gen_particle():
     part.add_element("thing", "double[4]")
     part.add_element("thing2", "double")
     rval = backend.gen_particle(part)
-    correct = '''struct core_part_type{
-    double position[3];
-    double velocity[3];
-};
-
-struct neighbour_part_type{
-    double cutoff;
-};
-
-enum FieldNames{thing = 0,
+    correct = '''enum FieldNames{thing = 0,
                  thing2,
                  core_part_velocity,
                  core_part_position,
@@ -447,7 +434,7 @@ struct config_type{
 def test_cabana_pir_cleanup():
     backend = Cabana_PIR()
     st = backend.cleanup(current_indent=0)
-    assert st == "}\n"
+    assert st == "\n}\n"
 
 def test_cabana_pir_println():
     backend = Cabana_PIR()
@@ -470,25 +457,28 @@ def test_cabana_pir_initialise():
     config_type config;
     config.config = config_struct_type("config", 1);
     config.config_host = Kokkos::create_mirror_view(config.config);
+    mystruct mystruct;
+    int myrank = 0;
+    int nranks = 1;
     Cabana::AoSoA<DataTypes, DeviceType, VectorLength> particle_aosoa( "particle_list", 123);
     Cabana::AoSoA<DataTypes, HostType, VectorLength> particle_aosoa_host( "particle_list_host", 123);
     random_io<decltype(particle_aosoa_host)>(particle_aosoa_host, config);
     Cabana::deep_copy(particle_aosoa, particle_aosoa_host);
 
     Cabana::SimdPolicy<VectorLength, ExecutionSpace> simd_policy( 0, particle_aosoa.size());
-    c_int mystruct;
     auto core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);
     auto core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
     auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
-    slice1_functor<decltype(s1_slice), decltype(s2_slice)> slice1(s1_slice, s2_slice, config.config,mystruct);'''
-    assert correct in out
+    slice1_functor<decltype(s1_slice), decltype(s2_slice)> slice1(s1_slice, s2_slice, config.config,mystruct);
+'''
+    assert correct == out
 
 def test_cabana_pir_call_language_function():
     backend = Cabana_PIR()
     with pytest.raises(AttributeError):
         rval1 = backend.call_language_function("a_c_call", "*part", "20")
     rval2 = backend.call_language_function("cleanup", current_indent=2, indent=1)
-    assert rval2 == "}\n"
+    assert rval2 == "\n}\n"
     with pytest.raises(AttributeError):
         rval3 = backend.call_language_function("a_c_call", "*part", "20", current_indent=4, indent=1)
     with pytest.raises(NotImplementedError) as excinfo:
@@ -526,10 +516,10 @@ def test_cabana_pir_add_coupler():
 
 def test_cabana_pir_write_output():
     backend = Cabana_PIR()
-    class temp_module(IO_Module, Cabana_IO_Mixin):
+    class temp_module(IO_Module, Cabana_PIR_IO_Mixin):
         def __init__(self):
             pass
-        def call_output_cabana(self, num_parts, filename, variable):
+        def call_output_cabana_pir(self, num_parts, filename, variable, current_indent=4):
             return "Success"
     a = temp_module()
     mod = Random_Particles()

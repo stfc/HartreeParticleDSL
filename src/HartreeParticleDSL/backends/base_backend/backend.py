@@ -87,3 +87,7 @@ class Backend(metaclass=ABCMeta):
 
     def get_extra_symbols(self, function_list):
         return []
+
+    @property
+    def structures(self):
+        return {}
