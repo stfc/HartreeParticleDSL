@@ -142,12 +142,14 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         # Start codegen.
 
         # Create the templated functor
-        rval = self._nindent + "template < "
-        all_slices = []
-        for slices in self._slices:
-            all_slices.append("class " + slices.upper())
-        classes = ", ".join(all_slices)
-        rval = rval + classes + " >\n"
+        rval = self._nindent
+        if len(self._slices) > 0:
+            rval = rval + "template < "
+            all_slices = []
+            for slices in self._slices:
+                all_slices.append("class " + slices.upper())
+            classes = ", ".join(all_slices)
+            rval = rval + classes + " >\n"
         rval = rval + f"{self._nindent}struct {node.name}_functor" + "{\n"
         self.indent()
         rval = rval + f"{self._nindent}config_struct_type _{node.arguments[1].symbol.name};\n"
@@ -184,7 +186,9 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             all_slices.append(f"{structure}({structure.upper()})")
         classes = ", ".join(all_slices)
         rval = rval + f"{self._nindent}{classes}"
-        rval = rval + ", " + f"_{node.arguments[1].symbol.name}({node.arguments[1].symbol.name})" + "{}\n"
+        if len(all_slices) > 0:
+            rval = rval + ", "
+        rval = rval + f"_{node.arguments[1].symbol.name}({node.arguments[1].symbol.name})" + "{}\n"
 
         # Need to have an update_structs call if there are structures
         if len(self._parent.structures) > 0:
@@ -304,13 +308,13 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             if updates_part_pos and (self._parent.boundary_condition is not None):
                 bound = self._parent.boundary_condition
                 if len(self._parent.structures) > 0:
-                    rval = rval + self._nindent
+                    rval = rval + "\n" + self._nindent
                     rval = rval + f"{invoke.value}.update_structs("
                     struct_list = []
                     for struct in self._parent.structures:
                         struct_list.append(struct)
-                    rval = rval + ", ".join(struct_list) + ");\n"
-                rval = rval + f"{self._nindent}Cabana::simd_parallel_for(simd_policy, {bound.name}, "
+                    rval = rval + ", ".join(struct_list) + ");"
+                rval = rval + f"\n{self._nindent}Cabana::simd_parallel_for(simd_policy, {bound.name}, "
                 rval = rval + "\"" + bound.name + "\");\n"
                 rval = rval + self._nindent + "Kokkos::fence();"
             # If we have MPI and move particles do the post-boundary condition stuff
@@ -347,7 +351,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             indent = len(self._indent)
             return self._parent.call_language_function(func_name, *args,
                     current_indent=current_indent, indent=indent).lstrip()
-        except AttributeError:
+        except AttributeError as err:
             pass
         arg_string = ", ".join(args)
         end = ";"

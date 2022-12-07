@@ -19,13 +19,45 @@ from HartreeParticleDSL.Particle_IR.datatypes.datatype import StructureType, INT
 
 from HartreeParticleDSL.Particle_IR.nodes.call import Call
 from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
-from HartreeParticleDSL.Particle_IR.nodes.kernels import PairwiseKernel
+from HartreeParticleDSL.Particle_IR.nodes.kernels import PairwiseKernel, PerPartKernel
 import HartreeParticleDSL.kernel_types.kernels as kernels
 
 from HartreeParticleDSL.HartreeParticleDSLExceptions import InvalidNameError, \
                                                             UnsupportedTypeError, \
                                                             InternalError, \
                                                             IRGenerationError
+
+
+from HartreeParticleDSL.inbuilt_kernels.boundaries import periodic_boundaries
+
+
+class coupler_test(base_coupler):
+    def __init__(self):
+        pass
+
+    def a_function(self, current_indent=0, indent=0):
+        return "test_string()"
+
+    def b_function(self, arg):
+        return arg
+
+    def get_includes(self):
+        return ["\"test.h\""]
+
+    def get_includes_header(self):
+        return []
+
+    def copy_files(self):
+        pass
+
+    def setup_testcase(self, filename, current_indent=0):
+        return current_indent * " " + "setup_testcase()"
+
+    def has_preferred_decomposition(self):
+        return True
+
+    def get_preferred_decomposition(self,arg1, current_indent=0):
+        return current_indent * " " + "preferred_decomposition()"
 
 def test_cabana_pir_init():
     a = Cabana_PIR()
@@ -193,6 +225,7 @@ def test_cabana_pir_gen_headers(capsys):
     mod = dummy_module()
     backend.set_io_modules(mod, mod)
     _HartreeParticleDSL.the_instance = None
+    HartreeParticleDSL.set_mpi(True)
     backend.create_global_variable(INT_TYPE, "hello", "0")
     backend.create_global_variable(INT_TYPE, "hello2")
     backend.gen_headers(config, part)
@@ -217,6 +250,10 @@ struct boundary{
     double x_min, x_max;
     double y_min, y_max;
     double z_min, z_max;
+    double local_x_min, local_x_max;
+    double local_y_min, local_y_max;
+    double local_z_min, local_z_max;
+    int x_ranks, y_ranks, z_ranks;
 };
 
 struct space_type{
@@ -240,12 +277,243 @@ struct config_type{
 };
 enum FieldNames{core_part_velocity = 0,
                  core_part_position,
-                 neighbour_part_cutoff
+                 neighbour_part_cutoff,
+                 neighbour_part_rank,
+                 neighbour_part_old_position
                };
 using DataTypes = Cabana::MemberTypes<double[3],
     double[3],
-    double>;
+    double,
+    int,
+    double[3]>;
+
+
+template<class aosoa> class Migrator{
+
+    private:
+        Kokkos::View<double***, MemorySpace> pos_space;
+        Kokkos::View<double***, MemorySpace> vel_space;
+        Kokkos::View<double**, MemorySpace> cutoff_space;
+        int _buffer_size;
+
+    public:
+        Migrator(int buffer_size, int nr_neighbours){
+            _buffer_size = buffer_size;
+            pos_space = Kokkos::View<double***, MemorySpace>("temp_pos", nr_neighbours, buffer_size, 3);
+            vel_space = Kokkos::View<double***, MemorySpace>("temp_velocity", nr_neighbours, buffer_size, 3);
+            cutoff_space = Kokkos::View<double**, MemorySpace>("temp_cutoff", nr_neighbours, buffer_size);
+        }
+
+    void exchange_data( aosoa &particle_aosoa, std::vector<int> neighbors, int myrank, int npart){
+
+        auto rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa, "rank");
+        auto last_pos_s = Cabana::slice<neighbour_part_old_position>(particle_aosoa, "last_pos");
+        auto pos_s = Cabana::slice<core_part_position>(particle_aosoa, "position");
+        auto vel_s = Cabana::slice<core_part_velocity>(particle_aosoa, "velocity");
+        auto cutoff_s = Cabana::slice<neighbour_part_cutoff>(particle_aosoa, "cutoff");
+        int *send_count = (int*) malloc(sizeof(int) * neighbors.size());
+        int count_neighbours = 0;
+        int end = particle_aosoa.size() - 1;
+        for(int i = 0; i < neighbors.size(); i++){
+                send_count[i] = 0;
+        }
+
+        for(int i = particle_aosoa.size()-1; i>=0; i--){
+            if(rank_slice(i) != myrank && rank_slice(i) >= 0){
+                int therank = rank_slice(i);
+                for(int k = 0; k < neighbors.size(); k++){
+                    if(therank == neighbors[k]){
+                        therank = k;
+                        break;
+                    }
+                }
+            int pos = send_count[therank];
+            pos_space(therank, pos, 0) = pos_s(i, 0);
+            pos_space(therank, pos, 1) = pos_s(i, 1);
+            pos_space(therank, pos, 2) = pos_s(i, 2);
+            vel_space(therank, pos, 0) = vel_s(i, 0);
+            vel_space(therank, pos, 1) = vel_s(i, 1);
+            vel_space(therank, pos, 2) = vel_s(i, 2);
+            cutoff_space(therank, pos) = cutoff_s(i);
+            send_count[therank]++;
+
+            while(rank_slice(end) != myrank && end > 0){
+                end--;
+            }
+            if(end > i){
+                rank_slice(i) = rank_slice(end);
+                pos_s(i, 0) = pos_s(end, 0);
+                pos_s(i, 1) = pos_s(end, 1);
+                pos_s(i, 2) = pos_s(end, 2);
+                vel_s(i, 0) = vel_s(end, 0);
+                vel_s(i, 1) = vel_s(end, 1);
+                vel_s(i, 2) = vel_s(end, 2);
+                cutoff_s(i) = cutoff_s(end);
+                rank_slice(end) = -1;
+            }else{
+                rank_slice(i) = -1;
+                end++;
+            }
+            continue;
+        }
+
+    }
+    // Data collected, need to send information to neighbours to know what to expect
+    int *recv_count = (int*) malloc(sizeof(int) * neighbors.size());
+    MPI_Request *requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbors.size() * 2);
+    int req_num = 0;
+    for(int i = 0; i < neighbors.size(); i++){
+        recv_count[i] = 0;
+        if(neighbors[i] == myrank){
+            continue;
+        }
+        MPI_Irecv(&recv_count[i], 1, MPI_INT, neighbors[i], 0, MPI_COMM_WORLD, &requests[req_num++]);
+        MPI_Isend(&send_count[i], 1, MPI_INT, neighbors[i], 0, MPI_COMM_WORLD, &requests[req_num++]);
+    }
+    MPI_Waitall(req_num, requests, MPI_STATUSES_IGNORE);
+    MPI_Barrier(MPI_COMM_WORLD);
+    int total_size = 0;
+    for(int i = 0; i < neighbors.size(); i++){
+             total_size += recv_count[i];
+    }
+    Kokkos::View<double***, MemorySpace> r_pos_space("temp_pos", neighbors.size(), total_size, 3);
+    Kokkos::View<double***, MemorySpace> r_vel_space("temp_vel", neighbors.size(), total_size, 3);
+    Kokkos::View<double**, MemorySpace> r_cutoff_space("temp_cutoff", neighbors.size(), total_size);
+
+    free(requests);
+    requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbors.size() * 2 * 3);
+    req_num = 0;
+    int tag = 0;
+    for(int i = 0; i < neighbors.size(); i++){
+        if(neighbors[i] != myrank){
+            tag = 0;
+            MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*i], recv_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*i], recv_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(1)*i], recv_count[i],MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            tag = 0;
+            MPI_Isend(&pos_space.data()[pos_space.extent(1)*i], send_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&vel_space.data()[vel_space.extent(1)*i], send_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&cutoff_space.data()[cutoff_space.extent(1)*i], send_count[i],MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+        }
+    }
+    MPI_Waitall(req_num, requests, MPI_STATUSES_IGNORE);
+    free(requests);
+    int recvd = 0;
+    int sent = 0;
+    for(int i = 0; i < neighbors.size(); i++){
+        recvd += recv_count[i];
+        sent += send_count[i];
+    }
+    int size_change = recvd - sent;
+    int current_size =  particle_aosoa.size();
+    if(size_change != 0){
+        particle_aosoa.resize(current_size+size_change);
+    }
+    auto new_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa, "new_rank");
+    for(int i = particle_aosoa.size() - 1; i > end; i--){
+        new_rank_slice(i) = -1;
+    }
+    if(size_change > 0){
+        if(sent = 0){
+            end = current_size;
+        }
+        while(end < current_size && end < particle_aosoa.size() && new_rank_slice(end) != -1 ) end++;
+        for(int i = 0; i < particle_aosoa.size(); i++){
+            new_rank_slice(i) = -1;
+        }
+    }
+    auto new_last_pos_s = Cabana::slice<neighbour_part_old_position>(particle_aosoa, "new_last_pos");
+    auto new_pos_s = Cabana::slice<core_part_position>(particle_aosoa, "new_position");
+    auto new_vel_s = Cabana::slice<core_part_velocity>(particle_aosoa, "new_velocity");
+    auto new_cutoff_s = Cabana::slice<neighbour_part_cutoff>(particle_aosoa, "new_cutoff");
+    int x = 0;
+    for(int j = 0; j < neighbors.size(); j++){
+        for(int i = 0; i < recv_count[j]; i++){
+            new_pos_s(end+x, 0) = r_pos_space(j,i,0);
+            new_pos_s(end+x, 1) = r_pos_space(j,i,1);
+            new_pos_s(end+x, 2) = r_pos_space(j,i,2);
+            new_vel_s(end+x, 0) = r_vel_space(j,i,0);
+            new_vel_s(end+x, 1) = r_vel_space(j,i,1);
+            new_vel_s(end+x, 2) = r_vel_space(j,i,2);
+            new_cutoff_s(end+x) = r_cutoff_space(j,i);
+            x++;
+        }
+    }
+    free(recv_count);
+    free(send_count);
+}};
+
+KOKKOS_INLINE_FUNCTION
+int get_oneD_rank(int x_r, int y_r, int z_r, int x_ranks, int y_ranks, int z_ranks){
+    int oneD_rank = z_r*(x_ranks*y_ranks) + y_r*(x_ranks) + x_r;
+    return oneD_rank;
+}
+KOKKOS_INLINE_FUNCTION
+void get_threeD_rank(int rank, int *x, int *y, int *z, int x_ranks, int y_ranks, int z_ranks){
+    int z_r = rank / (x_ranks*y_ranks);
+    int y_r = (rank - z_r*x_ranks*y_ranks) / x_ranks;
+    int x_r = rank - z_r*x_ranks*y_ranks - y_r*x_ranks;
+    *x = x_r;
+    *y = y_r;
+    *z = z_r;
+};
+
+template<class PartPosSlice, class RankSlice>
+struct _rank_update_functor{
+    boundary _box;
+    PartPosSlice _part_pos;
+    RankSlice _rank;
+    int _myrank;
+    int _xranks;
+    int _yranks;
+    int _zranks;
+    int _local_x_rank;
+    int _local_y_rank;
+    int _local_z_rank;
+    int _nranks;
+
+    KOKKOS_INLINE_FUNCTION
+    _rank_update_functor(boundary box, PartPosSlice pos, RankSlice rank, int xranks, int yranks, int zranks, int myrank):
+        _box(box), _part_pos(pos), _rank(rank), _xranks(xranks), _yranks(yranks), _zranks(zranks), _myrank(myrank){
+        get_threeD_rank(myrank, &_local_x_rank, &_local_y_rank, &_local_z_rank, xranks, yranks, zranks);
+    }
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int ix, const int ij) const{
+        int xr, yr, zr;
+        get_threeD_rank(_myrank, &xr, &yr, &zr, _xranks, _yranks, _zranks);
+        xr = _local_x_rank;
+        yr = _local_y_rank;
+        zr = _local_z_rank;
+        if(_part_pos.access(ix, ij, 0) >= _box.local_x_max){
+            xr = xr + 1;
+            if( xr >= _xranks ) xr = 0;
+        }
+        if(_part_pos.access(ix, ij, 0) < _box.local_x_min){
+            xr = xr - 1;
+            if( xr < 0 ) xr = _xranks-1;
+        }
+        if(_part_pos.access(ix, ij, 1) >= _box.local_y_max){
+            yr = yr + 1;
+            if( yr >= _yranks ) yr = 0;
+        }
+        if(_part_pos.access(ix, ij, 1) < _box.local_y_min){
+            yr = yr - 1;
+            if( yr < 0 ) yr = _yranks-1;
+        }
+        if(_part_pos.access(ix, ij, 2) >= _box.local_z_max){
+            zr = zr + 1;
+            if( zr >= _zranks ) zr = 0;
+        }
+        if(_part_pos.access(ix, ij, 2) < _box.local_z_min){
+            zr = zr - 1;
+            if( zr < 0 ) zr = _zranks-1;
+        }
+        _rank.access(ix, ij) = get_oneD_rank(xr, yr, zr, _xranks, _yranks, _zranks);
+    }};
+
 #endif'''
+    HartreeParticleDSL.set_mpi(False)
     assert f_str == correct
 
     HartreeParticleDSL.set_cuda(True)
@@ -290,13 +558,20 @@ def main():
     invoke(kern2)
     cleanup()
 
+class random_particles_test(Random_Particles):
+    def gen_code_cabana_pir(self, a):
+        return "void func(){}"
+
 def test_print_main():
     '''Test the print_main function of Cabana'''
     _HartreeParticleDSL.the_instance = None
     backend = Cabana_PIR()
+    backend.add_coupler(coupler_test())
+    backend.set_boundary_condition(periodic_boundaries)
     HartreeParticleDSL.set_backend(backend)
-    mod = Random_Particles()
-    backend.set_io_modules(mod, mod)
+    mod = random_particles_test()
+    mod2 = random_particles_test()
+    backend.set_io_modules(mod, mod2)
     config = Config()
     part = Particle()
     part.add_element("x", "int")
@@ -305,10 +580,12 @@ def test_print_main():
     backend.gen_kernel(kernel)
     m = ast.parse(inspect.getsource(main))
     HartreeParticleDSL.set_mpi(False)
+    backend.create_global_variable(INT_TYPE, "hello1", "0")
+    backend.create_global_variable(INT_TYPE, "hello2")
     backend.print_main(m)
     with open('code.cpp') as f:
         out = f.read()
-        correct = '''int main( int argc, char* argv[] ){
+        correct ='''int main( int argc, char* argv[] ){
     int a;
     Kokkos::ScopeGuard scope_guard(argc, argv);
 {
@@ -328,16 +605,20 @@ def test_print_main():
     auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
     auto x_slice = Cabana::slice<x>(particle_aosoa);
     kern2_functor<decltype(core_part_position_slice), decltype(x_slice)> kern2(core_part_position_slice, x_slice, config.config);
+    periodic_boundaries_functor<decltype(core_part_position_slice)> periodic_boundaries(core_part_position_slice, config.config);
 
     a = 0;
     a = (a + 1);
     Kokkos::deep_copy(config.config, config.config_host);
     Cabana::simd_parallel_for(simd_policy, kern2, "kern2");
     Kokkos::fence();
+    Cabana::simd_parallel_for(simd_policy, periodic_boundaries, "periodic_boundaries");
+    Kokkos::fence();
     }
 
 }
 '''
+        print(out)
         assert correct in out
         correct = '''template < class CORE_PART_POSITION, class X >
 struct kern2_functor{
@@ -357,6 +638,13 @@ struct kern2_functor{
     }
 };'''
         assert correct in out
+
+        correct = '''int hello1 = 0;
+int hello2;
+void func(){}
+void func(){}'''
+        assert correct in out
+
 
 def test_cabana_pir_set_cutoff():
     a = Cabana_PIR()
@@ -397,6 +685,14 @@ using DataTypes = Cabana::MemberTypes<double[4],
 '''
     assert correct == rval
 
+    HartreeParticleDSL.set_mpi(True)
+    rval = backend.gen_particle(part)
+    HartreeParticleDSL.set_mpi(False)
+    assert ",\n                 neighbour_part_rank" in rval
+    assert ",\n                 neighbour_part_old_position" in rval
+    assert ",\n    int,\n    double[3]" in rval
+
+
 def test_cabana_pir_gen_config():
     backend = Cabana_PIR()
     conf = Config()
@@ -430,6 +726,15 @@ struct config_type{
 };
 '''
     assert correct == rval
+    HartreeParticleDSL.set_mpi(True)
+    rval = backend.gen_config(conf)
+    HartreeParticleDSL.set_mpi(False)
+    correct = '''    double local_x_min, local_x_max;
+    double local_y_min, local_y_max;
+    double local_z_min, local_z_max;
+    int x_ranks, y_ranks, z_ranks;
+'''
+    assert correct in rval
 
 def test_cabana_pir_cleanup():
     backend = Cabana_PIR()
@@ -473,6 +778,19 @@ def test_cabana_pir_initialise():
 '''
     assert correct == out
 
+    HartreeParticleDSL.set_mpi(True)
+    with pytest.raises(NotImplementedError) as excinfo:
+        rval = backend.initialise(123, "myfile", 4)
+    assert ("Can't yet do a decomposition when coupled systems didn't do it "
+            "for us." in str(excinfo.value))
+    coupler = coupler_test()
+    backend.add_coupler(coupler)
+    out = backend.initialise(123, "myfile", 4)
+    HartreeParticleDSL.set_mpi(False)
+    assert "int _provided;\n" in out
+    assert "MPI_Init_thread( &argc, &argv, MPI_THREAD_FUNNELED, &_provided  );\n" in out
+    assert "preferred_decomposition()" in out
+
 def test_cabana_pir_call_language_function():
     backend = Cabana_PIR()
     with pytest.raises(AttributeError):
@@ -484,19 +802,6 @@ def test_cabana_pir_call_language_function():
     with pytest.raises(NotImplementedError) as excinfo:
         val4 = backend.call_language_function("set_cutoff", "0.5", "C_AOS.CONSTANT")
     assert "Cabana PIR backend doesn't yet support pairwise interactions" in str(excinfo.value)
-
-class coupler_test(base_coupler):
-    def __init__(self):
-        pass
-
-    def a_function(self, current_indent=0, indent=0):
-        return "test_string()"
-
-    def b_function(self, arg):
-        return arg
-
-    def get_includes(self):
-        return ["\"test.h\""]
 
 def test_cabana_pir_add_coupler():
     backend = Cabana_PIR()
@@ -525,3 +830,260 @@ def test_cabana_pir_write_output():
     mod = Random_Particles()
     backend.set_io_modules(mod, a)
     assert backend.write_output("a") == "Success\n"
+
+
+def test_cabana_pir_boundary_conditions():
+    backend = Cabana_PIR()
+    with pytest.raises(TypeError) as excinfo:
+        backend.set_boundary_condition(3)
+    assert ("Cannot set boundary condition to a non perpart kernel" 
+             in str(excinfo.value))
+
+    assert backend._boundary_condition is None
+    assert backend._boundary_condition_tree is None
+
+    backend.set_boundary_condition(periodic_boundaries)
+
+    assert backend._boundary_condition is periodic_boundaries
+    assert backend._boundary_condition_tree == periodic_boundaries.get_kernel_tree()
+
+    assert isinstance(backend.boundary_condition, PerPartKernel)
+
+def test_mpi_headers():
+    backend = Cabana_PIR()
+    part = Particle()
+    config = Config()
+    out = backend.mpi_headers(config, part)
+    print(out)
+    correct = '''
+
+template<class aosoa> class Migrator{
+
+    private:
+        Kokkos::View<double***, MemorySpace> pos_space;
+        Kokkos::View<double***, MemorySpace> vel_space;
+        Kokkos::View<double**, MemorySpace> cutoff_space;
+        int _buffer_size;
+
+    public:
+        Migrator(int buffer_size, int nr_neighbours){
+            _buffer_size = buffer_size;
+            pos_space = Kokkos::View<double***, MemorySpace>("temp_pos", nr_neighbours, buffer_size, 3);
+            vel_space = Kokkos::View<double***, MemorySpace>("temp_velocity", nr_neighbours, buffer_size, 3);
+            cutoff_space = Kokkos::View<double**, MemorySpace>("temp_cutoff", nr_neighbours, buffer_size);
+        }
+
+    void exchange_data( aosoa &particle_aosoa, std::vector<int> neighbors, int myrank, int npart){
+
+        auto rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa, "rank");
+        auto last_pos_s = Cabana::slice<neighbour_part_old_position>(particle_aosoa, "last_pos");
+        auto pos_s = Cabana::slice<core_part_position>(particle_aosoa, "position");
+        auto vel_s = Cabana::slice<core_part_velocity>(particle_aosoa, "velocity");
+        auto cutoff_s = Cabana::slice<neighbour_part_cutoff>(particle_aosoa, "cutoff");
+        int *send_count = (int*) malloc(sizeof(int) * neighbors.size());
+        int count_neighbours = 0;
+        int end = particle_aosoa.size() - 1;
+        for(int i = 0; i < neighbors.size(); i++){
+                send_count[i] = 0;
+        }
+
+        for(int i = particle_aosoa.size()-1; i>=0; i--){
+            if(rank_slice(i) != myrank && rank_slice(i) >= 0){
+                int therank = rank_slice(i);
+                for(int k = 0; k < neighbors.size(); k++){
+                    if(therank == neighbors[k]){
+                        therank = k;
+                        break;
+                    }
+                }
+            int pos = send_count[therank];
+            pos_space(therank, pos, 0) = pos_s(i, 0);
+            pos_space(therank, pos, 1) = pos_s(i, 1);
+            pos_space(therank, pos, 2) = pos_s(i, 2);
+            vel_space(therank, pos, 0) = vel_s(i, 0);
+            vel_space(therank, pos, 1) = vel_s(i, 1);
+            vel_space(therank, pos, 2) = vel_s(i, 2);
+            cutoff_space(therank, pos) = cutoff_s(i);
+            send_count[therank]++;
+
+            while(rank_slice(end) != myrank && end > 0){
+                end--;
+            }
+            if(end > i){
+                rank_slice(i) = rank_slice(end);
+                pos_s(i, 0) = pos_s(end, 0);
+                pos_s(i, 1) = pos_s(end, 1);
+                pos_s(i, 2) = pos_s(end, 2);
+                vel_s(i, 0) = vel_s(end, 0);
+                vel_s(i, 1) = vel_s(end, 1);
+                vel_s(i, 2) = vel_s(end, 2);
+                cutoff_s(i) = cutoff_s(end);
+                rank_slice(end) = -1;
+            }else{
+                rank_slice(i) = -1;
+                end++;
+            }
+            continue;
+        }
+
+    }
+    // Data collected, need to send information to neighbours to know what to expect
+    int *recv_count = (int*) malloc(sizeof(int) * neighbors.size());
+    MPI_Request *requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbors.size() * 2);
+    int req_num = 0;
+    for(int i = 0; i < neighbors.size(); i++){
+        recv_count[i] = 0;
+        if(neighbors[i] == myrank){
+            continue;
+        }
+        MPI_Irecv(&recv_count[i], 1, MPI_INT, neighbors[i], 0, MPI_COMM_WORLD, &requests[req_num++]);
+        MPI_Isend(&send_count[i], 1, MPI_INT, neighbors[i], 0, MPI_COMM_WORLD, &requests[req_num++]);
+    }
+    MPI_Waitall(req_num, requests, MPI_STATUSES_IGNORE);
+    MPI_Barrier(MPI_COMM_WORLD);
+    int total_size = 0;
+    for(int i = 0; i < neighbors.size(); i++){
+             total_size += recv_count[i];
+    }
+    Kokkos::View<double***, MemorySpace> r_pos_space("temp_pos", neighbors.size(), total_size, 3);
+    Kokkos::View<double***, MemorySpace> r_vel_space("temp_vel", neighbors.size(), total_size, 3);
+    Kokkos::View<double**, MemorySpace> r_cutoff_space("temp_cutoff", neighbors.size(), total_size);
+
+    free(requests);
+    requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbors.size() * 2 * 3);
+    req_num = 0;
+    int tag = 0;
+    for(int i = 0; i < neighbors.size(); i++){
+        if(neighbors[i] != myrank){
+            tag = 0;
+            MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*i], recv_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*i], recv_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(1)*i], recv_count[i],MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            tag = 0;
+            MPI_Isend(&pos_space.data()[pos_space.extent(1)*i], send_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&vel_space.data()[vel_space.extent(1)*i], send_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&cutoff_space.data()[cutoff_space.extent(1)*i], send_count[i],MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+        }
+    }
+    MPI_Waitall(req_num, requests, MPI_STATUSES_IGNORE);
+    free(requests);
+    int recvd = 0;
+    int sent = 0;
+    for(int i = 0; i < neighbors.size(); i++){
+        recvd += recv_count[i];
+        sent += send_count[i];
+    }
+    int size_change = recvd - sent;
+    int current_size =  particle_aosoa.size();
+    if(size_change != 0){
+        particle_aosoa.resize(current_size+size_change);
+    }
+    auto new_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa, "new_rank");
+    for(int i = particle_aosoa.size() - 1; i > end; i--){
+        new_rank_slice(i) = -1;
+    }
+    if(size_change > 0){
+        if(sent = 0){
+            end = current_size;
+        }
+        while(end < current_size && end < particle_aosoa.size() && new_rank_slice(end) != -1 ) end++;
+        for(int i = 0; i < particle_aosoa.size(); i++){
+            new_rank_slice(i) = -1;
+        }
+    }
+    auto new_last_pos_s = Cabana::slice<neighbour_part_old_position>(particle_aosoa, "new_last_pos");
+    auto new_pos_s = Cabana::slice<core_part_position>(particle_aosoa, "new_position");
+    auto new_vel_s = Cabana::slice<core_part_velocity>(particle_aosoa, "new_velocity");
+    auto new_cutoff_s = Cabana::slice<neighbour_part_cutoff>(particle_aosoa, "new_cutoff");
+    int x = 0;
+    for(int j = 0; j < neighbors.size(); j++){
+        for(int i = 0; i < recv_count[j]; i++){
+            new_pos_s(end+x, 0) = r_pos_space(j,i,0);
+            new_pos_s(end+x, 1) = r_pos_space(j,i,1);
+            new_pos_s(end+x, 2) = r_pos_space(j,i,2);
+            new_vel_s(end+x, 0) = r_vel_space(j,i,0);
+            new_vel_s(end+x, 1) = r_vel_space(j,i,1);
+            new_vel_s(end+x, 2) = r_vel_space(j,i,2);
+            new_cutoff_s(end+x) = r_cutoff_space(j,i);
+            x++;
+        }
+    }
+    free(recv_count);
+    free(send_count);
+}};
+
+KOKKOS_INLINE_FUNCTION
+int get_oneD_rank(int x_r, int y_r, int z_r, int x_ranks, int y_ranks, int z_ranks){
+    int oneD_rank = z_r*(x_ranks*y_ranks) + y_r*(x_ranks) + x_r;
+    return oneD_rank;
+}
+KOKKOS_INLINE_FUNCTION
+void get_threeD_rank(int rank, int *x, int *y, int *z, int x_ranks, int y_ranks, int z_ranks){
+    int z_r = rank / (x_ranks*y_ranks);
+    int y_r = (rank - z_r*x_ranks*y_ranks) / x_ranks;
+    int x_r = rank - z_r*x_ranks*y_ranks - y_r*x_ranks;
+    *x = x_r;
+    *y = y_r;
+    *z = z_r;
+};
+
+template<class PartPosSlice, class RankSlice>
+struct _rank_update_functor{
+    boundary _box;
+    PartPosSlice _part_pos;
+    RankSlice _rank;
+    int _myrank;
+    int _xranks;
+    int _yranks;
+    int _zranks;
+    int _local_x_rank;
+    int _local_y_rank;
+    int _local_z_rank;
+    int _nranks;
+
+    KOKKOS_INLINE_FUNCTION
+    _rank_update_functor(boundary box, PartPosSlice pos, RankSlice rank, int xranks, int yranks, int zranks, int myrank):
+        _box(box), _part_pos(pos), _rank(rank), _xranks(xranks), _yranks(yranks), _zranks(zranks), _myrank(myrank){
+        get_threeD_rank(myrank, &_local_x_rank, &_local_y_rank, &_local_z_rank, xranks, yranks, zranks);
+    }
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int ix, const int ij) const{
+        int xr, yr, zr;
+        get_threeD_rank(_myrank, &xr, &yr, &zr, _xranks, _yranks, _zranks);
+        xr = _local_x_rank;
+        yr = _local_y_rank;
+        zr = _local_z_rank;
+        if(_part_pos.access(ix, ij, 0) >= _box.local_x_max){
+            xr = xr + 1;
+            if( xr >= _xranks ) xr = 0;
+        }
+        if(_part_pos.access(ix, ij, 0) < _box.local_x_min){
+            xr = xr - 1;
+            if( xr < 0 ) xr = _xranks-1;
+        }
+        if(_part_pos.access(ix, ij, 1) >= _box.local_y_max){
+            yr = yr + 1;
+            if( yr >= _yranks ) yr = 0;
+        }
+        if(_part_pos.access(ix, ij, 1) < _box.local_y_min){
+            yr = yr - 1;
+            if( yr < 0 ) yr = _yranks-1;
+        }
+        if(_part_pos.access(ix, ij, 2) >= _box.local_z_max){
+            zr = zr + 1;
+            if( zr >= _zranks ) zr = 0;
+        }
+        if(_part_pos.access(ix, ij, 2) < _box.local_z_min){
+            zr = zr - 1;
+            if( zr < 0 ) zr = _zranks-1;
+        }
+        _rank.access(ix, ij) = get_oneD_rank(xr, yr, zr, _xranks, _yranks, _zranks);
+    }};
+
+'''
+    assert out == correct
+
+def test_get_current_kernel():
+    backend = Cabana_PIR()
+    assert backend.get_current_kernel() is None

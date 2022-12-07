@@ -81,19 +81,7 @@ class Cabana_PIR(Backend):
         self._boundary_condition = None
         self._boundary_condition_tree = None
 
-    #def set_boundary_condition(self, boundary_condition_kernel):
-    #    from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import \
-    #            pir_perpart_visitor
-    #    if not isinstance(boundary_condition_kernel, kernels.perpart_kernel_wrapper):
-    #        raise TypeError("Cannot set boundary condition to a non perpart kernel.")
-
-    #    conv = pir_perpart_visitor()
-    #    pir = conv.visit(boundary_condition_kernel.get_kernel_tree())
-    #    self._boundary_condition = pir
-
-    #@property
-    #def boundary_condition(self) -> PerPartKernel:
-    #    return self._boundary_condition
+        self._current_kernel = None
 
     def set_boundary_condition(self, boundary_condition_kernel):
         if not isinstance(boundary_condition_kernel, kernels.perpart_kernel_wrapper):
@@ -930,12 +918,12 @@ class Cabana_PIR(Backend):
         # generate those kernels.
         conv = pir_main_visitor() # ast_to_pir_visitor()
         pir = conv.visit(function)
-        if not isinstance(pir, MainKernel):
-            body = pir.body.detach()
-            sym_tabl = pir.symbol_table
-            pir = MainKernel("main")
-            pir.children[0] = body
-            pir._symbol_table = sym_tabl
+#        if not isinstance(pir, MainKernel):
+#            body = pir.body.detach()
+#            sym_tabl = pir.symbol_table
+#            pir = MainKernel("main")
+#            pir.children[0] = body
+#            pir._symbol_table = sym_tabl
 
         kernels = pir.body.walk(Invoke)
         names = []
@@ -1221,7 +1209,7 @@ class Cabana_PIR(Backend):
         # For each other coupled system we initialise them now.
         for coupled in self._coupled_systems:
             if not coupled.has_preferred_decomposition():
-                rval = rval + coupler.setup_testcase(filename, current_indent=current_indent)
+                rval = rval + coupled.setup_testcase(filename, current_indent=current_indent)
 
         # Initialise neighbours list
         if HartreeParticleDSL.get_mpi():
