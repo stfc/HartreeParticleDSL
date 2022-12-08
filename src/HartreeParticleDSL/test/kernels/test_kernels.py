@@ -1,5 +1,6 @@
 import ast
 import inspect
+from HartreeParticleDSL.HartreeParticleDSL import reset_for_tests
 from HartreeParticleDSL.kernel_types.kernels import *
 
 def test_kernel():
@@ -16,5 +17,6 @@ def main():
     a = a + 1
 
 def test_main_declaration_function():
+    reset_for_tests()
     parser = main_declaration(main)
     assert isinstance(parser, main_function_wrapper)

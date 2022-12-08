@@ -258,6 +258,8 @@ class _HartreeParticleDSL():
     def with_cuda(self, cuda: bool) -> None:
         self._with_cuda = cuda
 
+def reset_for_tests():
+    _HartreeParticleDSL.the_instance = None
 
 def set_particle_type(part):
     '''
