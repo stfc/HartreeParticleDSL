@@ -72,7 +72,6 @@ class FDTD_MPI_Kokkos(force_solver):
         self._includes.append("\"FDTD_MPI_boundaries.hpp\"")
         self._includes.append("\"FDTD_MPI_interpolation.hpp\"")
         self._includes.append("\"FDTD_MPI_step.hpp\"")
-        self._includes.append("\"FDTD_MPI_init.hpp\"")
         self._includes.append("\"FDTD_MPI_IO_HDF5.hpp\"")
 
         self._includes_header = []
