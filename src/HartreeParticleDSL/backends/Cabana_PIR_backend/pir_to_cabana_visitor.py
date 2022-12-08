@@ -502,7 +502,6 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             return f"_{node.symbol.name}(0).{self._visit(node.member)}"
         else:
             return "config.config_host(0)." + self._visit(node.member)
-        assert False
 
     def visit_pointerreference_node(self, node: PointerReference) -> str:
         return f"*{node.symbol.name}"

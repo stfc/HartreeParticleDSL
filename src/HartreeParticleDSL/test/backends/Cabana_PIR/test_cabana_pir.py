@@ -396,13 +396,13 @@ template<class aosoa> class Migrator{
     for(int i = 0; i < neighbors.size(); i++){
         if(neighbors[i] != myrank){
             tag = 0;
-            MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*i], recv_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*i], recv_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(1)*i], recv_count[i],MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(1)*i], recv_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             tag = 0;
-            MPI_Isend(&pos_space.data()[pos_space.extent(1)*i], send_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Isend(&vel_space.data()[vel_space.extent(1)*i], send_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Isend(&cutoff_space.data()[cutoff_space.extent(1)*i], send_count[i],MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&pos_space.data()[pos_space.extent(1)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&vel_space.data()[vel_space.extent(1)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&cutoff_space.data()[cutoff_space.extent(1)*i], send_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
         }
     }
     MPI_Waitall(req_num, requests, MPI_STATUSES_IGNORE);
@@ -807,6 +807,14 @@ def test_cabana_pir_initialise():
     assert "preferred_decomposition()" in out
     assert "setup2()" in out
 
+    backend.add_coupler(coupler_test())
+    HartreeParticleDSL.set_mpi(True)
+    with pytest.raises(NotImplementedError) as excinfo:
+         rval = backend.initialise(123, "myfile", 4) 
+    HartreeParticleDSL.set_mpi(False)
+    assert ("Can't handle multiple coupled systems with a preferred "
+            "decomposition" in str(excinfo.value))
+
 def test_cabana_pir_call_language_function():
     backend = Cabana_PIR()
     with pytest.raises(AttributeError):
@@ -870,7 +878,11 @@ def test_mpi_headers():
     part = Particle()
     config = Config()
     part.add_element("testvar", "int[4][2]")
+    part.add_element("testvar2", "double")
+    part.add_element("testvar3", "float")
+    part.add_element("testvar4", "int64_t")
     config.add_element("testcar", "double[4][2]")
+    config.add_element("testcar2", "int")
     out = backend.mpi_headers(config, part)
     correct = '''
 
@@ -878,6 +890,9 @@ template<class aosoa> class Migrator{
 
     private:
         Kokkos::View<int****, MemorySpace> testvar_space;
+        Kokkos::View<double**, MemorySpace> testvar2_space;
+        Kokkos::View<float**, MemorySpace> testvar3_space;
+        Kokkos::View<int64_t**, MemorySpace> testvar4_space;
         Kokkos::View<double***, MemorySpace> pos_space;
         Kokkos::View<double***, MemorySpace> vel_space;
         Kokkos::View<double**, MemorySpace> cutoff_space;
@@ -887,6 +902,9 @@ template<class aosoa> class Migrator{
         Migrator(int buffer_size, int nr_neighbours){
             _buffer_size = buffer_size;
             testvar_space = Kokkos::View<int****, MemorySpace>("testvar_id", nr_neighbours, buffer_size, 4, 2);
+            testvar2_space = Kokkos::View<double**, MemorySpace>("testvar2_id", nr_neighbours, buffer_size);
+            testvar3_space = Kokkos::View<float**, MemorySpace>("testvar3_id", nr_neighbours, buffer_size);
+            testvar4_space = Kokkos::View<int64_t**, MemorySpace>("testvar4_id", nr_neighbours, buffer_size);
             pos_space = Kokkos::View<double***, MemorySpace>("temp_pos", nr_neighbours, buffer_size, 3);
             vel_space = Kokkos::View<double***, MemorySpace>("temp_velocity", nr_neighbours, buffer_size, 3);
             cutoff_space = Kokkos::View<double**, MemorySpace>("temp_cutoff", nr_neighbours, buffer_size);
@@ -900,6 +918,9 @@ template<class aosoa> class Migrator{
         auto vel_s = Cabana::slice<core_part_velocity>(particle_aosoa, "velocity");
         auto cutoff_s = Cabana::slice<neighbour_part_cutoff>(particle_aosoa, "cutoff");
         auto testvar_s = Cabana::slice<testvar>(particle_aosoa, "testvar");
+        auto testvar2_s = Cabana::slice<testvar2>(particle_aosoa, "testvar2");
+        auto testvar3_s = Cabana::slice<testvar3>(particle_aosoa, "testvar3");
+        auto testvar4_s = Cabana::slice<testvar4>(particle_aosoa, "testvar4");
         int *send_count = (int*) malloc(sizeof(int) * neighbors.size());
         int count_neighbours = 0;
         int end = particle_aosoa.size() - 1;
@@ -929,6 +950,9 @@ template<class aosoa> class Migrator{
                     testvar_space(therank, pos, ii, iii) = testvar_s(i, ii, iii);
                 }
             }
+            testvar2_space(therank, pos) = testvar2_s(i);
+            testvar3_space(therank, pos) = testvar3_s(i);
+            testvar4_space(therank, pos) = testvar4_s(i);
             send_count[therank]++;
 
             while(rank_slice(end) != myrank && end > 0){
@@ -948,6 +972,9 @@ template<class aosoa> class Migrator{
                         testvar_s(i, ii, iii) = testvar_s(end, ii, iii);
                     }
                 }
+                testvar2_s(i) = testvar2_s(end);
+                testvar3_s(i) = testvar3_s(end);
+                testvar4_s(i) = testvar4_s(end);
                 rank_slice(end) = -1;
             }else{
                 rank_slice(i) = -1;
@@ -979,23 +1006,32 @@ template<class aosoa> class Migrator{
     Kokkos::View<double***, MemorySpace> r_vel_space("temp_vel", neighbors.size(), total_size, 3);
     Kokkos::View<double**, MemorySpace> r_cutoff_space("temp_cutoff", neighbors.size(), total_size);
     Kokkos::View<int****, MemorySpace> r_testvar_space("temp_testvar", neighbors.size(), total_size, 4, 2);
+    Kokkos::View<double**, MemorySpace> r_testvar2_space("temp_testvar2", neighbors.size(), total_size);
+    Kokkos::View<float**, MemorySpace> r_testvar3_space("temp_testvar3", neighbors.size(), total_size);
+    Kokkos::View<int64_t**, MemorySpace> r_testvar4_space("temp_testvar4", neighbors.size(), total_size);
 
     free(requests);
-    requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbors.size() * 2 * 4);
+    requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbors.size() * 2 * 7);
     req_num = 0;
     int tag = 0;
     for(int i = 0; i < neighbors.size(); i++){
         if(neighbors[i] != myrank){
             tag = 0;
-            MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*i], recv_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*i], recv_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(1)*i], recv_count[i],MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(1)*i], recv_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Irecv(&r_testvar_space.data()[r_testvar_space.extent(1) * r_testvar_space.extent(2) * r_testvar_space.extent(3) * i], recv_count[i] * 4 * 2, MPI_INT, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_testvar2_space.data()[r_testvar2_space.extent(1)*i], recv_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_testvar3_space.data()[r_testvar3_space.extent(1)*i], recv_count[i], MPI_FLOAT, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_testvar4_space.data()[r_testvar4_space.extent(1)*i], recv_count[i], MPI_INT64_T, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             tag = 0;
-            MPI_Isend(&pos_space.data()[pos_space.extent(1)*i], send_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Isend(&vel_space.data()[vel_space.extent(1)*i], send_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Isend(&cutoff_space.data()[cutoff_space.extent(1)*i], send_count[i],MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&pos_space.data()[pos_space.extent(1)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&vel_space.data()[vel_space.extent(1)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&cutoff_space.data()[cutoff_space.extent(1)*i], send_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Isend(&testvar_space.data()[testvar_space.extent(1) * r_testvar_space.extent(2) * r_testvar_space.extent(3) * i], send_count[i] * 4 * 2, MPI_INT, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&testvar2_space.data()[testvar2_space.extent(1)*i], send_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&testvar3_space.data()[testvar3_space.extent(1)*i], send_count[i], MPI_FLOAT, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&testvar4_space.data()[testvar4_space.extent(1)*i], send_count[i], MPI_INT64_T, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
         }
     }
     MPI_Waitall(req_num, requests, MPI_STATUSES_IGNORE);
@@ -1029,6 +1065,9 @@ template<class aosoa> class Migrator{
     auto new_vel_s = Cabana::slice<core_part_velocity>(particle_aosoa, "new_velocity");
     auto new_cutoff_s = Cabana::slice<neighbour_part_cutoff>(particle_aosoa, "new_cutoff");
     auto new_testvar_s = Cabana::slice<testvar>(particle_aosoa, "new_testvar");
+    auto new_testvar2_s = Cabana::slice<testvar2>(particle_aosoa, "new_testvar2");
+    auto new_testvar3_s = Cabana::slice<testvar3>(particle_aosoa, "new_testvar3");
+    auto new_testvar4_s = Cabana::slice<testvar4>(particle_aosoa, "new_testvar4");
     int x = 0;
     for(int j = 0; j < neighbors.size(); j++){
         for(int i = 0; i < recv_count[j]; i++){
@@ -1044,6 +1083,9 @@ template<class aosoa> class Migrator{
                     new_testvar_s(end+x, ii, iii) = r_testvar_space(j,i, ii, iii);
                 }
             }
+            new_testvar2_s(end+x) = r_testvar2_space(j,i);
+            new_testvar3_s(end+x) = r_testvar3_space(j,i);
+            new_testvar4_s(end+x) = r_testvar4_space(j,i);
             x++;
         }
     }
@@ -1122,6 +1164,11 @@ struct _rank_update_functor{
 
 '''
     assert out == correct
+    part.add_element("testvar5", "int32_t")
+    with pytest.raises(NotImplementedError) as excinfo:
+        out = backend.mpi_headers(config, part)
+    assert ("Don't know currently how to support element testvar5 with "
+            "datatype int32_t for MPI" in str(excinfo.value))
 
 def test_cabana_pir_get_current_kernel():
     backend = Cabana_PIR()

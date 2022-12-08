@@ -323,6 +323,7 @@ type_mapping_str = {"c_int": INT_TYPE,
                     "c_bool": BOOL_TYPE,
                     "bool": BOOL_TYPE,
                     "char*": STRING_TYPE,
+                    "string": STRING_TYPE,
                     "part": BASE_PARTICLE_TYPE,
                     "config": BASE_CONFIG_TYPE}
 
@@ -366,7 +367,7 @@ def reset_type_mapping_str():
     valid_keys = ["c_int","int", "c_double", "double",
             "c_float", "float", "c_int64_t", "int64_t", "c_int32_t",
             "int32_t"," c_int8_t", "int8_t", "c_bool", "bool",
-            "char*", "part", "config"]
+            "char*", "string", "part", "config"]
     dict_keys = type_mapping_str.keys()
     to_remove = []
     for key in dict_keys:

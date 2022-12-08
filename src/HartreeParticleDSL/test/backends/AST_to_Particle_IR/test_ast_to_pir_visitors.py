@@ -75,6 +75,17 @@ def test_visit_Name():
         v.visit(c)
     assert ("Attempted to access a symbol that has not been defined in this "
             "scope. Symbol name was b" in str(excinfo.value))
+    
+    def d():
+        mycall(hello)
+    # Occasionally used in calls and similar
+    v._check_valid = False
+    c = ast.parse(textwrap.dedent(inspect.getsource(d)))
+    out = v.visit(c)
+    assert isinstance(out.body.children[0], Call)
+    assert isinstance(out.body.children[0].children[0], ScalarReference)
+    assert out.body.children[0].children[0].symbol.datatype == STRING_TYPE
+    assert out.body.children[0].children[0].symbol.name == "hello"
 
 def test_visit_Add():
     v = ast_to_pir_visitor()

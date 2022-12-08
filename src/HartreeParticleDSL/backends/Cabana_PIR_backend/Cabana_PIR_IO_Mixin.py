@@ -14,7 +14,7 @@ class Cabana_PIR_IO_Mixin(metaclass=ABCMeta):
         '''
         raise NotImplementedError(f"{self.__class__.__name__} does not "
                                   "implement required function "
-                                  "gen_code_cabana")
+                                  "gen_code_cabana_pir")
 
     def call_get_box_size_pir(self, part_count, filename, current_indent=4):
         raise NotImplementedError(f"{self.__class__.__name__} does not "

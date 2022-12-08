@@ -73,3 +73,19 @@ def test_input_cabana_pir():
     Cabana::deep_copy(particle_aosoa, particle_aosoa_host);
 '''
     assert x == correct
+
+def test_gen_code_cabana_pir():
+    mod = Random_Particles()
+    x = mod.gen_code_cabana_pir(None)
+    assert x == ""
+
+def test_get_includes_cabana_pir():
+    mod = Random_Particles()
+    x = mod.get_includes_cabana_pir()
+    assert "\"random_io_cabana.hpp\"" in x
+
+def test_get_header_includes_and_box_size_cabana_pir():
+    mod = Random_Particles()
+    assert mod.call_get_box_size_pir(None, None) == ""
+    assert len(mod.get_header_includes_cabana_pir()) == 0
+

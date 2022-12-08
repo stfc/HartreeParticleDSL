@@ -547,11 +547,11 @@ class Cabana_PIR(Backend):
         inc_indent()
         rval = rval + get_indent() + "tag = 0;\n"
         rval = rval + get_indent() + "MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*i], recv_count[i]*3,"
-        rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
+        rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
         rval = rval + get_indent() + "MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*i], recv_count[i]*3,"
-        rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
+        rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
         rval = rval + get_indent() + "MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(1)*i], recv_count[i],"
-        rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
+        rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
         for element in element_info.keys():
             mpi_dtype = None
             if element_info[element][0] == "int":
@@ -567,7 +567,7 @@ class Cabana_PIR(Backend):
                                           + element + " with datatype "
                                           + element_info[element][0] + " for MPI")
             if element_info[element][1] == 0:
-                rval = rval + get_indent() + "MPI_Irecv(&r_"+element+"_space.data()[r_"+element+"_space.extent(1)*i], recv_count[i],"
+                rval = rval + get_indent() + "MPI_Irecv(&r_"+element+"_space.data()[r_"+element+"_space.extent(1)*i], recv_count[i], "
                 rval = rval + mpi_dtype + ", neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
             else:
                 rval = rval + get_indent() + "MPI_Irecv(&r_"+element+"_space.data()[r_"+element+"_space.extent(1)"
@@ -581,11 +581,11 @@ class Cabana_PIR(Backend):
         # Now do sends
         rval = rval + get_indent() + "tag = 0;\n"
         rval = rval + get_indent() + "MPI_Isend(&pos_space.data()[pos_space.extent(1)*i], send_count[i]*3,"
-        rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
+        rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
         rval = rval + get_indent() + "MPI_Isend(&vel_space.data()[vel_space.extent(1)*i], send_count[i]*3,"
-        rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
+        rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
         rval = rval + get_indent() + "MPI_Isend(&cutoff_space.data()[cutoff_space.extent(1)*i], send_count[i],"
-        rval = rval + "MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
+        rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
         for element in element_info.keys():
             mpi_dtype = None
             if element_info[element][0] == "int":
@@ -600,7 +600,7 @@ class Cabana_PIR(Backend):
                 raise NotImplementedError("Don't know currently how to support datatype "
                                           + element_info[element[0]] + " for MPI")
             if element_info[element][1] == 0:
-                rval = rval + get_indent() + "MPI_Isend(&"+element+"_space.data()["+element+"_space.extent(1)*i], send_count[i],"
+                rval = rval + get_indent() + "MPI_Isend(&"+element+"_space.data()["+element+"_space.extent(1)*i], send_count[i], "
                 rval = rval + mpi_dtype + ", neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
             else:
                 rval = rval + get_indent() + "MPI_Isend(&"+element+"_space.data()["+element+"_space.extent(1)"
