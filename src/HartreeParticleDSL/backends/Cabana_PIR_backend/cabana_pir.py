@@ -596,9 +596,6 @@ class Cabana_PIR(Backend):
                 mpi_dtype = "MPI_FLOAT"
             elif element_info[element][0] == "int64_t":
                 mpi_dtype = "MPI_INT64_T"
-            if mpi_dtype is None:
-                raise NotImplementedError("Don't know currently how to support datatype "
-                                          + element_info[element[0]] + " for MPI")
             if element_info[element][1] == 0:
                 rval = rval + get_indent() + "MPI_Isend(&"+element+"_space.data()["+element+"_space.extent(1)*i], send_count[i], "
                 rval = rval + mpi_dtype + ", neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
