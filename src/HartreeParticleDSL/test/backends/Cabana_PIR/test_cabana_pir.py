@@ -1087,3 +1087,4 @@ struct _rank_update_functor{
 def test_get_current_kernel():
     backend = Cabana_PIR()
     assert backend.get_current_kernel() is None
+

@@ -5,7 +5,7 @@ from HartreeParticleDSL.Particle_IR.nodes.member import Member
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import INT_TYPE, StructureType
 from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
 
-def test_cr():
+def test_config_reference():
     struct_type = StructureType()
     structure = StructureSymbol(name="structure1", datatype=struct_type)
 
