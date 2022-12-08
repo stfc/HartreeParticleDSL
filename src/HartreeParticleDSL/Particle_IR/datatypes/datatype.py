@@ -363,9 +363,10 @@ def reset_type_mapping_str():
     '''
     This function resets the type_mapping_str to its initial state.
     '''
-    valid_keys = ["c_int", "c_double", "double",
-            "c_float", "float", "c_int64_t", "c_int32_t",
-            "c_int8_t", "c_bool", "char*", "part", "config"]
+    valid_keys = ["c_int","int", "c_double", "double",
+            "c_float", "float", "c_int64_t", "int64_t", "c_int32_t",
+            "int32_t"," c_int8_t", "int8_t", "c_bool", "bool",
+            "char*", "part", "config"]
     dict_keys = type_mapping_str.keys()
     to_remove = []
     for key in dict_keys:
