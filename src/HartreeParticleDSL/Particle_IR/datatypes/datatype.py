@@ -309,14 +309,19 @@ _SPACE_TYPE.components["box_dims"] = _BOUNDARY_TYPE
 BASE_CONFIG_TYPE.components["space"] = _SPACE_TYPE
 
 type_mapping_str = {"c_int": INT_TYPE,
+                    "int": INT_TYPE,
                     "c_double": DOUBLE_TYPE,
                     "double": DOUBLE_TYPE,
                     "c_float": FLOAT_TYPE,
                     "float": FLOAT_TYPE,
                     "c_int64_t": INT64_TYPE,
+                    "int64_t": INT64_TYPE,
                     "c_int32_t": INT32_TYPE,
+                    "int32_t": INT32_TYPE,
                     "c_int8_t": INT8_TYPE,
+                    "int8_t": INT8_TYPE,
                     "c_bool": BOOL_TYPE,
+                    "bool": BOOL_TYPE,
                     "char*": STRING_TYPE,
                     "part": BASE_PARTICLE_TYPE,
                     "config": BASE_CONFIG_TYPE}

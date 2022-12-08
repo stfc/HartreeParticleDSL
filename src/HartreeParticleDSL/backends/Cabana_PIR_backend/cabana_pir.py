@@ -1274,7 +1274,7 @@ class Cabana_PIR(Backend):
             for struct in self._structures.keys():
                 slice_names.append(struct)
             if len(slice_names) > 0:
-                rval = rval + ","
+                rval = rval + ", "
             rval = rval + ", ".join(slice_names) + ");\n"
 
         # TODO Initial MPI Communication and binning of particles
@@ -1388,7 +1388,7 @@ class Cabana_PIR(Backend):
         rval = rval + indent_str + "particle_aosoa.resize(particle_aosoa_host.size());\n"
         rval = rval + indent_str + "Cabana::deep_copy(particle_aosoa, particle_aosoa_host);\n"
 
-        # TODO Need to remake slices and SimdPolicy as well.
+        # Need to remake slices and SimdPolicy as well.
         rval = rval + indent_str + "core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);\n"
         rval = rval + indent_str + "core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);\n"
         rval = rval + indent_str + "neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);\n"
@@ -1428,50 +1428,50 @@ class Cabana_PIR(Backend):
 
     def _gen_makefile(self):
         raise NotImplementedError()
-        with open("CMakeLists.txt", "w") as f:
-            #TODO set project
-            import os
-            project_name = os.path.split(os.getcwd())[-1]
-            #TODO
-            output = "cmake_minimum_required (VERSION 3.10)\n"
-            output = output + f"project ({project_name})\n"
-            output = output + "set(Kokkos_DIR \"$ENV{Kokkos_ROOT}\" CACHE STRING \"Kokkos root directory\")\n"
-            required_packages = []
-            required_packages.append("Kokkos")
-            required_packages.append("Cabana")
-            if get_mpi():
-                required_packages.append("MPI")
-            # TODO IF we have GPU we need CUDAToolkit
-            # Check with IO and coupled systems for their needs
-            for sys in self._coupled_systems:
-                sys_req_pack = sys.get_required_packages()
-                for req in sys_req_pack:
-                    if req not in required_packages:
-                        required_packages.append(req)
-                
-            for package in required_packages:
-                output = output + f"find_package({package}, REQUIRED)\n"
-
-            if get_mpi():
-                output = output + "include_directories(SYSTEM ${MPI_INCLUDE_PATH})\n"
-
-            compiled_files = ["code.cpp"]
-            for sys in self._coupled_systems:
-                sys_files = sys.compilation_files()
-                for fil in sys_files:
-                    if fil not in compiled_files:
-                        compiled_files.append(fil)
-            
-            output = output + "add_executable(" + project_name + ".exe "
-            output = output + " ".join(compiled_files) + ")\n"
-
-#target_link_libraries(Cabana_PIC.exe ${HDF5_C_LIBRARIES})
-            link_libraries = ["Cabana::cabanacore", "Kokkos::kokkos"]
-            if get_mpi():
-                link_libraries.append("${MPI_C_LIBRARIES}")
-            # TODO If we have GPU we need CUDArt or something
-            # TODO Implement coupled system and IO requirements
-            for lib in link_libraries:
-                output = output + "target_link_libraries(" + project_name + ".exe" + lib + ")\n"
-
-            f.write(output)
+#        with open("CMakeLists.txt", "w") as f:
+#            #TODO set project
+#            import os
+#            project_name = os.path.split(os.getcwd())[-1]
+#            #TODO
+#            output = "cmake_minimum_required (VERSION 3.10)\n"
+#            output = output + f"project ({project_name})\n"
+#            output = output + "set(Kokkos_DIR \"$ENV{Kokkos_ROOT}\" CACHE STRING \"Kokkos root directory\")\n"
+#            required_packages = []
+#            required_packages.append("Kokkos")
+#            required_packages.append("Cabana")
+#            if get_mpi():
+#                required_packages.append("MPI")
+#            # TODO IF we have GPU we need CUDAToolkit
+#            # Check with IO and coupled systems for their needs
+#            for sys in self._coupled_systems:
+#                sys_req_pack = sys.get_required_packages()
+#                for req in sys_req_pack:
+#                    if req not in required_packages:
+#                        required_packages.append(req)
+#                
+#            for package in required_packages:
+#                output = output + f"find_package({package}, REQUIRED)\n"
+#
+#            if get_mpi():
+#                output = output + "include_directories(SYSTEM ${MPI_INCLUDE_PATH})\n"
+#
+#            compiled_files = ["code.cpp"]
+#            for sys in self._coupled_systems:
+#                sys_files = sys.compilation_files()
+#                for fil in sys_files:
+#                    if fil not in compiled_files:
+#                        compiled_files.append(fil)
+#            
+#            output = output + "add_executable(" + project_name + ".exe "
+#            output = output + " ".join(compiled_files) + ")\n"
+#
+##target_link_libraries(Cabana_PIC.exe ${HDF5_C_LIBRARIES})
+#            link_libraries = ["Cabana::cabanacore", "Kokkos::kokkos"]
+#            if get_mpi():
+#                link_libraries.append("${MPI_C_LIBRARIES}")
+#            # TODO If we have GPU we need CUDArt or something
+#            # TODO Implement coupled system and IO requirements
+#            for lib in link_libraries:
+#                output = output + "target_link_libraries(" + project_name + ".exe" + lib + ")\n"
+#
+#            f.write(output)

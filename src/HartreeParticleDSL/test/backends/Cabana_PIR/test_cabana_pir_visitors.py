@@ -476,6 +476,18 @@ def test_pir_cabana_config_reference():
 '''
     assert out == correct
 
+    def main():
+        config.space = 1
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(main)))
+    v = pir_main_visitor()
+    pir = v.visit(c)
+    out = cpir(pir)
+
+    correct = "config.config_host(0).space = 1;\n"
+    assert correct in out
+
+
 def test_pir_cabana_particle_references_and_perpart():
     backend = Cabana_PIR()
     cpir = Cabana_PIR_Visitor(backend)

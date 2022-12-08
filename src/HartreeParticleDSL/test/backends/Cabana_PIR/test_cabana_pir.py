@@ -203,6 +203,15 @@ class coupler_test2(base_coupler):
 
     def get_includes_header(self):
         return ["a"]
+    
+    def has_preferred_decomposition(self):
+        return False
+
+    def setup_testcase(self, filename, current_indent=0):
+        return current_indent*" " + "setup2()"
+
+    def get_extra_symbols(self, flist):
+        return "x"
 
 class dummy_module(IO_Module, Cabana_PIR_IO_Mixin):
 
@@ -755,6 +764,9 @@ def test_cabana_pir_initialise():
     backend.gen_particle(part)
     backend.gen_config(config)
     backend.add_structure("c_int", "mystruct")
+    temp = StructureType()
+    backend.add_structure(temp, "mystruct2")
+    type_mapping_str["test"] = temp
     backend._kernel_slices["slice1"] = ["s1", "s2"]
     out = backend.initialise(123, "myfile", 4)
     correct = '''    Kokkos::ScopeGuard scope_guard(argc, argv);
@@ -763,6 +775,7 @@ def test_cabana_pir_initialise():
     config.config = config_struct_type("config", 1);
     config.config_host = Kokkos::create_mirror_view(config.config);
     mystruct mystruct;
+    test mystruct2;
     int myrank = 0;
     int nranks = 1;
     Cabana::AoSoA<DataTypes, DeviceType, VectorLength> particle_aosoa( "particle_list", 123);
@@ -774,7 +787,7 @@ def test_cabana_pir_initialise():
     auto core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);
     auto core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
     auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
-    slice1_functor<decltype(s1_slice), decltype(s2_slice)> slice1(s1_slice, s2_slice, config.config,mystruct);
+    slice1_functor<decltype(s1_slice), decltype(s2_slice)> slice1(s1_slice, s2_slice, config.config, mystruct, mystruct2);
 '''
     assert correct == out
 
@@ -785,11 +798,14 @@ def test_cabana_pir_initialise():
             "for us." in str(excinfo.value))
     coupler = coupler_test()
     backend.add_coupler(coupler)
+    coupler2 = coupler_test2()
+    backend.add_coupler(coupler2)
     out = backend.initialise(123, "myfile", 4)
     HartreeParticleDSL.set_mpi(False)
     assert "int _provided;\n" in out
     assert "MPI_Init_thread( &argc, &argv, MPI_THREAD_FUNNELED, &_provided  );\n" in out
     assert "preferred_decomposition()" in out
+    assert "setup2()" in out
 
 def test_cabana_pir_call_language_function():
     backend = Cabana_PIR()
@@ -853,13 +869,15 @@ def test_mpi_headers():
     backend = Cabana_PIR()
     part = Particle()
     config = Config()
+    part.add_element("testvar", "int[4][2]")
+    config.add_element("testcar", "double[4][2]")
     out = backend.mpi_headers(config, part)
-    print(out)
     correct = '''
 
 template<class aosoa> class Migrator{
 
     private:
+        Kokkos::View<int****, MemorySpace> testvar_space;
         Kokkos::View<double***, MemorySpace> pos_space;
         Kokkos::View<double***, MemorySpace> vel_space;
         Kokkos::View<double**, MemorySpace> cutoff_space;
@@ -868,6 +886,7 @@ template<class aosoa> class Migrator{
     public:
         Migrator(int buffer_size, int nr_neighbours){
             _buffer_size = buffer_size;
+            testvar_space = Kokkos::View<int****, MemorySpace>("testvar_id", nr_neighbours, buffer_size, 4, 2);
             pos_space = Kokkos::View<double***, MemorySpace>("temp_pos", nr_neighbours, buffer_size, 3);
             vel_space = Kokkos::View<double***, MemorySpace>("temp_velocity", nr_neighbours, buffer_size, 3);
             cutoff_space = Kokkos::View<double**, MemorySpace>("temp_cutoff", nr_neighbours, buffer_size);
@@ -880,6 +899,7 @@ template<class aosoa> class Migrator{
         auto pos_s = Cabana::slice<core_part_position>(particle_aosoa, "position");
         auto vel_s = Cabana::slice<core_part_velocity>(particle_aosoa, "velocity");
         auto cutoff_s = Cabana::slice<neighbour_part_cutoff>(particle_aosoa, "cutoff");
+        auto testvar_s = Cabana::slice<testvar>(particle_aosoa, "testvar");
         int *send_count = (int*) malloc(sizeof(int) * neighbors.size());
         int count_neighbours = 0;
         int end = particle_aosoa.size() - 1;
@@ -904,6 +924,11 @@ template<class aosoa> class Migrator{
             vel_space(therank, pos, 1) = vel_s(i, 1);
             vel_space(therank, pos, 2) = vel_s(i, 2);
             cutoff_space(therank, pos) = cutoff_s(i);
+            for(int ii=0; ii < 4; ii++){
+                for(int iii=0; iii < 2; iii++){
+                    testvar_space(therank, pos, ii, iii) = testvar_s(i, ii, iii);
+                }
+            }
             send_count[therank]++;
 
             while(rank_slice(end) != myrank && end > 0){
@@ -918,6 +943,11 @@ template<class aosoa> class Migrator{
                 vel_s(i, 1) = vel_s(end, 1);
                 vel_s(i, 2) = vel_s(end, 2);
                 cutoff_s(i) = cutoff_s(end);
+                for(int ii=0; ii < 4; ii++){
+                    for(int iii=0; iii < 2; iii++){
+                        testvar_s(i, ii, iii) = testvar_s(end, ii, iii);
+                    }
+                }
                 rank_slice(end) = -1;
             }else{
                 rank_slice(i) = -1;
@@ -948,9 +978,10 @@ template<class aosoa> class Migrator{
     Kokkos::View<double***, MemorySpace> r_pos_space("temp_pos", neighbors.size(), total_size, 3);
     Kokkos::View<double***, MemorySpace> r_vel_space("temp_vel", neighbors.size(), total_size, 3);
     Kokkos::View<double**, MemorySpace> r_cutoff_space("temp_cutoff", neighbors.size(), total_size);
+    Kokkos::View<int****, MemorySpace> r_testvar_space("temp_testvar", neighbors.size(), total_size, 4, 2);
 
     free(requests);
-    requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbors.size() * 2 * 3);
+    requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbors.size() * 2 * 4);
     req_num = 0;
     int tag = 0;
     for(int i = 0; i < neighbors.size(); i++){
@@ -959,10 +990,12 @@ template<class aosoa> class Migrator{
             MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*i], recv_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*i], recv_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(1)*i], recv_count[i],MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_testvar_space.data()[r_testvar_space.extent(1) * r_testvar_space.extent(2) * r_testvar_space.extent(3) * i], recv_count[i] * 4 * 2, MPI_INT, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             tag = 0;
             MPI_Isend(&pos_space.data()[pos_space.extent(1)*i], send_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Isend(&vel_space.data()[vel_space.extent(1)*i], send_count[i]*3,MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Isend(&cutoff_space.data()[cutoff_space.extent(1)*i], send_count[i],MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&testvar_space.data()[testvar_space.extent(1) * r_testvar_space.extent(2) * r_testvar_space.extent(3) * i], send_count[i] * 4 * 2, MPI_INT, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
         }
     }
     MPI_Waitall(req_num, requests, MPI_STATUSES_IGNORE);
@@ -995,6 +1028,7 @@ template<class aosoa> class Migrator{
     auto new_pos_s = Cabana::slice<core_part_position>(particle_aosoa, "new_position");
     auto new_vel_s = Cabana::slice<core_part_velocity>(particle_aosoa, "new_velocity");
     auto new_cutoff_s = Cabana::slice<neighbour_part_cutoff>(particle_aosoa, "new_cutoff");
+    auto new_testvar_s = Cabana::slice<testvar>(particle_aosoa, "new_testvar");
     int x = 0;
     for(int j = 0; j < neighbors.size(); j++){
         for(int i = 0; i < recv_count[j]; i++){
@@ -1005,6 +1039,11 @@ template<class aosoa> class Migrator{
             new_vel_s(end+x, 1) = r_vel_space(j,i,1);
             new_vel_s(end+x, 2) = r_vel_space(j,i,2);
             new_cutoff_s(end+x) = r_cutoff_space(j,i);
+            for(int ii=0; ii < 4;ii++){
+                for(int iii=0; iii < 2;iii++){
+                    new_testvar_s(end+x, ii, iii) = r_testvar_space(j,i, ii, iii);
+                }
+            }
             x++;
         }
     }
@@ -1084,7 +1123,42 @@ struct _rank_update_functor{
 '''
     assert out == correct
 
-def test_get_current_kernel():
+def test_cabana_pir_get_current_kernel():
     backend = Cabana_PIR()
     assert backend.get_current_kernel() is None
 
+def test_cabana_pir_get_extra_symbols():
+    a = Cabana_PIR()
+    x = StructureType()
+    a.add_structure(x, "x")
+    a.add_coupler(coupler_test2())
+    result = a.get_extra_symbols([])
+    assert result[0][0] == "x"
+    assert result[0][1].datatype == x
+    assert result[1] == "x"
+
+def test_cabana_pir_get_mpi_comm_after_bcs():
+    a = Cabana_PIR()
+    
+    part = Particle()
+    part.add_element("test", "int")
+    a._particle = part
+    out = a.gen_mpi_comm_after_bcs()
+    correct = '''    Cabana::deep_copy(particle_aosoa_host, particle_aosoa);
+    _migrator.exchange_data(particle_aosoa_host, neighbors, myrank, particle_aosoa_host.size());
+    particle_aosoa.resize(particle_aosoa_host.size());
+    Cabana::deep_copy(particle_aosoa, particle_aosoa_host);
+    core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);
+    core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
+    neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
+    test_slice = Cabana::slice<test>(particle_aosoa);
+
+    simd_policy = Cabana::SimdPolicy<VectorLength, ExecutionSpace>(0, particle_aosoa.size());
+
+'''
+    assert out == correct
+
+def test_cabana_pir_gen_makefile():
+    a = Cabana_PIR()
+    with pytest.raises(NotImplementedError):
+        a._gen_makefile()
