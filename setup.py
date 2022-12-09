@@ -97,7 +97,8 @@ if __name__ == '__main__':
         long_description=LONG_DESCRIPTION,
         classifiers=CLASSIFIERS,
         packages=PACKAGES,
-        package_dir={"": ["src", "*.cpp", "*.hpp"]},
+        package_dir={"": "src"},
+        package_data = {"" : ["*.hpp", "*.cpp"]},
         install_requires=['pyparsing', 'six'],
         extras_require={
             'dag': ["graphviz"],
