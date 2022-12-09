@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
     EGS_DIR = os.path.join(BASE_PATH, "examples")
     INSTALL_PATH = os.path.join("share", "HartreeParticleDSL", "examples")
-    VALID_SUFFIXES = ["90", "py", "md", ".c", ".cl", "Makefile", ".mk"]
+    VALID_SUFFIXES = ["90", "py", "md", ".c", ".cl", "Makefile", ".mk", ".cpp", ".hpp"]
     EXAMPLES = get_files(EGS_DIR, INSTALL_PATH, VALID_SUFFIXES)
 
     LIBS_DIR = os.path.join(BASE_PATH, "lib")
