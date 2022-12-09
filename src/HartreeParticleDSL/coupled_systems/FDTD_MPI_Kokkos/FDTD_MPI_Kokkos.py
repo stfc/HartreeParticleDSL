@@ -357,9 +357,6 @@ class FDTD_MPI_Kokkos(force_solver):
                  'FDTD_MPI_step.cpp',
                  'FDTD_MPI_step.hpp']
         BASEPATH = os.path.dirname(inspect.getfile(FDTD_MPI_Kokkos))
-        temp = os.listdir(BASEPATH)
-        for f in temp:
-            print(temp)
         for f in files:
             copy(os.path.join(BASEPATH, f), f)
 
