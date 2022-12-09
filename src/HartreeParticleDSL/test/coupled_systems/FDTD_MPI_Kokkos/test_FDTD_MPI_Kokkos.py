@@ -83,7 +83,7 @@ def test_FDTD_MPI_Kokkos_set_interpolator():
     assert ("Unsupported interpolator, only TOPHAT is currently supported"
             in str(excinfo.value))
 
-def test_FDTD_MPI_Kokkos_set_interpolator():
+def test_FDTD_MPI_Kokkos_call_init_grid():
     backend = Cabana_PIR()
     HartreeParticleDSL.set_backend(backend)
     a = FDTD_MPI_Kokkos()
@@ -98,6 +98,15 @@ def test_FDTD_MPI_Kokkos_setup_testcase():
     out = a.setup_testcase("Myfile.hdf5")
     reset_type_mapping_str()
     reset_part_and_config()
+    correct = '''field.ng = 4;
+field.jng = 4;
+load_grid_hdf5(field, "Myfile.hdf5", myrank, nranks, config.config_host(0).space.box_dims);
+update_e_field_functor _efield_func(field, field.nx);
+update_b_field_functor _bfield_func(field, field.nx);
+auto _rp = Kokkos::RangePolicy<>(0, field.nx + 2 * field.ng);
+'''
+    assert out == correct
+    out = a.setup_testcase("\"Myfile.hdf5\"")
     correct = '''field.ng = 4;
 field.jng = 4;
 load_grid_hdf5(field, "Myfile.hdf5", myrank, nranks, config.config_host(0).space.box_dims);
