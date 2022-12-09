@@ -1,8 +1,22 @@
 import pytest
+
+import ast
+import inspect
+import textwrap
+import os
+
 import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
+from HartreeParticleDSL.HartreeParticleDSL import part, config
+from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import pir_perpart_visitor
 from HartreeParticleDSL.coupled_systems.FDTD_MPI_Kokkos.FDTD_MPI_Kokkos import FDTD_MPI_Kokkos, TOPHAT, PERIODIC, IllegalInterpolatorError
 from HartreeParticleDSL.backends.Cabana_PIR_backend.cabana_pir import Cabana_PIR
+from HartreeParticleDSL.backends.Cabana_PIR_backend.pir_to_cabana_visitor import Cabana_PIR_Visitor
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import reset_part_and_config, reset_type_mapping_str
+
+from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, ScalarType, \
+        StructureType, ArrayType, PointerType, \
+        INT_TYPE, FLOAT_TYPE, DOUBLE_TYPE, INT64_TYPE, INT32_TYPE, BOOL_TYPE, STRING_TYPE, \
+        BASE_PARTICLE_TYPE, reset_part_and_config
 
 def test_FDTD_MPI_Kokkos():
     backend = Cabana_PIR()
@@ -161,3 +175,200 @@ current_finish(field.jx, field.jy, field.jz,
                field.nx, field.ng);
 '''
     assert out == correct
+
+def test_FDTD_MPI_Kokkos_output_grid():
+    backend = Cabana_PIR()
+    HartreeParticleDSL.set_backend(backend)
+    a = FDTD_MPI_Kokkos()
+    out = a.output_grid("out.hdf5")
+    reset_type_mapping_str()
+    reset_part_and_config()
+    correct = '''
+{
+char filename[300] = "out.hdf5";
+grid_hdf5_output( field, filename, myrank, nranks);
+}
+'''
+    assert out == correct
+
+def test_FDTD_MPI_Kokkos_get_extra_symbols():
+    backend = Cabana_PIR()
+    HartreeParticleDSL.set_backend(backend)
+    a = FDTD_MPI_Kokkos()
+    out = a.get_extra_symbols([])
+    reset_type_mapping_str()
+    reset_part_and_config()
+    assert len(out) == 0
+
+    out = a.get_extra_symbols(["call_interpolate_to_particles"])
+    assert len(out) == 33
+    assert out[32][0] == "cell_x1"
+    assert out[0][0] == "idt"
+
+def test_FDTD_MPI_Kokkos_call_interpolate_to_particles():
+    backend = Cabana_PIR()
+    HartreeParticleDSL.set_backend(backend)
+    # Create a perpart_kernel
+    v = pir_perpart_visitor()
+    type_mapping_str["part"].add("subpart", INT_TYPE)
+    new_type = ArrayType(INT_TYPE, [3])
+    type_mapping_str["part"].add("subarray", new_type)
+    def x(arg: part, c: config):
+        arg.subpart = 1
+        arg.subarray[0] = 1
+        arg.core_part.position[0] = 2.0
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(x)))
+    pir = v.visit(c)
+    backend._current_kernel = pir
+
+
+    a = FDTD_MPI_Kokkos()
+    out = a.call_interpolate_to_particles("part_weight", "part_charge", "part_mass", "part_p[0]", "part_p[1]", "part_p[2]", "dx", "dt")
+    reset_type_mapping_str()
+    reset_part_and_config()
+    correct = '''idt = 1.0 / dt;
+idx = 1.0 / dx;
+dto2 = dt / 2.0;
+dtco2 = c * dto2;
+dtfac = 0.5 * dt;
+idtf = idt;
+idxf = idx;
+double gxarray[4] = {0.0, 0.0, 0., 0.};
+double hxarray[4] = {0.0, 0.0, 0.0, 0.0};
+double* gx = &gxarray[1];
+double* hx = &hxarray[1];
+part_weight = part_weight;
+fcx = idtf * part_weight;
+fcy = idxf * part_weight;
+part_q = part_charge;
+part_m = part_mass;
+part_mc = c * part_m;
+ipart_mc = 1.0 / part_mc;
+cmratio = part_q * dtfac * ipart_mc;
+ccmratio = c * cmratio;
+//Copy out the particle properties
+part_x = _core_part_position.access(i, a, 0) - field.field.x_grid_min_local;
+part_p_x = part_p[0];
+part_p_y = part_p[1];
+part_p_z = part_p[2];
+part_ux = part_p[0] * ipart_mc;
+part_uy = part_p[1] * ipart_mc;
+part_uz = part_p[2] * ipart_mc;
+//Calculate v(t) from p(t)
+gamma_rel = sqrtf(part_ux*part_ux + part_uy*part_uy + part_uz*part_uz + 1.0);
+root = dtco2 / gamma_rel;
+
+//Move particles to half timestep position (first order)
+part_x = part_x + part_ux * root;
+cell_x_r = part_x * idx - 0.5;
+ex_part = 0.0;
+ey_part = 0.0;
+ez_part = 0.0;
+bx_part = 0.0;
+by_part = 0.0;
+bz_part = 0.0;
+cell_x1 = 0;
+interpolate_from_grid_tophat_1D(part_weight, part_q, part_m,
+&part_x, part_p_x, part_p_y,
+part_p_z, &ex_part,
+&ey_part, &ez_part,
+&bx_part, &by_part,
+&bz_part, cell_x_r, &cell_x1,
+gx, hx, field.ex, field.ey, field.ez, field.bx, field.by, field.bz,
+idt, idx, dtco2, idtf, idxf, field.nx, fcx, fcy, field.ng);
+'''
+    assert out == correct
+
+def test_FDTD_MPI_Kokkos_gather_forces_to_grid():
+    backend = Cabana_PIR()
+    HartreeParticleDSL.set_backend(backend)
+    a = FDTD_MPI_Kokkos()
+    # Create a perpart_kernel
+    v = pir_perpart_visitor()
+    type_mapping_str["part"].add("subpart", INT_TYPE)
+    new_type = ArrayType(INT_TYPE, [3])
+    type_mapping_str["part"].add("subarray", new_type)
+    def x(arg: part, c: config):
+        arg.subpart = 1
+        arg.subarray[0] = 1
+        arg.core_part.position[0] = 2.0
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(x)))
+    pir = v.visit(c)
+    backend._current_kernel = pir
+
+    out = a.gather_forces_to_grid("delta_x", "part_vy", "part_vz")
+    reset_type_mapping_str()
+    reset_part_and_config()
+    correct = '''
+//Gathering forces to grid
+part_x = _core_part_position.access(i, a, 0) - field.field.x_grid_min_local;
+GatherForcesToGrid_1D(part_weight, part_q, part_x, delta_x,
+cell_x1, gx, hx, field.scatter_jx, field.scatter_jy, field.scatter_jz, idt, part_vy, part_vz, idx, dtco2, idtf, idxf,
+field.nx, fcx, fcy, field.ng);
+'''
+    assert correct == out
+
+def test_FDTD_MPI_Kokkos_has_preferred_decomposition():
+    backend = Cabana_PIR()
+    HartreeParticleDSL.set_backend(backend)
+    a = FDTD_MPI_Kokkos()
+    reset_type_mapping_str()
+    reset_part_and_config()
+    assert a.has_preferred_decomposition() == True
+
+def test_FDTD_MPI_Kokkos_get_preferred_decomposition():
+    backend = Cabana_PIR()
+    HartreeParticleDSL.set_backend(backend)
+    a = FDTD_MPI_Kokkos()
+    reset_type_mapping_str()
+    reset_part_and_config()
+    assert a.get_preferred_decomposition("box") == "store_domain_decomposition(field, box);\n"
+
+def test_FDTD_MPI_Kokkos_copy_files():
+    backend = Cabana_PIR()
+    HartreeParticleDSL.set_backend(backend)
+    a = FDTD_MPI_Kokkos()
+    reset_type_mapping_str()
+    reset_part_and_config()
+    a.copy_files()
+    files = ['FDTD_MPI_IO_HDF5.cpp',
+             'FDTD_MPI_IO_HDF5.hpp',
+             'FDTD_MPI_boundaries.cpp',
+             'FDTD_MPI_boundaries.hpp',
+             'FDTD_MPI_field.hpp',
+             'FDTD_MPI_init.cpp',
+             'FDTD_MPI_init.hpp',
+             'FDTD_MPI_interpolation.hpp',
+             'FDTD_MPI_step.cpp',
+             'FDTD_MPI_step.hpp']
+    success = True
+    for f in files:
+        success = success and os.path.exists(f)
+        if os.path.exists(f):
+            os.remove(f)
+    assert success
+
+def test_FDTD_MPI_Kokkos_compilation_files():
+    backend = Cabana_PIR()
+    HartreeParticleDSL.set_backend(backend)
+    a = FDTD_MPI_Kokkos()
+    reset_type_mapping_str()
+    reset_part_and_config()
+    out = a.compilation_files()
+    assert out[0] == "FDTD_MPI_IO_HDF5.cpp"
+    assert out[1] == "FDTD_MPI_boundaries.cpp"
+    assert out[2] == "FDTD_MPI_init.cpp"
+    assert out[3] == "FDTD_MPI_step.cpp"
+    assert len(out) == 4
+
+def test_FDTD_MPI_Kokkos_get_required_packages():
+    backend = Cabana_PIR()
+    HartreeParticleDSL.set_backend(backend)
+    a = FDTD_MPI_Kokkos()
+    reset_type_mapping_str()
+    reset_part_and_config()
+    out = a.get_required_packages()
+    assert out[0] == "Kokkos"
+    assert len(out) == 1

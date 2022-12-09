@@ -360,12 +360,12 @@ class FDTD_MPI_Kokkos(force_solver):
         for f in files:
             copy(BASEPATH + "/" + f, "./" + f)
 
-    def compilation_files():
+    def compilation_files(self):
         files = ['FDTD_MPI_IO_HDF5.cpp',
                  'FDTD_MPI_boundaries.cpp',
                  'FDTD_MPI_init.cpp',
                  'FDTD_MPI_step.cpp']
         return files
 
-    def get_required_packages():
+    def get_required_packages(self):
         return ["Kokkos"]
