@@ -199,6 +199,32 @@ grid_hdf5_output( field, filename, myrank, nranks);
 }
 '''
     assert out == correct
+    out = a.output_grid("\"out.hdf5\"")
+    correct = '''
+{
+char filename[300] = "out.hdf5";
+grid_hdf5_output( field, filename, myrank, nranks);
+}
+'''
+    assert out == correct
+    out = a.output_grid("out_", "0102")
+    correct = '''
+{
+char filename[300];
+sprintf(filename, "out_%.4d.hdf5", 0102);
+grid_hdf5_output( field, filename, myrank, nranks);
+}
+'''
+    assert out == correct
+    out = a.output_grid("\"out_\"", "0102")
+    correct = '''
+{
+char filename[300];
+sprintf(filename, "out_%.4d.hdf5", 0102);
+grid_hdf5_output( field, filename, myrank, nranks);
+}
+'''
+    assert out == correct
 
 def test_FDTD_MPI_Kokkos_get_extra_symbols():
     backend = Cabana_PIR()
