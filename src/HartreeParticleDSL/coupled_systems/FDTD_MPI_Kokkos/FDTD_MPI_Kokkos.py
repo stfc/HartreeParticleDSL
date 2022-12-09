@@ -358,7 +358,7 @@ class FDTD_MPI_Kokkos(force_solver):
                  'FDTD_MPI_step.hpp']
         BASEPATH = os.path.dirname(inspect.getfile(FDTD_MPI_Kokkos))
         for f in files:
-            copy(BASEPATH + "/" + f, "./" + f)
+            copy(os.path.join(BASEPATH, f), f)
 
     def compilation_files(self):
         files = ['FDTD_MPI_IO_HDF5.cpp',
