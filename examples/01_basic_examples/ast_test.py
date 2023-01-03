@@ -22,6 +22,7 @@ def foo(part1, part2, r2, config):
 def random_velocity(part1, part2, r2, config):
     for i in range(3):
         create_variable(c_double, "r", random_double())
+        r = random_double() + random_double()
         part1.core_part.velocity[i] = part1.core_part.velocity[i] + r
         part2.core_part.velocity[i] = part2.core_part.velocity[i] - r
 

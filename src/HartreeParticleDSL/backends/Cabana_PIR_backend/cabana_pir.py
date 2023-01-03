@@ -83,7 +83,17 @@ class Cabana_PIR(Backend):
 
         self._current_kernel = None
 
-    def set_boundary_condition(self, boundary_condition_kernel):
+    def set_boundary_condition(self, boundary_condition_kernel) -> None:
+        '''
+        Set the boundary condition kernel to use with this backend. This kernel
+        will be automatically run whenever a kernel which updates particle
+        positions is invoked. If you do not want this behaviour then do not
+        use this function.
+
+        :param boundary_condition_kernel: The kernel to use as a boundary condition.
+        :type boundary_contidion_kernel: A perpart kernel - usually denoted with \
+                @kernels.perpart_interaction .
+        '''
         if not isinstance(boundary_condition_kernel, kernels.perpart_kernel_wrapper):
             raise TypeError("Cannot set boundary condition to a non perpart kernel.")
 
@@ -92,6 +102,11 @@ class Cabana_PIR(Backend):
 
     @property
     def boundary_condition(self) -> PerPartKernel:
+        '''
+        :returns: the Particle IR PerPartKernel representation of the current 
+        boundary condition for this backend.
+        :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.kernels.PerPartKernel` or None
+        '''
         from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import \
                 pir_perpart_visitor
         if self._boundary_condition is None:
@@ -101,21 +116,47 @@ class Cabana_PIR(Backend):
 
     @property
     def structures(self):
+        '''
+        :returns: the structures currently used in this backend by coupled systems.
+        :rtype: Dict of str, StructureType pairs.
+        '''
         return self._structures
 
     def register_kernel(self, kernel_name: str, kernel: Kern):
+        '''
+        Registers a kernel with the backend for code generation,
+        and use in invoke statements.
+
+        :param str kernel_name: The name of the kernel to register.
+        :param kernel: The Kern object corresponding to the named kernel.
+        :type kernel: :py:class:`HartreeParticleDSL.Particle_IR.nodes.kern.Kern`
+
+        :raises InvalidNameError: If a kernel with the kernel_name already exists.
+        '''
         if kernel_name in self._kernels.keys():
             raise InvalidNameError(f"Kernel with name {kernel_name} already exists.") 
         self._kernels[kernel_name] = kernel
 
 
     def add_structure(self, structure_type: StructureType, structure_name: str):
+        '''
+        Adds a structure to the backend for code generation.
+
+        :param structure_type: The StructureType representing the structure.
+        :type structure_type: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.datatype.StructureType`
+        :param str structure_name: The name of the structure.
+        '''
         # Should this check the structure type is defined?
         self._structures[structure_name] = structure_type
 
-    def add_kernel_slices(self, kernel_name, kernel_slice):
+    def add_kernel_slices(self, kernel_name : str, kernel_slice: str):
         '''
         Adds access to a particle slice for a specific kernel.
+
+        :param str kernel_name: The name of the kernel to for the kernel_slice \
+                                to be generated for.
+        :param str kernel_slice: The slice of the particle arrays required for \
+                                 the kernel given by kernel_name.
         '''
         if kernel_name not in self._kernel_slices.keys():
             self._kernel_slices[kernel_name] = []
@@ -125,6 +166,11 @@ class Cabana_PIR(Backend):
     def add_type(self, type_name: str, the_type: DataType) -> None:
         '''
         Adds a new type to Cabana & PIR.
+
+        :param str type_name: The name of the type used in the code, e.g. int \
+                              is the name of the C integer type.
+        :param the_type: The Particle_IR datatype represented by the type_name.
+        :type type_type: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.datatype.DataType`
 
         :raises UnsupportedTypeError: if the_type is not a PIR DataType object.
         :raises InvalidNameError: if the type name is already present in PIR
@@ -155,7 +201,6 @@ class Cabana_PIR(Backend):
         from HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol import ScalarTypeSymbol
         from HartreeParticleDSL.Particle_IR.datatypes.datatype import StructureType, \
                 PointerType, ArrayType, ScalarType
-        #TODO
         if isinstance(c_type, StructureType):
             HartreeParticleDSL.global_symbol_table().new_symbol(name, c_type, StructureSymbol)
             self._global_values[name] = None
@@ -980,16 +1025,34 @@ class Cabana_PIR(Backend):
         raise NotImplementedError("Cabana PIR backend doesn't yet support pairwise interactions")
 
     def initialisation_code(self, particle_count, filename):
+        '''
+        Get the initialisation code for this code. This is done by the input IO module.
+
+        :param int particle_count: The number of particles to create for this testcase. \
+                Note that depending on the IO module this value may be ignored, e.g. \
+                for IO modules that read the input from a file this is likely ignored.
+        :param str filename: The filename to read the input from. Note that depending \
+                on the IO module this value may be ignored, e.g. for the random particle \
+                IO module this is ignored.
+        '''
         return self._input_module.call_input_cabana_pir(particle_count, filename)
 
-    def gen_particle(self, particle):
+    def gen_particle(self, particle) -> str:
+        '''
+        Generate the Cabana-compatible code for the particle structure provided.
+
+        Will generate extra sections if required for MPI.
+
+        :param particle: The particle to generate the Cabana code for.
+        :type particle: :py:class:`HartreeParticleDSL.HartreeParticleDSL.Particle`
+
+        :returns: The code string for the particle.
+        :rtype: str
+        '''
         # Store the particle for later
         self._particle = particle
         output = ""
 
-        #particle.add_element("core_part_position", "double[3]")
-#        particle.add_element("core_part_velocity", "double[3]")
-#        particle.add_element("neighbour_part_cutoff", "double")
 
         # Sort particle by size of element
         sizes = []
@@ -1062,8 +1125,18 @@ class Cabana_PIR(Backend):
 
         return output
 
-    def gen_config(self, config):
-        # FIXME
+    def gen_config(self, config) -> str:
+        '''
+        Generate the Cabana-compatible code for the config structure provided.
+
+        Will generate extra sections if required for MPI.
+
+        :param config: The particle to generate the Cabana code for.
+        :type config: :py:class:`HartreeParticleDSL.HartreeParticleDSL.Config`
+
+        :returns: The code string for the config.
+        :rtype: str
+        '''
         output = ""
         output = output + "struct boundary{\n"
         output = output + "    double x_min, x_max;\n"
@@ -1112,7 +1185,15 @@ class Cabana_PIR(Backend):
         # We probably need to do some extra type analysis in the config_type object.
         return output
 
-    def cleanup(self, *args, current_indent, **kwargs):
+    def cleanup(self, *args, current_indent, **kwargs) -> str:
+        '''
+        :param int current_indent: Current indentation level for this code. \
+                                   Unused.
+
+        :returns: The cleanup code for this backend. This doesn't do much as \
+                  Kokkos' initialisation is done through scoping.
+        :rtype: str
+        '''
         rval = "\n}\n" # Choosing no indentation for this } to match the outer one.
         return rval
 
@@ -1143,8 +1224,19 @@ class Cabana_PIR(Backend):
         output = output + " << \"\\n\";\n"
         return output
 
-    def initialise(self,particle_count, filename, current_indent, **kwargs):
-        # FIXME
+    def initialise(self,particle_count, filename, current_indent, **kwargs) -> str:
+        '''
+        :param int particle_count: Particle count for the simulation. Passed to \
+                the IO module where it may be ignored. Check the IO module for info.
+        :param str filename: The filename to read input data from. Passed to the \
+                IO m odule where it may be ignored. Check the IO module for info.
+        :param int current_indent: The current indentation level of code to start \
+                generating at.
+
+        :returns: the code to initialise Kokkos for this backend, and the \
+                  MPI initialisation if required.
+        :rtype: str
+        '''
         space = " "
         rval = space*current_indent + "Kokkos::ScopeGuard scope_guard(argc, argv);\n"
         if HartreeParticleDSL.get_mpi():
@@ -1283,7 +1375,7 @@ class Cabana_PIR(Backend):
         Adds a coupled system to the list of coupled systems in the backend
 
         :param coupled_system: The object to couple with.
-        :type couple_system: Object
+        :type coupled_system: Object
 
         :raises UnsupportedTypeError: If the object to couple with is not \
                                       an instance of base_coupler
@@ -1310,6 +1402,20 @@ class Cabana_PIR(Backend):
         return code
 
     def call_language_function(self, func_call: str, *args, **kwargs) -> str:
+        '''
+        Calls the backend/coupled system inbuilt function with func_call name
+        using the associated arguments.
+
+        :param str func_call: The name of the inbuilt function to call, e.g. \
+                println
+
+        :raises AttributeError: If the function is not found in the backend or \
+                any coupled system.
+
+        :returns: The C++ code associated with the function call for the given \
+                arguments.
+        :rtype: str
+        '''
         string = ""
         try:
             fn = getattr(self, func_call)

@@ -17,6 +17,17 @@ class Cabana_PIR_IO_Mixin(metaclass=ABCMeta):
                                   "gen_code_cabana_pir")
 
     def call_get_box_size_pir(self, part_count, filename, current_indent=4):
+        '''
+        Returns the code required for the Cabana_PIR backend to use this IO module for reading
+        in the box dimensions from the HDF5 file.
+
+        :param int part_count: Unused particle count value.
+        :param str filename: Filename to read the data from.
+        :param int current_indent: The code current indentation level. Default is 4.
+
+        :returns: The function call used to get the box size from the file.
+        :rtype: str
+        '''
         raise NotImplementedError(f"{self.__class__.__name__} does not "
                                   "implement required function "
                                   "call_get_box_size_pir")
