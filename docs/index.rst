@@ -48,6 +48,7 @@ currently undocumented, but will be added in future.
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+
    getting_started
    internals
    modules
