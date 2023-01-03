@@ -1,17 +1,34 @@
-HartreeParticleDSL.backends.AST\_to\_Particle\_IR package
-==========================================
+HartreeParticleDSL.backends.Cabana\_PIR\_backend package
+=========================================================
 
-This package contains the AST_to_Particle_IR module. This module is
-used by various backends to facilitate conversion of python code
-into the intermediate representation used by those backends.
+This package contains the Cabana_PIR backend module. This is the
+currently recommended backend for HartreeParticleDSL. It is built
+on the Particle_IR submodule system, and supports MPI and CUDA with
+automatic support for MPI calls and boundary conditions.
 
 Submodules
 ----------
 
-HartreeParticleDSL.backends.AST\_to\_Particle\_IR module
-------------------------------------------------
+HartreeParticleDSL.backends.Cabana\_PIR\_backend module
+-------------------------------------------------------
 
-.. automodule:: HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors
+.. automodule:: HartreeParticleDSL.backends.Cabana_PIR_backend.cabana_pir
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+HartreeParticleDSL.backends.Cabana\_PIR_backend.Cabana\_PIR\_IO\_Mixin module
+-----------------------------------------------------------------------------
+
+.. automodule:: HartreeParticleDSL.backends.Cabana_PIR_backend.Cabana_PIR_IO_Mixin
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+HartreeParticleDSL.backends.Cabana\_PIR\_backend.pir\_to\_cabana\_visitor module
+--------------------------------------------------------------------------------
+
+.. automodule:: HartreeParticleDSL.backends.Cabana_PIR_backend.pir_to_cabana_visitor
    :members:
    :undoc-members:
    :show-inheritance:
@@ -19,7 +36,7 @@ HartreeParticleDSL.backends.AST\_to\_Particle\_IR module
 Module contents
 ---------------
 
-.. automodule:: HartreeParticleDSL.backends.AST_to_Particle_IR
+.. automodule:: HartreeParticleDSL.backends.Cabana_PIR_backend
    :members:
    :undoc-members:
    :show-inheritance:

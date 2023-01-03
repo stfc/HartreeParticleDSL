@@ -106,6 +106,7 @@ class Cabana_PIR(Backend):
         :returns: the Particle IR PerPartKernel representation of the current 
         boundary condition for this backend.
         :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.kernels.PerPartKernel` or None
+
         '''
         from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import \
                 pir_perpart_visitor
@@ -1205,11 +1206,11 @@ class Cabana_PIR(Backend):
 
         For the Cabana module this is a call to `std::cout`, using the
         string argument as the first value to be passed into cout, and
-        the *args contains any further values used in the output.
+        the args contains any further values used in the output.
 
         :param string: The formatted string to use with cout.                                                                                                                      :type string: str
         :param int current_indent: The current indentation level
-        :param *args: A list of strings containing the other values
+        :param args: A list of strings containing the other values
                       to output with cout. Any strings to add to cout
                       should be surrounded with \"\".
         :type args: str

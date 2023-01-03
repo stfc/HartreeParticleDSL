@@ -8,6 +8,7 @@ Subpackages
    :maxdepth: 4
 
    HartreeParticleDSL.IO_modules.base_IO_module
+   HartreeParticleDSL.IO_modules.PHDF5
    HartreeParticleDSL.IO_modules.random_IO
 
 Submodules

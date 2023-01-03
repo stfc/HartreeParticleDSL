@@ -18,6 +18,8 @@ HartreeParticleDSL scripts are basic python scripts that describe the set of
 operations to be executed on particles. Each independent set of operations is
 combined into a kernel, e.g.
 
+.. code-block:: python
+
     @HartreeParticleDSl.kernels.perpart_interaction
     def my_kernel(part1: part, config: config):
         part1.core_part.position[0] += part1.core_part.velocity[0] * config.dt
@@ -34,6 +36,8 @@ so should be used by users to store their particles positions.
 To add more members to the particle object, the user can call the `add_element` call
 from the outermost-level of their python script, e.g.
 
+.. code-block:: python
+
     from HartreeParticleDSL.HartreeParticleDSL import part
     part.add_element("mass", "double")
 
@@ -45,6 +49,8 @@ itself is a structure containing a `box_dims` structure, which contains the 3D
 min/max coordinates as `x_min`, `x_max`, etc. for the global box dimensions.
 
 Other elements can be added to the space object in a similar way to the particle:
+
+.. code-block:: python
 
     from HartreeParticleDSL.HartreeParticleDSL import config
     config.add_element("dt", "double")
@@ -61,6 +67,8 @@ current choices are limited.
 
 Backends should be created by users in their script, and then provided to the DSL,
 for example:
+
+.. code-block:: python
 
     from HartreeParticleDSL.backends.Cabana_PIR_backend.cabana_pir import Cabana_PIR
     import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
@@ -83,14 +91,16 @@ code to fit into existing larger codebases.
 
 The main function declaration usually contains:
 1. Calls to `initialise` and `cleanup`. These generate any backend-specific code
-   required for a backend to startup, setup a testcase and close down any
-   libraries used during its runtime. Note that the `initialise` call takes
-   `particle_count` and `filename` keyword arguments, and depending on the IO
-    method chosen, one (or both) may be unused during the program runtime.
+required for a backend to startup, setup a testcase and close down any
+libraries used during its runtime. Note that the `initialise` call takes
+`particle_count` and `filename` keyword arguments, and depending on the IO
+method chosen, one (or both) may be unused during the program runtime.
 2. A timestepping loop (or similar). This usually will call some kernel
-   invocations, do IO, and/or make calls to coupled systems.
+invocations, do IO, and/or make calls to coupled systems.
 
 For example, you might do:
+
+.. code-block:: python
 
     @kernels.main_declaration
     def main():
@@ -127,6 +137,8 @@ will be required to provide build files soon to minimise the challenge of
 compilation. These will also be added into the relevant directory.
 
 Users can also specify the directory for output to be placed from their script:
+
+.. code-block:: python
 
     HartreeParticleDSL.set_output_dir("./output_dir")
 
