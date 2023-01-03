@@ -1,5 +1,5 @@
-src
-===
+Pydoc documentation
+===================
 
 .. toctree::
    :maxdepth: 4
