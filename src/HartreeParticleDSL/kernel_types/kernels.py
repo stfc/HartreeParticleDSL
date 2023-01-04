@@ -87,6 +87,7 @@ def pairwise_interaction(function):
     Finally, it registers the kernel with the DSL.
 
     Example use:
+
     >>> @pairwise_interaction
     >>> def my_kernel(...):
     >>>    ....
