@@ -50,6 +50,7 @@ Boundary Conditions
     :show-inheritance:
 
 .. autoattribute:: HartreeParticleDSL.inbuilt_kernels.boundaries.periodic_boundaries
+    :no-value:
 
 Subpackages
 -----------

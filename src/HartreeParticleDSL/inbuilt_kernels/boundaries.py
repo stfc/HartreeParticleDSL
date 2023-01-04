@@ -22,6 +22,12 @@ def _periodic_boundaries(part1: part, config: config):
         part1.core_part.position.z = part1.core_part.position.z + z_size
 
 periodic_boundaries = _periodic_boundaries
+'''
+Simple 3 dimensional periodic boundary condition function. Compares particle
+position with config.space.box_dims and ensures the range is
+dim_min <= position < dim_max.
+'''
+
 periodic_boundaries.__doc__ = '''
 Simple 3 dimensional periodic boundary condition function. Compares particle
 position with config.space.box_dims and ensures the range is
