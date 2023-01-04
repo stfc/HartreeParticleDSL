@@ -43,7 +43,7 @@ in their documentation
 Boundary Conditions
 ^^^^^^^^^^^^^^^^^^^
 .. automodule:: HartreeParticleDSL.inbuilt_kernels.boundaries
-    :members:
+    :members: periodic_boundaries
     :undoc-members:
     :show-inheritance:
 
