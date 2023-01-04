@@ -86,6 +86,11 @@ def pairwise_interaction(function):
     AST, and then creates the pairwise kernel wrapper from that.
     Finally, it registers the kernel with the DSL.
 
+    Example use:
+    >>> @pairwise_interaction
+    >>> def my_kernel(...):
+    >>>    ....
+
     :returns: The pairwise kernel wrapper corresponding to the
               given kernel.
     :rtype: :py:class:`HartreeParticleDSL.kernel_types.kernels.pairwise_kernel_wrapper`
@@ -105,6 +110,11 @@ def perpart_interaction(function):
     The function takes the kernel function, and generates the
     AST, and then creates the perpart kernel wrapper from that.
     Finally, it registers the kernel with the DSL.
+
+    Example use:
+    >>> @perpart_interaction
+    >>> def my_kernel(...):
+    >>>    ....
 
     :returns: The perpart kernel wrapper corresponding to the
               given kernel.
@@ -126,6 +136,11 @@ def main_declaration(function):
     main_function_wrapper, and then calls the DSL to print the
     main function according to the chosen backend. This is currently
     output to stdout.
+
+    Example use:
+    >>> @main_declaration
+    >>> def main(...):
+    >>>    ....
 
     :returns: The main function wrapper corresponding to the 
               given function.

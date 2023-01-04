@@ -19,6 +19,18 @@ functions handle accessing that class.
    :undoc-members:
    :show-inheritance:
 
+
+Defining Kernels
+----------------
+
+The kernel types are defined in the ``HartreeParticleDSL.kernel_types.kernels``
+module. There are a variety of types supported, however not all backends will
+support all types of kernel, so check backend documentation for more detail.
+
+.. automodule:: HartreeParticleDSL.kernel_types.kernels
+    :members: perpart_interaction, main_declaration, pairwise_interaction
+    
+
 HartreeParticleDSLExceptions
 ------------------------------------------------------
 
@@ -33,7 +45,7 @@ HartreeParticleDSL programs.
 
 Inbuilt Kernels
 ---------------
-The inbuild kernels package contains a number of kernels available for
+The inbuilt kernels package contains a number of kernels available for
 use in HartreeParticleDSL code. These can just be imported and invoked
 without the need to specify any extra functionality. If they require the
 particle or config to contain specific fields, those will be documented
@@ -42,6 +54,11 @@ in their documentation
 
 Boundary Conditions
 ^^^^^^^^^^^^^^^^^^^
+
+The boundaries module contains the inbuilt boundary conditions supported
+for particles in HartreeParticleDSL code. These will be expanded in the future,
+including optimisations for 1D and 2D variants (note that the 3D version will
+still work correctly for 1D/2D variants).
  .. automodule:: HartreeParticleDSL.inbuilt_kernels.boundaries
     :members:
     :undoc-members:
