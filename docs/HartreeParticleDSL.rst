@@ -9,7 +9,7 @@ Subpackages
 -----------
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 2
 
    HartreeParticleDSL.IO_modules
    HartreeParticleDSL.backends
