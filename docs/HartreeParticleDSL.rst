@@ -42,7 +42,8 @@ in their documentation
 
 Boundary Conditions
 ^^^^^^^^^^^^^^^^^^^
-.. automodule:: HartreeParticleDSL.inbuilt_kernels.boundaries
+..
+   .. automodule:: HartreeParticleDSL.inbuilt_kernels.boundaries
     :members:
     :undoc-members:
     :private-members:
