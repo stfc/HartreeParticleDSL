@@ -9,6 +9,8 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import UnsupportedCodeError
 # New style module to go with Cabana_PIR and MPI.
 class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
     '''Implementation of the Parallel HDF5 IO Module.
+
+    This module currently only supports the ``Cabana_PIR`` backend.
     
     This module uses HDF5 over MPI to perform File I/O across multiple nodes.
 

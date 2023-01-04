@@ -5,7 +5,11 @@ from HartreeParticleDSL.backends.Cabana_backend.Cabana_IO_Mixin import Cabana_IO
 from HartreeParticleDSL.backends.Cabana_PIR_backend.Cabana_PIR_IO_Mixin import Cabana_PIR_IO_Mixin
 
 class Random_Particles(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin, Cabana_PIR_IO_Mixin):
-    ''' Implementation of the randomly generated particles IO module '''
+    ''' Implementation of the randomly generated particles IO module.
+
+    This module supports all backends.
+
+    '''
     def __init__(self):
         super().__init__()
 

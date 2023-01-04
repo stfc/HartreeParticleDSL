@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
 
     HartreeParticleDSL.IO_modules.HDF5_IO
+    HartreeParticleDSL.IO_modules.PHDF5_IO
     HartreeParticleDSL.IO_modules.base_IO_module
     HartreeParticleDSL.IO_modules.random_IO
 

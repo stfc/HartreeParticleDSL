@@ -1,8 +1,6 @@
 HartreeParticleDSL.IO\_modules.random\_IO package
 =================================================
 
-This contains the documentation for the random_IO module.
-
 Submodules
 ----------
 

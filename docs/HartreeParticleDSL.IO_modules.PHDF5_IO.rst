@@ -1,8 +1,6 @@
 HartreeParticleDSL.IO\_modules.PHDF5\_IO package
 ================================================
 
-This contains the documentation for the PHDF5_IO module.
-
 Submodules
 ----------
 
