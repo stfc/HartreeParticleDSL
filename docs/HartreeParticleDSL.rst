@@ -5,16 +5,6 @@ This is the main page for the pydoc generated documentation. Most functions
 should be documented here or in subpages with their usage and descriptions.
 
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 0
-
-   HartreeParticleDSL.IO_modules
-   HartreeParticleDSL.backends
-   HartreeParticleDSL.kernel_types
-
 HartreeParticleDSL.HartreeParticleDSL module
 --------------------------------------------
 
@@ -40,20 +30,12 @@ HartreeParticleDSL programs.
    :undoc-members:
    :show-inheritance:
 
-HartreeParticleDSL.c\_types module
-----------------------------------
+Subpackages
+-----------
 
-Deprecated.
+.. toctree::
+   :maxdepth: 1
 
-.. automodule:: HartreeParticleDSL.c_types
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: HartreeParticleDSL
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   HartreeParticleDSL.IO_modules
+   HartreeParticleDSL.backends
+   HartreeParticleDSL.kernel_types
