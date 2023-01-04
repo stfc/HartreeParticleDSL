@@ -42,15 +42,12 @@ in their documentation
 
 Boundary Conditions
 ^^^^^^^^^^^^^^^^^^^
-..
-   .. automodule:: HartreeParticleDSL.inbuilt_kernels.boundaries
+ .. automodule:: HartreeParticleDSL.inbuilt_kernels.boundaries
     :members:
     :undoc-members:
     :private-members:
     :special-members:
     :show-inheritance:
-
-.. autoattribute:: HartreeParticleDSL.inbuilt_kernels.boundaries.periodic_boundaries
     :no-value:
 
 Subpackages
