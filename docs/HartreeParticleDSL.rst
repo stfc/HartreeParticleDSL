@@ -1,8 +1,8 @@
-Pydoc documentation
-==========================
+User documentation for HartreeParticleDSL
+=========================================
 
 This is the main page for the pydoc generated documentation. Most functions
-should be documented here or in subpages with their usage and descriptions.
+that users of HartreeParticleDSL should need are documented here.
 
 
 HartreeParticleDSL.HartreeParticleDSL module
@@ -19,7 +19,7 @@ functions handle accessing that class.
    :undoc-members:
    :show-inheritance:
 
-HartreeParticleDSL.HartreeParticleDSLExceptions module
+HartreeParticleDSLExceptions
 ------------------------------------------------------
 
 This module contains various Exceptions that may be thrown in
@@ -29,6 +29,23 @@ HartreeParticleDSL programs.
    :members:
    :undoc-members:
    :show-inheritance:
+
+
+Inbuilt Kernels
+---------------
+The inbuild kernels package contains a number of kernels available for
+use in HartreeParticleDSL code. These can just be imported and invoked
+without the need to specify any extra functionality. If they require the
+particle or config to contain specific fields, those will be documented
+in their documentation
+
+
+Boundary Conditions
+^^^^^^^^^^^^^^^^^^^
+.. automodule:: HartreeParticleDSL.inbuilt_kernels.boundaries
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 Subpackages
 -----------
