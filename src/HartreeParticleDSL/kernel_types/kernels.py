@@ -113,6 +113,7 @@ def perpart_interaction(function):
     Finally, it registers the kernel with the DSL.
 
     Example use:
+
     >>> @perpart_interaction
     >>> def my_kernel(...):
     >>>    ....
@@ -139,6 +140,7 @@ def main_declaration(function):
     output to stdout.
 
     Example use:
+
     >>> @main_declaration
     >>> def main(...):
     >>>    ....
