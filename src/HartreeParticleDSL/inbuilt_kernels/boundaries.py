@@ -33,3 +33,7 @@ Simple 3 dimensional periodic boundary condition function. Compares particle
 position with config.space.box_dims and ensures the range is
 dim_min <= position < dim_max.
 '''
+
+
+periodic_boundaries_2 = _periodic_boundaries
+'''Test'''
