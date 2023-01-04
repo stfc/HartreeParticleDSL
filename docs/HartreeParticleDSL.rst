@@ -9,14 +9,11 @@ Subpackages
 -----------
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 0
 
    HartreeParticleDSL.IO_modules
    HartreeParticleDSL.backends
    HartreeParticleDSL.kernel_types
-
-Submodules
-----------
 
 HartreeParticleDSL.HartreeParticleDSL module
 --------------------------------------------
