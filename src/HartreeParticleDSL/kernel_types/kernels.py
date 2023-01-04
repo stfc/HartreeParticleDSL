@@ -1,5 +1,6 @@
 import ast
 import inspect
+from functools import wraps
 
 class kernel():
     def __init__(self, kernel_tree=None):
@@ -89,6 +90,7 @@ def pairwise_interaction(function):
               given kernel.
     :rtype: :py:class:`HartreeParticleDSL.kernel_types.kernels.pairwise_kernel_wrapper`
     '''
+    @wraps(function)
     def wrapper():
         import HartreeParticleDSL.HartreeParticleDSL as HPDSL
         tree = ast.parse(inspect.getsource(function))
@@ -108,6 +110,7 @@ def perpart_interaction(function):
               given kernel.
     :rtype: :py:class:`HartreeParticleDSL.kernel_types.kernels.perpart_kernel_wrapper`
     '''
+    @wraps(function)
     def wrapper():
         import HartreeParticleDSL.HartreeParticleDSL as HPDSL
         tree = ast.parse(inspect.getsource(function))
@@ -128,6 +131,7 @@ def main_declaration(function):
               given function.
     :rtype: :py:class:`HartreeParticleDSL.kernel_types.kernels.main_function_wrapper`
     '''
+    @wraps(function)
     def wrapper():
         import HartreeParticleDSL.HartreeParticleDSL as HPDSL
         tree = ast.parse(inspect.getsource(function))
