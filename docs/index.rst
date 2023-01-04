@@ -51,4 +51,4 @@ currently undocumented, but will be added in future.
 
    getting_started
    internals
-   modules
+   HartreeParticleDSL

@@ -3,6 +3,11 @@ from HartreeParticleDSL.c_types import c_double
 from HartreeParticleDSL.HartreeParticleDSL import part, config
 
 @kernels.perpart_interaction
+'''
+Simple 3 dimensional periodic boundary condition function. Compares particle
+position with config.space.box_dims and ensures the range is
+dim_min <= position < dim_max.
+'''
 def periodic_boundaries(part1: part, config: config):
     create_variable(c_double, x_size, config.space.box_dims.x_max - config.space.box_dims.x_min)
     create_variable(c_double, y_size, config.space.box_dims.y_max - config.space.box_dims.y_min)
