@@ -1,8 +1,7 @@
-Pydoc documentation
-===================
+HartreeParticleDSL
+==================
 
 .. toctree::
    :maxdepth: 4
 
    HartreeParticleDSL
-   Particle_IR
