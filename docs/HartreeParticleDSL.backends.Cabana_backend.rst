@@ -1,33 +1,17 @@
 HartreeParticleDSL.backends.Cabana\_backend package
 ===================================================
 
-Submodules
-----------
+The Cabana backend is an old-style backend. It only supports
+perpart kernels.
 
 HartreeParticleDSL.backends.Cabana\_backend.Cabana module
 ---------------------------------------------------------
 
 .. automodule:: HartreeParticleDSL.backends.Cabana_backend.Cabana
-    :members:
+    :members: create_global_variable, println, get_pointer, set_cutoff,
+     cleanup, initialise, create_variable, write_output, add_coupler
     :undoc-members:
     :show-inheritance:
-
-HartreeParticleDSL.backends.Cabana\_backend.Cabana\_IO\_Mixin module
---------------------------------------------------------------------
-
-.. automodule:: HartreeParticleDSL.backends.Cabana_backend.Cabana_IO_Mixin
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-HartreeParticleDSL.backends.Cabana\_backend.Cabana\_visitors module
--------------------------------------------------------------------
-
-.. automodule:: HartreeParticleDSL.backends.Cabana_backend.Cabana_visitors
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Module contents
 ---------------

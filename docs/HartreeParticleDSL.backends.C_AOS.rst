@@ -1,6 +1,14 @@
 HartreeParticleDSL.backends.C\_AOS package
 ==========================================
 
+The C_AOS module is an initial proof-of-concept backend for HartreePArticleDSL.
+
+It is not yet updated to use PIR, and is very limited in its support, however it
+does support all kernel types currently implemented.
+
+It is not optimised for performance, and is not recommended for use.
+
+
 Submodules
 ----------
 
@@ -8,31 +16,6 @@ HartreeParticleDSL.backends.C\_AOS.C\_AOS module
 ------------------------------------------------
 
 .. automodule:: HartreeParticleDSL.backends.C_AOS.C_AOS
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-HartreeParticleDSL.backends.C\_AOS.C\_AOS\_IO\_Mixin module
------------------------------------------------------------
-
-.. automodule:: HartreeParticleDSL.backends.C_AOS.C_AOS_IO_Mixin
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-HartreeParticleDSL.backends.C\_AOS.visitors module
---------------------------------------------------
-
-.. automodule:: HartreeParticleDSL.backends.C_AOS.visitors
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: HartreeParticleDSL.backends.C_AOS
-    :members:
+    :members: println, cleanup, initialise, create_variable, set_cutoff, add_coupler
     :undoc-members:
     :show-inheritance:
