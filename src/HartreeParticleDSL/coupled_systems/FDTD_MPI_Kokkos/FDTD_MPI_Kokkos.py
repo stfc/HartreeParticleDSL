@@ -25,6 +25,23 @@ class IllegalInterpolatorError(Exception):
     pass
 
 class FDTD_MPI_Kokkos(force_solver):
+    '''
+    A coupled system supporting Finite Difference Time Domain as part of
+    HartreeParticleDSL.
+
+    Currently only supports 1D testcases and periodic boundary conditions.
+
+    All arguments should be left at default for now, but are implemented to
+    enable future support
+
+    :param int dimensionality: The dimensionality of the problem, default 1.
+    :param x_bc_max: Default periodic.
+    :param x_bc_min: Default periodic.
+    :param y_bc_max: Default periodic.
+    :param y_bc_min: Default periodic.
+    :param z_bc_max: Default periodic.
+    :param z_bc_min: Default periodic.
+    '''
     def __init__(self, dimensionality=1,
                  x_bc_max = PERIODIC, x_bc_min = PERIODIC,
                  y_bc_max = PERIODIC, y_bc_min = PERIODIC,
@@ -78,22 +95,53 @@ class FDTD_MPI_Kokkos(force_solver):
         self._includes_header.append("\"FDTD_MPI_field.hpp\"")
 
     def get_includes(self):
+        '''
+        :returns: The list of includes required for this coupled system.
+        :rtype: List of str.
+        '''
         return self._includes
 
     def get_includes_header(self):
+        '''
+        :returns: The list of includes required for the haeder file for this \
+                coupled system.
+        :rtype: List of str.
+        '''
         return self._includes_header
 
     def set_interpolator(self, interpolator):
+        '''
+        Set the interpolator type to be used. This has to be set in the user
+        script if they want to use a non-tophat interpolator.
+
+        Currently only tophat is supported anyway.
+
+        :raises IllegalInterpolatorError: If an unsupported interpolator is \
+                provided.    
+        '''
         if interpolator != TOPHAT:
             raise IllegalInterpolatorError("Unsupported interpolator, only "
                                            "TOPHAT is currently supported.")
         self.interpolator = TOPHAT
 
     def call_init_grid(self, current_indent=0, indent=0):
-        assert self.dimensionality == 1
+        '''
+        Call to use from a main script to initialise the grid.
+
+        :returns: the code to call to initialise the grid for simulation.
+        :rtype: str
+        '''
         return ""
 
     def setup_testcase(self, filename, current_indent=0, indent=0):
+        '''
+        Call to use to setup the testcase.
+
+        The filename argument is a required argument and is used to read an
+        input file to initialise the grid. The file must be a HDF5 file.
+
+        :param str filename: The HDF5 file to use to setup the testcase.
+        '''
         in_str = " " * current_indent
         # For now these are fixed, but will eventually depend on interpolation type
         code = in_str + "field.ng = 4;\n"
@@ -110,33 +158,63 @@ class FDTD_MPI_Kokkos(force_solver):
         return code
 
     def call_cleanup_grid(self, current_indent=0, indent=0):
+        '''
+        Call to use to cleanup the grid solver at the end of the run.
+        '''
         in_str = " " * current_indent
         code = in_str + "kokkos_fdtd_cleanup_1D(field);\n"
         return code
 
     def call_finish_initialisation_grid(self, current_indent=0, indent=0):
+        '''
+        Final call to initialise the grid, which must be called before
+        starting the main section of the simulation.
+        '''
         in_str = " " * current_indent
         code = in_str + "bfield_final_bcs(field.bx, field.by, field.bz, field.nx, field.ng);\n"
         return code
 
     def call_eb_fields_first_halfstep(self, current_indent=0, indent=0):
+        '''
+        Computes the update to the electric and magnetic field for the first
+        halfstep based on the computed current.
+
+        Used in user main function definition.
+        '''
         in_str = " " * current_indent
         code = in_str + "update_eb_fields_half_1D(field, field.nx, field.ng, config.config_host(0).dt, config.config_host(0).dx,\n"
         code = code + in_str + "                         _efield_func, _bfield_func, _rp);\n"
         return code
 
     def call_eb_fields_final_halfstep(self, current_indent=0, indent=0):
+        '''
+        Computes the update to the electric and magnetic field for the
+        second halfstep based on the computed current.
+
+        Used in user main function definition.
+        '''
         in_str = " " * current_indent
         code = in_str + "update_eb_fields_final_1D(field, field.nx, field.ng, config.config_host(0).dt, config.config_host(0).dx,\n"
         code = code + in_str + "                          _efield_func, _bfield_func, _rp);\n"
         return code
 
     def call_reset_current(self, current_indent=0, indent=0):
+        '''
+        Resets the current to zero to start a new step.
+
+        Used in user main function definition.
+        '''
         in_str = " " * current_indent
         code = in_str + "current_start(field, field.nx, field.ng);\n"
         return code
 
     def call_finish_current(self, current_indent=0, indent=0):
+        '''
+        Gathers the current for the current step before any field updates
+        occur.
+
+        Used in user main function definition
+        '''
         in_str = " " * current_indent
         code = in_str + "Kokkos::Experimental::contribute(field.jx, field.scatter_jx);\n"
         code = code + in_str + "Kokkos::Experimental::contribute(field.jy, field.scatter_jy);\n"
@@ -149,6 +227,19 @@ class FDTD_MPI_Kokkos(force_solver):
         return code
 
     def output_grid(self, filename, variable=None, current_indent=0, indent=0):
+        '''
+        Outputs the current grid system to the file specified in filename as
+        a HDF5 file. If the file already exists it will be appended to the
+        file.
+
+        If variable is specified the filename will be constructed as
+        filename_{variable}.hdf5 where variable is expressed as a 4 length
+        integer.
+
+        :param str filename: The filename to output the grid to.
+        :param str variable: An optional variable to use as part of the \
+                filename construction.
+        '''
         code = "\n" + current_indent * " " + "{\n" 
         current_indent = current_indent + indent
         code = code + current_indent * " "
@@ -170,6 +261,17 @@ class FDTD_MPI_Kokkos(force_solver):
         return code
 
     def get_extra_symbols(self, function_list):
+        '''
+        Returns a list of extra symbols required if functions are used inside
+        a kernel.
+
+        :param function_list: A list of function names used in a kernel.
+        :type function_list: list of str.
+
+        :returns: A list of string, symbol tuples containing the name and \
+                symbols required to use a specified function.
+        :rtype: list of Tuple( str, Symbol)
+        '''
         symbols = []
         if "call_interpolate_to_particles" in function_list:
             symbols.append( ("idt", ScalarTypeSymbol("idt", DOUBLE_TYPE)) )
@@ -214,10 +316,25 @@ class FDTD_MPI_Kokkos(force_solver):
                                       part_momentum_z, dx, dt, current_indent=0,
                                       indent=0):
         '''
+        The call to use in kernels to obtain a the magnetic and electric
+        field values at the position of a particle.
+        After this call, the field values will be stored in ``ex_part``, 
+        ``ey_part``, ``ez_part``, ``bx_part``, ``by_part``, and ``bz_part``.
+
+        The inputs to the functions should be the full particle access
+        to use each part of the particle, e.g. for part_weight it may be
+        ``part1.part_weight``, and dx and dt should be the variables containing
+        the cell width and timestep.
+
+        :param part_weight: Access to the particle's weight value.
+        :param part_charge: Access to the particle's charge value.
+        :param part_mass: Access to the particle's mass value.
+        :param part_momentum_x: Access to the particle's x momentum.
+        :param part_momentum_y: Access to the particle's y momentum.
+        :param part_momentum_z: Access to the particle's z momentum.
+        :param dx: Access to the cell width value.
+        :param dt: Access to the timestep value.
         '''
-        # FIXME
-        assert self.dimensionality == 1
-        assert self.interpolator == TOPHAT
         backend = get_backend()
         double_type = backend._type_map["c_double"]
         int32_type = backend._type_map["c_int32_t"]
@@ -307,9 +424,14 @@ class FDTD_MPI_Kokkos(force_solver):
         return code
 
     def gather_forces_to_grid(self, delta_x, part_vy, part_vz, current_indent=0, indent=0):
-        # FIXME
-        assert self.dimensionality == 1
-        assert self.interpolator == TOPHAT
+        '''
+        The call to use in kernels to obtain a the magnetic and electric
+        field values at the position of a particle.
+
+        :param delta_x: The movement of the particle in the x direction during this step.
+        :param part_vy: The part_vy variable.
+        :param part_vz: The part_vz variable.
+        '''
         backend = get_backend()
         double_type = backend._type_map["c_double"]
         int32_type = backend._type_map["c_int32_t"]
@@ -346,6 +468,10 @@ class FDTD_MPI_Kokkos(force_solver):
         return " " * current_indent + f"store_domain_decomposition(field, {box_str});\n"
 
     def copy_files(self):
+        '''
+        Copies the files required to use this coupled system into the output
+        directory.
+        '''
         files = ['FDTD_MPI_IO_HDF5.cpp',
                  'FDTD_MPI_IO_HDF5.hpp',
                  'FDTD_MPI_boundaries.cpp',
@@ -361,6 +487,11 @@ class FDTD_MPI_Kokkos(force_solver):
             copy(os.path.join(BASEPATH, f), f)
 
     def compilation_files(self):
+        '''
+        :returns: A list of strings containing the files required to compile \
+                with this coupled system.
+        :rtype: list of str.
+        '''
         files = ['FDTD_MPI_IO_HDF5.cpp',
                  'FDTD_MPI_boundaries.cpp',
                  'FDTD_MPI_init.cpp',
@@ -368,4 +499,9 @@ class FDTD_MPI_Kokkos(force_solver):
         return files
 
     def get_required_packages(self):
+        '''
+        :returns: A list of strings containing packages required to compile \
+                with CMake.
+        :rtype: list of str.
+        '''
         return ["Kokkos"]

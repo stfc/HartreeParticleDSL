@@ -1,6 +1,15 @@
 HartreeParticleDSL.coupled\_systems.FDTD\_Kokkos package
 ========================================================
 
+Finite Difference Time Domain solver for usage with the Cabana backend.
+
+The only supported interpolation is 1D grid using a Tophat interpolator.
+
+This module has a number of .cpp and .hpp files associated with it, which need
+to be manually copied into compilation.
+
+Documentation is unfinished due to being an outdated module design.
+
 Submodules
 ----------
 

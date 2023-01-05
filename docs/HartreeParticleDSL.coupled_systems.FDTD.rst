@@ -1,6 +1,10 @@
 HartreeParticleDSL.coupled\_systems.FDTD package
 ================================================
 
+
+Outdated coupled system for Finite Difference Time Domain computations.
+Works with C_AOS or similar backends.
+
 Submodules
 ----------
 
