@@ -614,20 +614,19 @@ def test_print_main():
     auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
     auto x_slice = Cabana::slice<x>(particle_aosoa);
     kern2_functor<decltype(core_part_position_slice), decltype(x_slice)> kern2(core_part_position_slice, x_slice, config.config);
-    periodic_boundaries_functor<decltype(core_part_position_slice)> periodic_boundaries(core_part_position_slice, config.config);
+    _periodic_boundaries_functor<decltype(core_part_position_slice)> _periodic_boundaries(core_part_position_slice, config.config);
 
     a = 0;
     a = (a + 1);
     Kokkos::deep_copy(config.config, config.config_host);
     Cabana::simd_parallel_for(simd_policy, kern2, "kern2");
     Kokkos::fence();
-    Cabana::simd_parallel_for(simd_policy, periodic_boundaries, "periodic_boundaries");
+    Cabana::simd_parallel_for(simd_policy, _periodic_boundaries, "_periodic_boundaries");
     Kokkos::fence();
     }
 
 }
 '''
-        print(out)
         assert correct in out
         correct = '''template < class CORE_PART_POSITION, class X >
 struct kern2_functor{

@@ -713,7 +713,7 @@ def test_pir_cabana_mainkernel():
     }
 
     x.update_structs(xs);
-    Cabana::simd_parallel_for(simd_policy, periodic_boundaries, "periodic_boundaries");
+    Cabana::simd_parallel_for(simd_policy, _periodic_boundaries, "_periodic_boundaries");
     Kokkos::fence();
     Cabana::deep_copy(particle_aosoa_host, particle_aosoa);
     _migrator.exchange_data(particle_aosoa_host, neighbors, myrank, particle_aosoa_host.size());
