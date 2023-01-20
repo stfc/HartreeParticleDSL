@@ -409,8 +409,30 @@ def test_phdf5_call_output_cabana_pir():
         hdf5_output<decltype(particle_aosoa_host)>(particle_aosoa_host, filename, config.config_host(0).space.box_dims, config, myrank, nranks);
     }'''
     assert correct in out
+    out = a.call_output_cabana_pir(123, "a", "varname")
+    correct = '''{
+        char filename[300];
+        sprintf(filename, "a%.4d.hdf5", varname);
+        Cabana::deep_copy(particle_aosoa_host, particle_aosoa);
+        int myrank, nranks;
+        MPI_Comm_rank( MPI_COMM_WORLD, &myrank );
+        MPI_Comm_size( MPI_COMM_WORLD, &nranks );
+        hdf5_output<decltype(particle_aosoa_host)>(particle_aosoa_host, filename, config.config_host(0).space.box_dims, config, myrank, nranks);
+    }'''
+    assert correct in out
 
     out = a.call_output_cabana_pir(123, "a")
+    correct = '''{
+        char filename[300] = "a";
+        Cabana::deep_copy(particle_aosoa_host, particle_aosoa);
+        int myrank, nranks;
+        MPI_Comm_rank( MPI_COMM_WORLD, &myrank );
+        MPI_Comm_size( MPI_COMM_WORLD, &nranks );
+        hdf5_output<decltype(particle_aosoa_host)>(particle_aosoa_host, filename, config.config_host(0).space.box_dims, config, myrank, nranks);
+    }'''
+    assert correct in out
+
+    out = a.call_output_cabana_pir(123, "\"a\"")
     correct = '''{
         char filename[300] = "a";
         Cabana::deep_copy(particle_aosoa_host, particle_aosoa);
