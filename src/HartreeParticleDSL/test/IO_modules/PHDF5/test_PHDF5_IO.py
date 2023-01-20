@@ -374,6 +374,13 @@ template <class aosoa_class, class aosoa_host_class> void hdf5_input(aosoa_class
 }'''
     assert correct in out
 
+    part.add_element("thing", "c_int")
+    a.add_output("thing", "thing")
+    with pytest.raises(UnsupportedCodeError) as excinfo:
+        out = a.gen_code_cabana_pir(part)
+    assert("thing element not supported in HDF5 IO." in str(excinfo.value))
+
+
 def test_phdf5_get_box_size_cabana_pir():
     a = PHDF5_IO.PHDF5_IO()
     out = a.call_get_box_size_pir(123, "a")

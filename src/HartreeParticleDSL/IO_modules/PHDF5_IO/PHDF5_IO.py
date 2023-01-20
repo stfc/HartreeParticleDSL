@@ -220,8 +220,6 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
                     positions[1] = key
                 if "core_part.position.z" in value or "core_part.position[2]" in value:
                     positions[2] = key
-            if positions[0] == None and positions[1] == None and positions[2] == None:
-                assert False
 
             # Start by loading the positions
             conditions = []
@@ -304,8 +302,6 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
                         part_elem = "core_part_velocity"
                         part_indexing = ", 2"
                         elem_type = "double"
-                elif part_elem.startswith("neighbour_part"):
-                    assert False
                 else:
                     elem_type = part_type.particle_type[part_elem]['type']
                 h5_type = PHDF5_IO.type_map.get(elem_type, None)
@@ -447,8 +443,6 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
                         part_elem = "core_part_velocity"
                         part_indexing = ", 2"
                         elem_type = "double"
-                elif part_elem.startswith("neighbour_part"):
-                    pass
                 else:
                     elem_type = part_type.particle_type[part_elem]['type']
                 h5_type = PHDF5_IO.type_map.get(elem_type, None)
