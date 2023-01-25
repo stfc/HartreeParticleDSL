@@ -5,15 +5,17 @@ Subpackages
 -----------
 
 .. toctree::
-   :maxdepth: 4
 
-   HartreeParticleDSL.backends.C_AOS
-   HartreeParticleDSL.backends.base_backend
+    HartreeParticleDSL.backends.C_AOS
+    HartreeParticleDSL.backends.Cabana_PIR_backend
+    HartreeParticleDSL.backends.Cabana_backend
+    HartreeParticleDSL.backends.FDPS_backend
+    HartreeParticleDSL.backends.base_backend
 
 Module contents
 ---------------
 
 .. automodule:: HartreeParticleDSL.backends
-   :members:
-   :undoc-members:
-   :show-inheritance:
+    :members:
+    :undoc-members:
+    :show-inheritance:

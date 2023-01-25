@@ -179,11 +179,11 @@ class Cabana(Backend):
 
         For the Cabana module this is a call to `std::cout`, using the
         string argument as the first value to be passed into cout, and
-        the *args contains any further values used in the output.
+        the args contains any further values used in the output.
 
         :param string: The formatted string to use with cout.                                                                                                                      :type string: str
         :param int current_indent: The current indentation level
-        :param *args: A list of strings containing the other values
+        :param args: A list of strings containing the other values
                       to output with cout. Any strings to add to cout
                       should be surrounded with \"\".
         :type args: str
@@ -274,14 +274,14 @@ class Cabana(Backend):
         input_module_header = ""
         if self._input_module is not None:
             input_module_header = self._input_module.gen_code_cabana(part_type) #FIXME
-        if input_module_header is not "":
+        if input_module_header != "":
             print(input_module_header)
             print("\n")
 
         output_module_header = ""
         if self._output_module is not None:
             output_module_header = self._output_module.gen_code_cabana(part_type) #FIXME
-        if output_module_header is not "":
+        if output_module_header != "":
             # Do something later
             print(output_module_header)
             print("\n")

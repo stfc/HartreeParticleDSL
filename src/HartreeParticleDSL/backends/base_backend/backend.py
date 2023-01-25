@@ -52,7 +52,7 @@ class Backend(metaclass=ABCMeta):
         '''
         pass
 
-    def get_pointer(self, code):
+    def get_pointer(self, code, **kwargs):
         pass
 
     def initialisation_code(self, particle_count, filename):
@@ -84,3 +84,10 @@ class Backend(metaclass=ABCMeta):
 
     def write_output(self, filename):
         pass
+
+    def get_extra_symbols(self, function_list):
+        return []
+
+    @property
+    def structures(self):
+        return {}

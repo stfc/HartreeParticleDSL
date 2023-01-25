@@ -10,7 +10,11 @@ from HartreeParticleDSL.backends.Cabana_backend.Cabana_IO_Mixin import Cabana_IO
 from HartreeParticleDSL.HartreeParticleDSLExceptions import UnsupportedCodeError
 
 class HDF5_IO(IO_Module, C_AOS_IO_Mixin, FDPS_IO_Mixin, Cabana_IO_Mixin):
-    '''Implementation of the HDF5 IO Module'''
+    '''Implementation of the HDF5 IO Module.
+    
+    This module supports the C_AOS, FDPS and Cabana backends, and not yet the
+    Cabana_PIR or other PIR-based backends.
+    '''
     type_map = {c_int : "H5T_STD_I32LE",
                 c_double : "H5T_NATIVE_DOUBLE",
                 c_float : "H5T_NATIVE_FLOAT",

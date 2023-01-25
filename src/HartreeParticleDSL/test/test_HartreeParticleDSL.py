@@ -11,6 +11,7 @@ from HartreeParticleDSL.backends.base_backend.backend import Backend
 from HartreeParticleDSL.backends.C_AOS.C_AOS import C_AOS
 from HartreeParticleDSL.IO_modules.random_IO.random_IO import *
 from HartreeParticleDSL.kernel_types.kernels import perpart_kernel_wrapper
+from HartreeParticleDSL.Particle_IR.symbols.symboltable import SymbolTable
 
 def test_get_instance():
     '''Test get_instance function of _HartreeParticleDSL '''
@@ -124,6 +125,10 @@ def test_generate_code(capsys):
     assert correct == captured.out
     HartreeParticleDSL.get_backend().enable_variable_checks()
 
+def test_global_symbol_table():
+    val = HartreeParticleDSL.global_symbol_table()
+    assert isinstance(val, SymbolTable)
+
 
 def test_global_set_particle_type():
     '''Test the globally used set_particle_type function'''
@@ -220,3 +225,13 @@ def test_particle_add_element():
         part.add_element("value", "int")
     assert "The variable name value is already in the particle type" in str(excinfo.value)
 
+def test_HPDSL_setters():
+    '''Test the MPI and CUDA setters for the DSL'''
+    HartreeParticleDSL.set_mpi(True)
+    assert HartreeParticleDSL.get_mpi() == True
+    HartreeParticleDSL.set_mpi()
+    assert HartreeParticleDSL.get_mpi() == False
+    HartreeParticleDSL.set_cuda(True)
+    assert HartreeParticleDSL.get_cuda() == True
+    HartreeParticleDSL.set_cuda()
+    assert HartreeParticleDSL.get_cuda() == False

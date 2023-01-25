@@ -1,10 +1,17 @@
+from __future__ import annotations
 import os
+import re
+
 from HartreeParticleDSL.backends.base_backend import backend
 import HartreeParticleDSL.IO_modules.base_IO_module.IO_module as io_modules
 import HartreeParticleDSL.IO_modules.random_IO.random_IO as random_io
 from HartreeParticleDSL.HartreeParticleDSLExceptions import SingletonInstanceError, \
                                                             RepeatedNameError, \
                                                             NoBackendError
+
+from HartreeParticleDSL.Particle_IR.datatypes.datatype import StructureType, type_mapping_str, \
+                                                            PARTICLE_POSITION_TYPE, ArrayType, \
+                                                            DOUBLE_TYPE
 
 class _HartreeParticleDSL():
     '''
@@ -41,6 +48,14 @@ class _HartreeParticleDSL():
         self._outdir = "."
         _HartreeParticleDSL.the_instance = self
 
+        self._with_mpi=False
+        self._with_cuda = False
+
+        # Add a global symbol table
+        from HartreeParticleDSL.Particle_IR.symbols.symboltable import SymbolTable
+        self._symbol_table = SymbolTable(self)
+
+    @staticmethod
     def get_instance():
         '''
         Helper function used to get the instance of _HartreeParticleDSL
@@ -223,6 +238,29 @@ class _HartreeParticleDSL():
             os.mkdir(directory)
         os.chdir(directory)
 
+    @property
+    def symbol_table(self) -> SymbolTable:
+        return self._symbol_table
+
+    @property
+    def with_mpi(self) -> bool:
+        return self._with_mpi
+
+    @with_mpi.setter
+    def with_mpi(self, mpi: bool) -> None:
+        self._with_mpi = mpi
+
+    @property
+    def with_cuda(self) -> bool:
+        return self._with_cuda
+
+    @with_cuda.setter
+    def with_cuda(self, cuda: bool) -> None:
+        self._with_cuda = cuda
+
+def reset_for_tests():
+    _HartreeParticleDSL.the_instance = None
+
 def set_particle_type(part):
     '''
     Function to set the Particle type used by HartreeParticleDSL
@@ -363,12 +401,62 @@ def set_output_dir(directory):
     '''
     _HartreeParticleDSL.get_instance().set_output_dir(directory)
 
+def global_symbol_table():
+    '''
+    Gets the global symbol table for Particle IR
+    '''
+    return _HartreeParticleDSL.get_instance().symbol_table
+
+def set_mpi(with_mpi=False):
+    '''
+    Sets the MPI status of the DSL.
+    
+    :param bool with_mpi: The new MPI status for the DSL.
+    '''
+    _HartreeParticleDSL.get_instance().with_mpi = with_mpi
+
+def get_mpi() -> bool:
+    '''
+    Gets the MPI status of the DSL.
+
+    :returns: The MPI status of the DSL
+    :rtype: bool
+    '''
+    return _HartreeParticleDSL.get_instance().with_mpi
+
+def set_cuda(with_cuda=False):
+    '''
+    Sets the CUDA status of the DSL.
+
+    :param bool with_cuda: The new CUDA status for the DSL.
+    '''
+    _HartreeParticleDSL.get_instance().with_cuda = with_cuda
+
+def get_cuda() -> bool:
+    '''
+    Gets the CUDA status of the DSL.
+
+    :returns: The CUDA status of the DSL.
+    :rtype: bool
+    '''
+    return _HartreeParticleDSL.get_instance().with_cuda
+
 class Particle():
     '''Particle class used in HartreeParticleDSL'''
     def __init__(self):
         self.particle_type = {}
         self.particle_type['core_part'] = {'type' : 'struct core_part_type', 'is_array' : False }
         self.particle_type['neighbour_part'] = {'type' : 'struct neighbour_part_type', 'is_array' : False}
+
+        # Handle PIR things
+        self._pir_type = StructureType()
+        _CORE_PART_TYPE = StructureType()
+        _CORE_PART_TYPE.components["position"] = PARTICLE_POSITION_TYPE
+        self._pir_type.components["core_part"] = _CORE_PART_TYPE
+        type_mapping_str["part"] = self._pir_type
+
+        #TODO Neighbour part type? Also need to add the struct core_part_type so
+        #the DSL knows how to define them both
 
     def reset_particle(self):
         '''
@@ -377,6 +465,15 @@ class Particle():
         self.particle_type = {}
         self.particle_type['core_part'] = {'type' : 'struct core_part_type', 'is_array' : False }
         self.particle_type['neighbour_part'] = {'type' : 'struct neighbour_part_type', 'is_array' : False}
+
+        # Handle PIR things
+        self._pir_type = StructureType()
+        _CORE_PART_TYPE = StructureType()
+        _CORE_PART_TYPE.components["position"] = PARTICLE_POSITION_TYPE
+        self._pir_type.components["core_part"] = _CORE_PART_TYPE
+        type_mapping_str["part"] = self._pir_type
+        #TODO Neighbour part type? Also need to add the struct core_part_type so
+        #the DSL knows how to define them both
 
     def add_element(self, variable_name, c_type):
         '''
@@ -395,6 +492,22 @@ class Particle():
             is_array = True
         self.particle_type[variable_name] = {'type' : c_type, 'is_array' : is_array}
 
+        if is_array:
+            indices = re.findall(r'\[[0-9]*\]', c_type)
+            index_vals = []
+            for index in indices:
+                index_vals.append(int(index.replace("[", "").replace("]","")))
+            base_type = c_type[0:c_type.index("[")]
+            atype = ArrayType(type_mapping_str[base_type], index_vals)
+            self._pir_type.components[variable_name] = atype
+        else:
+            self._pir_type.components[variable_name] = c_type
+
+part = Particle()
+'''
+The part member is an instance of Particle, and can be imported to use as both
+the part object and to enable using `a: part` in Kernel implementations.
+'''
 
 class Config():
     '''
@@ -407,6 +520,27 @@ class Config():
         self.config_type = {}
         self.config_type['space'] = {'type' : 'struct space_type', 'is_array' : False }
         self.config_type['neighbour_config'] = {'type' : 'struct neighbour_config_type' , 'is_array' : False}
+        # Handle PIR things
+        self._pir_type = StructureType()
+        space = StructureType()
+        self._pir_type.components["space"] = space
+        BOUNDARY_TYPE = StructureType()
+        BOUNDARY_TYPE.components["x_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["x_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["y_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["y_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["z_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["z_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_x_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_x_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_y_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_y_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_z_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_z_max"] = DOUBLE_TYPE
+        space.components["box_dims"] = BOUNDARY_TYPE
+        type_mapping_str["config"] = self._pir_type
+        #TODO Neighbour config type? Also need to add the struct space_type so
+        #the DSL knows how to define them both
 
     def reset_config(self):
         '''
@@ -415,6 +549,27 @@ class Config():
         self.config_type = {}
         self.config_type['space'] = {'type' : 'struct space_type', 'is_array' : False }
         self.config_type['neighbour_config'] = {'type' : 'struct neighbour_config_type' , 'is_array' : False}
+        # Handle PIR things
+        self._pir_type = StructureType()
+        space = StructureType()
+        self._pir_type.components["space"] = space
+        BOUNDARY_TYPE = StructureType()
+        BOUNDARY_TYPE.components["x_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["x_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["y_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["y_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["z_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["z_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_x_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_x_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_y_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_y_max"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_z_min"] = DOUBLE_TYPE
+        BOUNDARY_TYPE.components["local_z_max"] = DOUBLE_TYPE
+        space.components["box_dims"] = BOUNDARY_TYPE
+        type_mapping_str["config"] = self._pir_type
+        #TODO Neighbour config type? Also need to add the struct space_type so
+        #the DSL knows how to define them both
 
     def add_element(self, variable_name, c_type):
         '''
@@ -434,3 +589,20 @@ class Config():
         if "[" in c_type:
             is_array = True
         self.config_type[variable_name] = {'type' : c_type, 'is_array' : is_array}
+
+        if is_array:
+            indices = re.findall(r'\[[0-9]*\]', c_type)
+            index_vals = []
+            for index in indices:
+                index_vals.append(int(index.replace("[", "").replace("]","")))
+            base_type = c_type[0:c_type.index("[")]
+            atype = ArrayType(type_mapping_str[base_type], index_vals)
+            self._pir_type.components[variable_name] = atype
+        else:
+            self._pir_type.components[variable_name] = c_type
+
+config = Config()
+'''
+The config member is an instance of Config, and can be imported to use as both
+the config object and to enable using `a: config` in Kernel implementations.
+'''

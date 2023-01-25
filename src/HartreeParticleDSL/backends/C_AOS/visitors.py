@@ -26,6 +26,7 @@ class c_visitor(baseVisitor):
         rval = " " * self._currentIndent
         return rval
 
+    # Leaving to support pre-3.8 version of Python, no longer covered
     def visit_Str(self, node):
         return f"\"{node.s}\""
 
@@ -129,7 +130,7 @@ class c_visitor(baseVisitor):
         childless.child = attr
         return var
 
-    # For pre-python 3.8
+    # For pre-python 3.8 - no longer covered
     def visit_Num(self, node):
         return f"{node.n}"
 
@@ -139,6 +140,7 @@ class c_visitor(baseVisitor):
         elif str(node.value) == "False":
             return "false"
 
+    # Back to current
     def visit_Break(self, node):
         return self.addIndent() + "break;\n"
 
@@ -256,6 +258,7 @@ class c_visitor(baseVisitor):
             rval = rval + self.visit(a)
         return rval
 
+    # Pre 3.9, no longer covered
     def visit_Index(self, node):
         return self.visit(node.value)
 

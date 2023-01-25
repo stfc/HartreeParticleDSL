@@ -1,5 +1,6 @@
 import ast
 import inspect
+from functools import wraps
 
 class kernel():
     def __init__(self, kernel_tree=None):
@@ -85,10 +86,17 @@ def pairwise_interaction(function):
     AST, and then creates the pairwise kernel wrapper from that.
     Finally, it registers the kernel with the DSL.
 
+    Example use:
+
+    >>> @pairwise_interaction
+    >>> def my_kernel(...):
+    >>>    ....
+
     :returns: The pairwise kernel wrapper corresponding to the
               given kernel.
     :rtype: :py:class:`HartreeParticleDSL.kernel_types.kernels.pairwise_kernel_wrapper`
     '''
+    @wraps(function)
     def wrapper():
         import HartreeParticleDSL.HartreeParticleDSL as HPDSL
         tree = ast.parse(inspect.getsource(function))
@@ -104,10 +112,17 @@ def perpart_interaction(function):
     AST, and then creates the perpart kernel wrapper from that.
     Finally, it registers the kernel with the DSL.
 
+    Example use:
+
+    >>> @perpart_interaction
+    >>> def my_kernel(...):
+    >>>    ....
+
     :returns: The perpart kernel wrapper corresponding to the
               given kernel.
     :rtype: :py:class:`HartreeParticleDSL.kernel_types.kernels.perpart_kernel_wrapper`
     '''
+    @wraps(function)
     def wrapper():
         import HartreeParticleDSL.HartreeParticleDSL as HPDSL
         tree = ast.parse(inspect.getsource(function))
@@ -124,10 +139,17 @@ def main_declaration(function):
     main function according to the chosen backend. This is currently
     output to stdout.
 
+    Example use:
+
+    >>> @main_declaration
+    >>> def main(...):
+    >>>    ....
+
     :returns: The main function wrapper corresponding to the 
               given function.
     :rtype: :py:class:`HartreeParticleDSL.kernel_types.kernels.main_function_wrapper`
     '''
+    @wraps(function)
     def wrapper():
         import HartreeParticleDSL.HartreeParticleDSL as HPDSL
         tree = ast.parse(inspect.getsource(function))
