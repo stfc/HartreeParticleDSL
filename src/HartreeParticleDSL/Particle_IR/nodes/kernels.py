@@ -20,7 +20,7 @@ class PairwiseKernel(Kern):
 
     def __init__(self, name: str) -> None:
         super().__init__()
-        self.name = name
+        self._name = name
 
     @property
     def name(self) -> str:
@@ -106,7 +106,7 @@ class PerPartKernel(Kern):
     '''
     def __init__(self, name: str) -> None:
         super().__init__()
-        self.name = name
+        self._name = name
 
     @property
     def name(self) -> str:
@@ -195,7 +195,7 @@ class MainKernel(Kern):
 
     def __init__(self, name: str) -> None:
         super().__init__()
-        self.name = name
+        self._name = name
 
     @property
     def name(self) -> str:
@@ -257,6 +257,145 @@ class MainKernel(Kern):
         :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.kernels.MainKernel
         '''
         kernel = MainKernel(name)
+
+        for node in kernel_body:
+            kernel.body.addchild(node)
+
+        return kernel
+
+
+class SourceBoundaryKernel(Kern):
+    def __init__(self, name: str, source_count: int) -> None:
+        super().__init__()
+        self._name = name
+        self._source_count = source_count
+
+    @property
+    def name(self) -> str:
+        '''
+        '''
+        return self._name
+
+    @name.setter
+    def name(self, name: str) -> None:
+        '''
+        '''
+        if not isinstance(name, str):
+            raise TypeError("Expected SinkBoundaryKernel name to be a str but got "
+                            f"{type(name)}.")
+        self._name = name
+
+    @property
+    def source_count(self) -> int:
+        '''
+        '''
+        return self._source_count
+
+    @source_count.setter
+    def source_count(self, source_count: int) -> None:
+        if not isinstance(source_count, int):
+            raise TypeError("Expected SinkBoundaryKernel source_count to be an "
+                            f"int but got {type(name)}.")
+        self._source_count = source_count
+
+    @property
+    def arguments(self) -> List[Reference]:
+        '''
+        :returns: The argument list of this perpart kernel.
+        :rtype: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.reference.Reference`
+        '''
+        return self._arguments
+
+    @arguments.setter
+    def arguments(self, arguments: List[Reference]) -> None:
+        '''
+
+        :param arguments: list of arguments for this perpart kernel.
+        :type arguments: List of \
+                :py:class:`HartreeParticleDSL.Particle_IR.nodes.reference.Reference`
+
+        :raises TypeError: If any provided argument is not a Reference.
+        :raises IRGenerationError: If there are not at least two arguments.
+        '''
+        self._arguments = []
+        if len(arguments) < 2:
+            raise IRGenerationError("Perpart kernel requires at least two arguments"
+                                    f", but only got {len(arguments)}.")
+        for arg in arguments:
+            if not isinstance(arg, Reference):
+                raise TypeError("Each argument must be a Reference, but found "
+                                f"{type(arg)}.")
+            self._arguments.append(arg)
+
+    @staticmethod
+    def create(name: str, source_count: int, arguments: List[Reference],
+               kernel_body: List[Statement]) -> SourceBoundaryKernel:
+        '''
+        '''
+        kernel = SourceBoundaryKernel(name, source_count)
+        kernel.arguments = arguments
+
+        for node in kernel_body:
+            kernel.body.addchild(node)
+
+        return kernel
+
+class SinkBoundaryKernel(Kern):
+    def __init__(self, name: str) -> None:
+        super().__init__()
+        self._name = name
+
+    @property
+    def name(self) -> str:
+        '''
+        '''
+        return self._name
+
+    @name.setter
+    def name(self, name: str) -> None:
+        '''
+        '''
+        if not isinstance(name, str):
+            raise TypeError("Expected SinkBoundaryKernel name to be a str but got "
+                            f"{type(name)}.")
+        self._name = name
+
+    @property
+    def arguments(self) -> List[Reference]:
+        '''
+        :returns: The argument list of this perpart kernel.
+        :rtype: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.reference.Reference`
+        '''
+        return self._arguments
+
+    @arguments.setter
+    def arguments(self, arguments: List[Reference]) -> None:
+        '''
+
+        :param arguments: list of arguments for this perpart kernel.
+        :type arguments: List of \
+                :py:class:`HartreeParticleDSL.Particle_IR.nodes.reference.Reference`
+
+        :raises TypeError: If any provided argument is not a Reference.
+        :raises IRGenerationError: If there are not at least two arguments.
+        '''
+        self._arguments = []
+        if len(arguments) < 2:
+            raise IRGenerationError("Perpart kernel requires at least two arguments"
+                                    f", but only got {len(arguments)}.")
+        for arg in arguments:
+            if not isinstance(arg, Reference):
+                raise TypeError("Each argument must be a Reference, but found "
+                                f"{type(arg)}.")
+            self._arguments.append(arg)
+
+    @staticmethod
+    def create(name: str, arguments: List[Reference], kernel_body: List[Statement]) \
+            -> SinkBoundaryKernel:
+        '''
+        '''
+        kernel = SinkBoundaryKernel(name)
+        kernel.arguments = arguments
 
         for node in kernel_body:
             kernel.body.addchild(node)
