@@ -25,7 +25,9 @@ from HartreeParticleDSL.Particle_IR.nodes.invoke import Invoke
 from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
 from HartreeParticleDSL.Particle_IR.nodes.loop import Loop
 from HartreeParticleDSL.Particle_IR.nodes.kernels import MainKernel, PairwiseKernel, \
-                                                         PerPartKernel
+                                                         PerPartKernel,\
+                                                         SourceBoundaryKernel,\
+                                                         SinkBoundaryKernel
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
 from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, \
                                                            UnaryOperation
@@ -489,7 +491,7 @@ class ast_to_pir_visitor(ast.NodeVisitor):
         raise IRGenerationError(f"Found unsupported node of type {type(node)}")
 
 class pir_main_visitor(ast_to_pir_visitor):
-    def visit_FunctionDef(self, node: ast.FuncDef) -> MainKernel:
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> MainKernel:
         backend = get_backend()
         extra_symbols = []
         if backend is not None:
@@ -519,7 +521,7 @@ class pir_main_visitor(ast_to_pir_visitor):
         return main
 
 class pir_pairwise_visitor(ast_to_pir_visitor):
-    def visit_FunctionDef(self, node: ast.FuncDef) -> PairwiseKernel:
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> PairwiseKernel:
         backend = get_backend()
         extra_symbols = []
         if backend is not None:
@@ -551,7 +553,7 @@ class pir_pairwise_visitor(ast_to_pir_visitor):
         return kern
 
 class pir_perpart_visitor(ast_to_pir_visitor):
-    def visit_FunctionDef(self, node: ast.FuncDef) -> PerPartKernel:
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> PerPartKernel:
         backend = get_backend()
         extra_symbols = []
         if backend is not None:
@@ -577,6 +579,76 @@ class pir_perpart_visitor(ast_to_pir_visitor):
             self._symbol_table.add(symbol)
 
         # TODO check for 1 particle reference
+        for child in node.body:
+            kernel.body.addchild(self.visit(child))
+        kernel.arguments = args
+        return kernel
+
+class pir_source_boundary_visitor(ast_to_pir_visitor):
+
+    def __init__(self, source_boundary_wrapper):
+        super().__init__()
+        self._source_count = source_boundary_wrapper.get_source_count()
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> SourceBoundaryKernel:
+        backend = get_backend()
+        extra_symbols = []
+        if backend is not None:
+            fcv = find_calls_visitor()
+            fcv.visit(node)
+            calls = fcv.calls
+            extra_symbols = backend.get_extra_symbols(calls)
+
+        name = node.name
+        kernel = SourceBoundaryKernel(name, self._source_count) 
+        self._symbol_table = kernel.symbol_table
+        args = self.visit(node.args)
+
+        if len(args) < 2:
+            raise IRGenerationError("Particle IR expects at least 2 arguments "
+                                    "for a source boundary kernel, but got "
+                                    f"{len(args)}.")
+
+        if not isinstance(args[0], ParticleReference):
+            raise IRGenerationError("First argument to SourceBoundaryKernel must "
+                                    "be a particle.")
+
+        for name, symbol in extra_symbols:
+            self._symbol_table.add(symbol)
+
+        for child in node.body:
+            kernel.body.addchild(self.visit(child))
+        kernel.arguments = args
+        return kernel
+
+class pir_sink_boundary_visitor(ast_to_pir_visitor):
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> SinkBoundaryKernel:
+        backend = get_backend()
+        extra_symbols = []
+        if backend is not None:
+            fcv = find_calls_visitor()
+            fcv.visit(node)
+            calls = fcv.calls
+            extra_symbols = backend.get_extra_symbols(calls)
+
+        name = node.name
+        kernel = SinkBoundaryKernel(name) 
+        self._symbol_table = kernel.symbol_table
+        args = self.visit(node.args)
+
+        if len(args) < 2:
+            raise IRGenerationError("Particle IR expects at least 2 arguments "
+                                    "for a source boundary kernel, but got "
+                                    f"{len(args)}.")
+
+        if not isinstance(args[0], ParticleReference):
+            raise IRGenerationError("First argument to SourceBoundaryKernel must "
+                                    "be a particle.")
+
+        for name, symbol in extra_symbols:
+            self._symbol_table.add(symbol)
+
         for child in node.body:
             kernel.body.addchild(self.visit(child))
         kernel.arguments = args

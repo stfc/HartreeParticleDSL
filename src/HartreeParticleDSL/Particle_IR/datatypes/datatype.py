@@ -281,13 +281,14 @@ BOOL_TYPE = ScalarType(ScalarType.Intrinsic.BOOLEAN, ScalarType.Precision.UNDEFI
 
 STRING_TYPE = ScalarType(ScalarType.Intrinsic.CHARACTER, ScalarType.Precision.UNDEFINED)
 
-# Particles always have a position, and its always considered to be a 3D double array
+# Particles always have a position and velocity, and its always considered to be a 3D double array
 # internally for now.
 PARTICLE_POSITION_TYPE = ArrayType(DOUBLE_TYPE, [3])
 
 BASE_PARTICLE_TYPE = StructureType()
 _CORE_PART_TYPE = StructureType()
 _CORE_PART_TYPE.components["position"] = PARTICLE_POSITION_TYPE
+_CORE_PART_TYPE.components["velocity"] = ArrayType( DOUBLE_TYPE, [3])
 BASE_PARTICLE_TYPE.components["core_part"] = _CORE_PART_TYPE
 
 BASE_CONFIG_TYPE = StructureType()
@@ -337,6 +338,7 @@ def reset_part_and_config():
     BASE_PARTICLE_TYPE = StructureType()
     _CORE_PART_TYPE = StructureType()
     _CORE_PART_TYPE.components["position"] = PARTICLE_POSITION_TYPE
+    _CORE_PART_TYPE.components["velocity"] = ArrayType( DOUBLE_TYPE, [3])
     BASE_PARTICLE_TYPE.components["core_part"] = _CORE_PART_TYPE
 
     BASE_CONFIG_TYPE = StructureType()

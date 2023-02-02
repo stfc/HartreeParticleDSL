@@ -6,9 +6,13 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import IllegalLoopError, Un
 
 from HartreeParticleDSL.Particle_IR.nodes.array_mixin import ArrayMixin
 from HartreeParticleDSL.Particle_IR.nodes.assignment import Assignment
+from HartreeParticleDSL.Particle_IR.nodes.auto_reference import AutoReference
+from HartreeParticleDSL.Particle_IR.nodes.call import Call
 from HartreeParticleDSL.Particle_IR.nodes.funcdef import FuncDef
 from HartreeParticleDSL.Particle_IR.nodes.invoke import Invoke
 from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
+from HartreeParticleDSL.Particle_IR.nodes.kernels import PerPartKernel, \
+    PairwiseKernel, SourceBoundaryKernel, SinkBoundaryKernel
 from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
 from HartreeParticleDSL.Particle_IR.nodes.node import Node
 from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
@@ -18,6 +22,7 @@ from HartreeParticleDSL.Particle_IR.nodes.particle_position_reference import \
         ParticlePositionReference
 from HartreeParticleDSL.Particle_IR.nodes.particle_reference import ParticleReference
 from HartreeParticleDSL.Particle_IR.nodes.pointer_reference import PointerReference
+from HartreeParticleDSL.Particle_IR.symbols.autosymbol import AutoSymbol
 from HartreeParticleDSL.backends.base_backend.pir_visitor import PIR_Visitor
 
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, ScalarType, \
@@ -68,6 +73,9 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         if slice_name not in self._slices:
             self._slices.append(slice_name)
 
+    def visit_autosymbol_node(self, symbol: AutoSymbol) -> str:
+        return f"auto {symbol.name} = {symbol.initial_value}"
+
     def visit_symbol_node(self, symbol: Symbol) -> str:
         # Find the name in the type_mapping_str
         type_str = ""
@@ -114,6 +122,29 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         if len(node.walk(Invoke)) != 0:
             raise UnsupportedCodeError("Per part kernel cannot contain Invokes.")
 
+        # Need to find any random number calls
+        calls = node.walk(Call)
+        for call in calls:
+            if call.func_name == "random_number":
+                # Whenever we find a random number we need to wrap it in
+                # the wrapper calls.
+                # Find the generator symbol
+                generator_symbol = node.symbol_table.lookup("_generator")
+                pre_assign = Assignment.create(AutoReference(generator_symbol), Call.create("_random_pool.get_state", []))
+                post_assign = Call.create("_random_pool.free_state", [AutoReference(generator_symbol)])
+                if isinstance(call.parent, Assignment):
+                    # If its in an assignment then we add them around the
+                    # assignment instead
+                    container = call.parent.parent
+                    position = call.parent.position
+                    container.addchild(post_assign, position+1)
+                    container.addchild(post_assign, position)
+                else:
+                    container = call.parent
+                    position = call.position
+                    container.addchild(post_assign, position+1)
+                    container.addchild(post_assign, position)
+
         # Arg 1 is always a particle
         #TODO Save the particle 1 symbol name.
         self._parent.register_kernel(node.name, node)
@@ -131,8 +162,11 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         for pairs in symbols.keys():
             symbol = symbols[pairs]
             if pairs not in argument_names:
-                sym = self._visit(symbol)
-                symbol_list = symbol_list + self._nindent + sym + " " + pairs + ";\n"
+                if not isinstance(symbol, AutoSymbol):
+                    sym = self._visit(symbol)
+                    symbol_list = symbol_list + self._nindent + sym + " " + pairs + ";\n"
+                else:
+                    symbol_list = symbol_list + self._nindent + self._visit(symbol) + ";\n"
         self.dedent()
 
         #Current indentation level isn't quite correct
@@ -153,6 +187,8 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         rval = rval + f"{self._nindent}struct {node.name}_functor" + "{\n"
         self.indent()
         rval = rval + f"{self._nindent}config_struct_type _{node.arguments[1].symbol.name};\n"
+        if self._parent.get_require_random():
+            rval = rval + f"{self._nindent}Kokkos::Random_XorShift64_Pool<> _random_pool;\n"
         all_slices = []
         for slices in self._slices:
             rval = rval + f"{self._nindent}{slices.upper()} _{slices};\n"
@@ -171,6 +207,8 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         for slices in self._slices:
             all_slices.append(f"{slices.upper()} {slices}")
         all_slices.append("config_struct_type " + node.arguments[1].symbol.name)
+        if self._parent.get_require_random():
+            all_slices.append("Kokkos::Random_XorShift64_Pool<> random_pool")
         for structure in self._parent.structures:
             if self._parent._structures[structure] in type_mapping_str.values():
                 typename = [k for k, v in type_mapping_str.items() if v == self._parent._structures[structure]][0]
@@ -184,6 +222,8 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             all_slices.append(f"_{slices}({slices})")
         for structure in self._parent.structures:
             all_slices.append(f"{structure}({structure.upper()})")
+        if self._parent.get_require_random():
+            all_slices.append("_random_pool(random_pool)")
         classes = ", ".join(all_slices)
         rval = rval + f"{self._nindent}{classes}"
         if len(all_slices) > 0:
@@ -217,6 +257,308 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         rval = rval + self._nindent + "};\n"
         for slices in self._slices:
             self._parent.add_kernel_slices(node.name, slices)
+        return rval
+
+    def visit_sourceboundarykernel_node(self, node: SourceBoundaryKernel) -> str:
+        self._in_kernel = True
+
+        self._slices = []
+        # Check rules. Doesn't contain invokes.
+        if len(node.walk(Invoke)) != 0:
+            raise UnsupportedCodeError("Per part kernel cannot contain Invokes.")
+
+        # Need to find any random number calls
+        calls = node.walk(Call)
+        for call in calls:
+            if call.func_name == "random_number":
+                # Whenever we find a random number we need to wrap it in
+                # the wrapper calls.
+                # Find the generator symbol
+                generator_symbol = node.symbol_table.lookup("_generator")
+                pre_assign = Assignment.create(AutoReference(generator_symbol), Call.create("_random_pool.get_state", []))
+                post_assign = Call.create("_random_pool.free_state", [AutoReference(generator_symbol)])
+                if isinstance(call.parent, Assignment):
+                    # If its in an assignment then we add them around the
+                    # assignment instead
+                    container = call.parent.parent
+                    position = call.parent.position
+                    container.addchild(post_assign, position+1)
+                    container.addchild(pre_assign, position)
+                else:
+                    container = call.parent
+                    position = call.position
+                    container.addchild(post_assign, position+1)
+                    container.addchild(pre_assign, position)
+
+        # Arg 1 is always a particle
+        #TODO Save the particle 1 symbol name.
+        self._parent.register_kernel(node.name, node)
+        argument_names = []
+        for arg in node.arguments:
+            # Need the correct typing on these arguments
+            argument_names.append(arg.symbol.name)
+
+        self.indent()
+        # Extra indentation for symbol table
+        self.indent()
+        symbols = node.symbol_table.get_symbols()
+        sym_strings = []
+        symbol_list = ""
+        for pairs in symbols.keys():
+            symbol = symbols[pairs]
+            if pairs not in argument_names:
+                if not isinstance(symbol, AutoSymbol):
+                    sym = self._visit(symbol)
+                    symbol_list = symbol_list + self._nindent + sym + " " + pairs + ";\n"
+                else:
+                    symbol_list = symbol_list + self._nindent + self._visit(symbol) + ";\n"
+        self.dedent()
+
+        #Current indentation level isn't quite correct
+        kernel_body = self._visit(node.body)
+        self.dedent()
+
+        # Start codegen.
+
+        # Create the templated functor
+        rval = self._nindent
+        if len(self._slices) > 0:
+            rval = rval + "template < "
+            all_slices = []
+            for slices in self._slices:
+                all_slices.append("class " + slices.upper())
+            classes = ", ".join(all_slices)
+            rval = rval + classes + " >\n"
+        rval = rval + f"{self._nindent}struct {node.name}_functor" + "{\n"
+        self.indent()
+        rval = rval + f"{self._nindent}config_struct_type _{node.arguments[1].symbol.name};\n"
+        if self._parent.get_require_random():
+            rval = rval + f"{self._nindent}Kokkos::Random_XorShift64_Pool<> _random_pool;\n"
+        all_slices = []
+        for slices in self._slices:
+            rval = rval + f"{self._nindent}{slices.upper()} _{slices};\n"
+        for structure in self._parent.structures:
+            if self._parent._structures[structure] in type_mapping_str.values():
+                typename = [k for k, v in type_mapping_str.items() if v == self._parent._structures[structure]][0]
+            else:
+                typename = structure
+            rval = rval + f"{self._nindent}{typename} {structure};\n"
+
+        # Constructor
+        rval = rval + "\n"
+        rval = rval + f"{self._nindent}KOKKOS_INLINE_FUNCTION\n"
+        rval = rval + f"{self._nindent} {node.name}_functor( "
+        all_slices = []
+        for slices in self._slices:
+            all_slices.append(f"{slices.upper()} {slices}")
+        all_slices.append("config_struct_type " + node.arguments[1].symbol.name)
+        if self._parent.get_require_random():
+            all_slices.append("Kokkos::Random_XorShift64_Pool<> random_pool")
+        for structure in self._parent.structures:
+            if self._parent._structures[structure] in type_mapping_str.values():
+                typename = [k for k, v in type_mapping_str.items() if v == self._parent._structures[structure]][0]
+            else:
+                typename = structure
+            all_slices.append(f"{typename} {structure.upper()}")
+        classes = ", ".join(all_slices)
+        rval = rval + classes + "):\n"
+        all_slices = []
+        for slices in self._slices:
+            all_slices.append(f"_{slices}({slices})")
+        for structure in self._parent.structures:
+            all_slices.append(f"{structure}({structure.upper()})")
+        if self._parent.get_require_random():
+            all_slices.append("_random_pool(random_pool)")
+        classes = ", ".join(all_slices)
+        rval = rval + f"{self._nindent}{classes}"
+        if len(all_slices) > 0:
+            rval = rval + ", "
+        rval = rval + f"_{node.arguments[1].symbol.name}({node.arguments[1].symbol.name})" + "{}\n"
+
+        # Need to have an update_structs call if there are structures
+        if len(self._parent.structures) > 0:
+            rval = rval + f"\n{self._nindent}void update_structs("
+            all_structs = []
+            for struct in self._parent.structures:
+                if self._parent._structures[structure] in type_mapping_str.values():
+                    typename = [k for k, v in type_mapping_str.items() if v == self._parent._structures[structure]][0]
+                else:
+                    typename = structure
+                all_structs.append(typename + " " + struct.upper())
+            rval = rval + ", ".join(all_structs) + "){\n"
+            self.indent()
+            for struct in self._parent.structures:
+                rval = rval + self._nindent + struct + " = " + struct.upper() + ";\n"
+            self.dedent()
+            rval = rval + self._nindent + "}\n"
+
+        # Generate inflow count function
+        rval = rval + f"\n{self._nindent}int get_inflow_count()" + "{\n"
+        self.indent()
+        rval = rval + f"{self._nindent}return {node.source_count};\n"
+        self.dedent()
+        rval = rval + f"{self._nindent}" + "}\n"
+
+
+        rval = rval + "\n"
+        rval = rval + self._nindent + "void operator()(const int i, const int a) const{\n"
+        rval = rval + symbol_list
+        rval = rval + kernel_body
+        rval = rval + self._nindent + "}\n"
+
+        self.dedent()
+        rval = rval + self._nindent + "};\n"
+        for slices in self._slices:
+            self._parent.add_kernel_slices(node.name, slices)
+
+        self._in_kernel = False
+        return rval
+
+    def visit_sinkboundarykernel_node(self, node: SinkBoundaryKernel) -> str:
+        self._in_kernel = True
+
+        self._slices = []
+        # Check rules. Doesn't contain invokes.
+        if len(node.walk(Invoke)) != 0:
+            raise UnsupportedCodeError("Sink boundary kernel cannot contain Invokes.")
+
+        # Need to find any random number calls
+        calls = node.walk(Call)
+        for call in calls:
+            if call.func_name == "random_number":
+                # Whenever we find a random number we need to wrap it in
+                # the wrapper calls.
+                # Find the generator symbol
+                generator_symbol = node.symbol_table.lookup("_generator")
+                pre_assign = Assignment.create(AutoReference(generator_symbol), Call.create("_random_pool.get_state", []))
+                post_assign = Call.create("_random_pool.free_state", [AutoReference(generator_symbol)])
+                if isinstance(call.parent, Assignment):
+                    # If its in an assignment then we add them around the
+                    # assignment instead
+                    container = call.parent.parent
+                    position = call.parent.position
+                    container.addchild(post_assign, position+1)
+                    container.addchild(post_assign, position)
+                else:
+                    container = call.parent
+                    position = call.position
+                    container.addchild(post_assign, position+1)
+                    container.addchild(post_assign, position)
+
+        # Arg 1 is always a particle
+        #TODO Save the particle 1 symbol name.
+        self._parent.register_kernel(node.name, node)
+        argument_names = []
+        for arg in node.arguments:
+            # Need the correct typing on these arguments
+            argument_names.append(arg.symbol.name)
+
+        self.indent()
+        # Extra indentation for symbol table
+        self.indent()
+        symbols = node.symbol_table.get_symbols()
+        sym_strings = []
+        symbol_list = ""
+        for pairs in symbols.keys():
+            symbol = symbols[pairs]
+            if pairs not in argument_names:
+                if not isinstance(symbol, AutoSymbol):
+                    sym = self._visit(symbol)
+                    symbol_list = symbol_list + self._nindent + sym + " " + pairs + ";\n"
+                else:
+                    symbol_list = symbol_list + self._nindent + self._visit(symbol) + ";\n"
+        self.dedent()
+
+        #Current indentation level isn't quite correct
+        kernel_body = self._visit(node.body)
+        self.dedent()
+
+        # Start codegen.
+
+        # Create the templated functor
+        rval = self._nindent
+        if len(self._slices) > 0:
+            rval = rval + "template < "
+            all_slices = []
+            for slices in self._slices:
+                all_slices.append("class " + slices.upper())
+            classes = ", ".join(all_slices)
+            rval = rval + classes + " >\n"
+        rval = rval + f"{self._nindent}struct {node.name}_functor" + "{\n"
+        self.indent()
+        rval = rval + f"{self._nindent}config_struct_type _{node.arguments[1].symbol.name};\n"
+        if self._parent.get_require_random():
+            all_slices.append("Kokkos::Random_XorShift64_Pool<> random_pool")
+        all_slices = []
+        for slices in self._slices:
+            rval = rval + f"{self._nindent}{slices.upper()} _{slices};\n"
+        for structure in self._parent.structures:
+            if self._parent._structures[structure] in type_mapping_str.values():
+                typename = [k for k, v in type_mapping_str.items() if v == self._parent._structures[structure]][0]
+            else:
+                typename = structure
+            rval = rval + f"{self._nindent}{typename} {structure};\n"
+
+        # Constructor
+        rval = rval + "\n"
+        rval = rval + f"{self._nindent}KOKKOS_INLINE_FUNCTION\n"
+        rval = rval + f"{self._nindent} {node.name}_functor( "
+        all_slices = []
+        for slices in self._slices:
+            all_slices.append(f"{slices.upper()} {slices}")
+        all_slices.append("config_struct_type " + node.arguments[1].symbol.name)
+        if self._parent.get_require_random():
+            all_slices.append("Kokkos::Random_XorShift64_Pool<> random_pool")
+        for structure in self._parent.structures:
+            if self._parent._structures[structure] in type_mapping_str.values():
+                typename = [k for k, v in type_mapping_str.items() if v == self._parent._structures[structure]][0]
+            else:
+                typename = structure
+            all_slices.append(f"{typename} {structure.upper()}")
+        classes = ", ".join(all_slices)
+        rval = rval + classes + "):\n"
+        all_slices = []
+        for slices in self._slices:
+            all_slices.append(f"_{slices}({slices})")
+        for structure in self._parent.structures:
+            all_slices.append(f"{structure}({structure.upper()})")
+        if self._parent.get_require_random():
+            all_slices.append("_random_pool(random_pool)")
+        classes = ", ".join(all_slices)
+        rval = rval + f"{self._nindent}{classes}"
+        if len(all_slices) > 0:
+            rval = rval + ", "
+        rval = rval + f"_{node.arguments[1].symbol.name}({node.arguments[1].symbol.name})" + "{}\n"
+
+        # Need to have an update_structs call if there are structures
+        if len(self._parent.structures) > 0:
+            rval = rval + f"\n{self._nindent}void update_structs("
+            all_structs = []
+            for struct in self._parent.structures:
+                if self._parent._structures[structure] in type_mapping_str.values():
+                    typename = [k for k, v in type_mapping_str.items() if v == self._parent._structures[structure]][0]
+                else:
+                    typename = structure
+                all_structs.append(typename + " " + struct.upper())
+            rval = rval + ", ".join(all_structs) + "){\n"
+            self.indent()
+            for struct in self._parent.structures:
+                rval = rval + self._nindent + struct + " = " + struct.upper() + ";\n"
+            self.dedent()
+            rval = rval + self._nindent + "}\n"
+
+        rval = rval + "\n"
+        rval = rval + self._nindent + "void operator()(const int i, const int a) const{\n"
+        rval = rval + symbol_list
+        rval = rval + kernel_body
+        rval = rval + self._nindent + "}\n"
+
+        self.dedent()
+        rval = rval + self._nindent + "};\n"
+        for slices in self._slices:
+            self._parent.add_kernel_slices(node.name, slices)
+
+        self._in_kernel = False
         return rval
 
     def visit_mainkernel_node(self, node: MainKernel) -> str:
@@ -289,6 +631,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
                     updates_part_pos = True
                 # TODO If it contains a "Call" node to an unknown call maybe
                 # this should just be set to True as well?
+
             rval = rval + f"Kokkos::deep_copy(config.config, config.config_host);\n"
             if len(self._parent.structures) > 0:
                 rval = rval + self._nindent
@@ -297,13 +640,68 @@ class Cabana_PIR_Visitor(PIR_Visitor):
                 for struct in self._parent.structures:
                     struct_list.append(struct)
                 rval = rval + ", ".join(struct_list) + ");\n"
-            rval = rval + f"{self._nindent}Cabana::simd_parallel_for(simd_policy, {invoke.value}, "
-            rval = rval + "\"" + invoke.value + "\");\n"
-            # TODO Check if we need to block (i.e. only if kernel dependencies or final kernel)
-            rval = rval + self._nindent + "Kokkos::fence();"
+            # TODO Need to do stuff depending on kernel type.
+            if isinstance(pir_kernel, PerPartKernel):
+                rval = rval + f"{self._nindent}Cabana::simd_parallel_for(simd_policy, {invoke.value}, "
+                rval = rval + "\"" + invoke.value + "\");\n"
+                # TODO Check if we need to block (i.e. only if kernel dependencies or final kernel)
+                rval = rval + self._nindent + "Kokkos::fence();"
+            elif isinstance(pir_kernel, SourceBoundaryKernel):
+                rval = rval + f"{self._nindent}" + "{\n"
+                self.indent()
+                rval = rval + f"{self._nindent}int new_parts = {invoke.value}.get_inflow_count();\n"
+                rval = rval + f"{self._nindent}int old_size = particle_aosoa.size();\n"
+                rval = rval + f"{self._nindent}int new_size = old_size + new_parts;\n"
+                # We need to resize both particle structures
+                rval = rval + f"{self._nindent}particle_aosoa.resize(new_size);\n"
+                rval = rval + f"{self._nindent}particle_aosoa_host.resize(new_size);\n"
+                # Need to redo slices and functors
+                current_indent = len(self._nindent)
+                indent = len(self._indent)
+                rval = rval + self._parent.gen_slices_and_functors(current_indent=current_indent, indent=indent)
+                # Loop over the new stuff and do the source bc
+                rval = rval + f"{self._nindent}Cabana::SimdPolicy<VectorLength, ExecutionSpace> simd(old_size+1, new_size);\n"
+                rval = rval + f"{self._nindent}Cabana::simd_parallel_for(simd, {invoke.value}, "
+                rval = rval + "\"" + invoke.value + "\");\n"
+                self.dedent()
+                rval = rval + f"{self._nindent}" + "}\n"
+            elif isinstance(pir_kernel, SinkBoundaryKernel):
+                # Sink boundaries update the neighbour_part_deletion_flag
+                rval = rval + f"{self._nindent}" + "{\n"
+                self.indent()
+                rval = rval + f"{self._nindent}Cabana::simd_parallel_for(simd_policy, {invoke.value}, "
+                rval = rval + "\"" + invoke.value + "\");\n"
+                # Positive values are deleted
+                rval = rval + f"{self._nindent}auto sort_data = Cabana::bin_by_key(neighbour_part_deletion_flag_slice, 2);\n"
+                rval = rval + f"{self._nindent}Cabana::permute(sort_data, particle_aosoa);\n"
+                # TODO Resize the array.
+                rval = rval + f"{self._nindent}Cabana::deep_copy(particle_aosoa_host, particle_aosoa);\n"
+                rval = rval + f"{self._nindent}auto local_deletion_flags = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa_host);\n"
+                rval = rval + f"{self._nindent}int end = particle_aosoa.size();\n"
+                rval = rval + f"{self._nindent}for(int j = particle_aosoa.size()-1; j > 0; j--)" + "{\n"
+                self.indent()
+                rval = rval + f"{self._nindent}if(local_deletion_flags <= 0)" + "{\n"
+                self.indent()
+                rval = rval + f"{self._nindent}end = j+1;\n"
+                rval = rval + f"{self._nindent}break;\n"
+                self.dedent()
+                rval = rval + f"{self._nindent}" + "}\n"
+                self.dedent()
+                rval = rval + f"{self._nindent}" + "}\n"
+                rval = rval + f"{self._nindent}particle_aosoa.resize(end);\n"
+                rval = rval + f"{self._nindent}particle_aosoa_host.resize(end);\n"
+                # Redo slices and functors
+                current_indent = len(self._nindent)
+                indent = len(self._indent)
+                rval = rval + self._parent.gen_slices_and_functors(current_indent=current_indent, indent=indent)
+                self.dedent()
+                rval = rval + f"{self._nindent}" + "}\n"
+            else:
+                raise NotImplementedError()
             # If we have MPI and move particles do the pre-boundary condition stuff.
             if updates_part_pos and get_mpi():
                 rval = rval + "\n" + self._parent.gen_mpi_comm_before_bcs(len(self._nindent), len(self._indent))
+
 
             if updates_part_pos and (self._parent.boundary_condition is not None):
                 bound = self._parent.boundary_condition
@@ -505,6 +903,9 @@ class Cabana_PIR_Visitor(PIR_Visitor):
 
     def visit_pointerreference_node(self, node: PointerReference) -> str:
         return f"*{node.symbol.name}"
+
+    def visit_autoreference_node(self, node: AutoReference) -> str:
+        return f"{node.symbol.name}"
 
     def visit_scalarreference_node(self, node: ScalarReference) -> str:
         return f"{node.symbol.name}"
