@@ -14,6 +14,7 @@ from HartreeParticleDSL.c_types import c_int, c_double, c_float, c_int64_t, \
                                        c_int32_t, c_int8_t, c_bool
 
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, DataType
+from HartreeParticleDSL.Particle_IR.symbols.autosymbol import AutoSymbol
 from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
 
 
@@ -61,6 +62,7 @@ class Cabana_PIR(Backend):
         self._includes.append("<iostream>")
         self._includes.append("<cmath>")
         self._includes.append("<cstdio>")
+        self._includes.append("<math.h>")
         self._includes.append("\"part.h\"")
 
         self._input_module = None
@@ -82,6 +84,8 @@ class Cabana_PIR(Backend):
         self._boundary_condition_tree = None
 
         self._current_kernel = None
+
+        self._require_random = False
 
     def set_boundary_condition(self, boundary_condition_kernel) -> None:
         '''
@@ -845,6 +849,10 @@ class Cabana_PIR(Backend):
         '''
         self._config = config
         self._part_type = part_type
+
+        # We need to add an extra type to the part type for neighbours_part_deletion_flag
+        if "neighbour_part_deletion_flag" not in part_type.particle_type:
+            part_type.add_element("neighbour_part_deletion_flag", "int")
         config_output = self.gen_config(config)
         part_output = self.gen_particle(part_type)
         with open('part.h', 'w') as f:
@@ -906,13 +914,20 @@ class Cabana_PIR(Backend):
         # to wait and do all the codegen from print_main, and output to file
         # for this backend.
         from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import \
-                pir_perpart_visitor, pir_pairwise_visitor
+                pir_perpart_visitor, pir_pairwise_visitor, pir_source_boundary_visitor, \
+                pir_sink_boundary_visitor
         pir = None
         if isinstance(kernel, kernels.perpart_kernel_wrapper):
             conv = pir_perpart_visitor()
             pir = conv.visit(kernel.get_kernel_tree())
         elif isinstance(kernel, kernels.pairwise_kernel_wrapper):
             conv = pir_pairwise_visitor()
+            pir = conv.visit(kernel.get_kernel_tree())
+        elif isinstance(kernel, kernels.source_boundary_kernel_wrapper):
+            conv = pir_source_boundary_visitor(kernel)
+            pir = conv.visit(kernel.get_kernel_tree())
+        elif isinstance(kernel, kernels.sink_boundary_kernel_wrapper):
+            conv = pir_sink_boundary_visitor()
             pir = conv.visit(kernel.get_kernel_tree())
         else:
             raise NotImplementedError("Cabana PIR backend doesn't yet support "
@@ -1096,6 +1111,8 @@ class Cabana_PIR(Backend):
             output = output + ",\n                 core_part_velocity"
         output = output + ",\n                 core_part_position"
         output = output + ",\n                 neighbour_part_cutoff"
+        # Delete particles info
+        output = output + ",\n                 neighbour_part_deletion_flag"
         if HartreeParticleDSL.get_mpi():
             output = output + ",\n                 neighbour_part_rank"
             output = output + ",\n                 neighbour_part_old_position"
@@ -1119,6 +1136,7 @@ class Cabana_PIR(Backend):
             output = output + ",\n    double[3]"
         output = output + ",\n    double[3]"
         output = output + ",\n    double"
+        output = output + ",\n    int"
         if HartreeParticleDSL.get_mpi():
             output = output + ",\n    int"
             output = output + ",\n    double[3]"
@@ -1225,6 +1243,18 @@ class Cabana_PIR(Backend):
         output = output + " << \"\\n\";\n"
         return output
 
+    def random_number(self, *args, **kwargs):
+        '''
+        TODO
+        '''
+        return "_generator.drand(0., 1.)"
+
+    def pi(self, *args, **kwargs):
+        '''
+        TODO
+        '''
+        return "M_PI"
+
     def initialise(self,particle_count, filename, current_indent, **kwargs) -> str:
         '''
         :param int particle_count: Particle count for the simulation. Passed to \
@@ -1248,6 +1278,8 @@ class Cabana_PIR(Backend):
         rval = rval + space*current_indent + "config_type config;\n"
         rval = rval + space*current_indent + "config.config = config_struct_type(\"config\", 1);\n"
         rval = rval + space*current_indent + "config.config_host = Kokkos::create_mirror_view(config.config);\n"
+        if self.get_require_random():
+            rval = rval + space*current_indent + "Kokkos::Random_XorShift64_Pool<> random_pool(/*seed=*/12345);\n"
 
         # Initialise structures
         for structure in self._structures:
@@ -1337,6 +1369,7 @@ class Cabana_PIR(Backend):
         rval = rval + space*current_indent + "auto core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);\n"
         rval = rval + space*current_indent + "auto core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);\n"
         rval = rval + space*current_indent + "auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);\n"
+        rval = rval + space*current_indent + "auto neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);\n"
         if HartreeParticleDSL.get_mpi():
             rval = rval + "    auto neighbour_part_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa);\n"
             rval = rval + "    auto neighbour_part_old_position_slice = Cabana::slice<neighbour_part_old_position>(particle_aosoa);\n"
@@ -1433,6 +1466,9 @@ class Cabana_PIR(Backend):
                 pass
         raise AttributeError
 
+    def get_require_random(self) -> bool:
+        return self._require_random
+
     def get_extra_symbols(self, function_list):
         '''
         Returns the list of symbols that need to be added to the symbol table
@@ -1445,8 +1481,12 @@ class Cabana_PIR(Backend):
         '''
         # This backend needs to add any structures created.
         results = []
+        if "random_number" in function_list:
+            self._require_random = True
+            results.append( ("_generator", AutoSymbol("_generator", "_random_pool.get_state(); _random_pool.free_state(_generator);"))) # TODO Fix.
         for struct in self._structures.keys():
             results.append( (struct, StructureSymbol(struct, self._structures[struct])) )
+
 
         # Check the coupled systems as well.
         for system in self._coupled_systems:
@@ -1467,6 +1507,53 @@ class Cabana_PIR(Backend):
         rval = rval + indent_str + "Cabana::simd_parallel_for( temp_policy, ruf, \"rank_update_functor\");\n"
         rval = rval + indent_str + "Kokkos::fence();\n"
         rval = rval + current_indent * " " + "}\n"
+        return rval
+
+    def gen_slices_and_functors(self, current_indent=4, indent=4) -> str:
+        '''
+        Returns the code required to regenerate slices and functors for
+        this backend. Used if something resizes the particle arrays.
+
+        :returns: The code to regenerate the slices and functors
+        :rtype: str
+        '''
+        indent_str = current_indent * " "
+        rval = ""
+        rval = rval + indent_str + "core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);\n"
+        rval = rval + indent_str + "core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);\n"
+        rval = rval + indent_str + "neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);\n"
+        rval = rval + indent_str + "neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);\n"
+        if HartreeParticleDSL.get_mpi():
+            rval = rval + indent_str + "neighbour_part_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa);\n"
+            rval = rval + indent_str + "neighbour_part_old_position_slice = Cabana::slice<neighbour_part_old_position>(particle_aosoa);\n"
+        if self._particle is not None:
+            for key in self._particle.particle_type:
+                if key != "core_part" and key != "neighbour_part":
+                    rval = rval + indent_str + f"{key}_slice = Cabana::slice<{key}>" + "(particle_aosoa);\n"
+
+        rval = rval + indent_str + f"simd_policy = Cabana::SimdPolicy<VectorLength, ExecutionSpace>(0, particle_aosoa.size());\n"
+
+        # Generate the functors
+        for key in self._kernel_slices.keys():
+            rval = rval + indent_str + f"{key} = {key}_functor"
+            slice_names = []
+            for slices in self._kernel_slices[key]:
+                slice_names.append(f"decltype({slices}_slice)")
+            if len(slice_names) > 0:
+                rval = rval + "<"
+                rval = rval + ", ".join(slice_names) + ">"
+
+            rval = rval + f"("
+            slice_names = []
+            for slices in self._kernel_slices[key]:
+                slice_names.append(f"{slices}_slice")
+            rval = rval + ", ".join(slice_names) + ", config.config"
+            slice_names = []
+            for struct in self._structures.keys():
+                slice_names.append(struct)
+            if len(slice_names) > 0:
+                rval = rval + ","
+            rval = rval + ", ".join(slice_names) + ");\n" 
         return rval
 
     def gen_mpi_comm_after_bcs(self, current_indent=4, indent=4) -> str:
@@ -1496,6 +1583,7 @@ class Cabana_PIR(Backend):
         rval = rval + indent_str + "core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);\n"
         rval = rval + indent_str + "core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);\n"
         rval = rval + indent_str + "neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);\n"
+        rval = rval + indent_str + "neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);\n"
         if HartreeParticleDSL.get_mpi():
             rval = rval + indent_str + "neighbour_part_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa);\n"
             rval = rval + indent_str + "neighbour_part_old_position_slice = Cabana::slice<neighbour_part_old_position>(particle_aosoa);\n"
