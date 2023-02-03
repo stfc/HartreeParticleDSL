@@ -1111,7 +1111,7 @@ class Cabana_PIR(Backend):
         output = output + "enum FieldNames{"
         first = True
         for key in sorted_fields:
-            if key != "core_part" and key != "neighbour_part":
+            if key != "core_part" and key != "neighbour_part" and "neighbour_part" not in key:
                 if first:
                     output = output + f"{key} = 0"
                     first = False
@@ -1134,7 +1134,7 @@ class Cabana_PIR(Backend):
         output = output + "using DataTypes = Cabana::MemberTypes<"
         first = True
         for key in sorted_fields:
-            if key != "core_part" and key != "neighbour_part":
+            if key != "core_part" and key != "neighbour_part" and "neighbour_part" not in key:
                 if first:
                     c_type = particle.particle_type[key]['type']
                     output = output + c_type
@@ -1393,7 +1393,7 @@ class Cabana_PIR(Backend):
             rval = rval + "    auto neighbour_part_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa);\n"
             rval = rval + "    auto neighbour_part_old_position_slice = Cabana::slice<neighbour_part_old_position>(particle_aosoa);\n"
         for key in self._particle.particle_type:
-            if key != "core_part" and key != "neighbour_part":
+            if key != "core_part" and key != "neighbour_part" and "neighbour_part" not in key:
                 rval = rval + space*current_indent + f"auto {key}_slice = Cabana::slice<{key}>" + "(particle_aosoa);\n"
 
 
