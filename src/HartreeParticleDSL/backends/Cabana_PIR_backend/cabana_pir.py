@@ -290,6 +290,8 @@ class Cabana_PIR(Backend):
         '''
         Generates the extra header file code required for this backend
         if MPI is enabled.
+
+        TODO: Future version of this should not transfer the neighbour_part_deletion_flag
         '''
         #Templated class on aosoa type
         # Needs a space for each member of the particle, e.g.:
@@ -321,7 +323,7 @@ class Cabana_PIR(Backend):
         inc_indent()
         element_info = {} # element name: [datatype, array_dimension (i.e. 0-N), array_indices]
         for element in particle.particle_type:
-            if element == "core_part" or element == "neighbour_part":
+            if element == "core_part" or element == "neighbour_part" or "neighbour_part" in element:
                 continue
             c_type = particle.particle_type[element]['type']
             is_array = particle.particle_type[element]['is_array']
