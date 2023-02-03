@@ -305,7 +305,6 @@ using DataTypes = Cabana::MemberTypes<double[3],
 template<class aosoa> class Migrator{
 
     private:
-        Kokkos::View<int**, MemorySpace> neighbour_part_deletion_flag_space;
         Kokkos::View<double***, MemorySpace> pos_space;
         Kokkos::View<double***, MemorySpace> vel_space;
         Kokkos::View<double**, MemorySpace> cutoff_space;
@@ -314,7 +313,6 @@ template<class aosoa> class Migrator{
     public:
         Migrator(int buffer_size, int nr_neighbours){
             _buffer_size = buffer_size;
-            neighbour_part_deletion_flag_space = Kokkos::View<int**, MemorySpace>("neighbour_part_deletion_flag_id", nr_neighbours, buffer_size);
             pos_space = Kokkos::View<double***, MemorySpace>("temp_pos", nr_neighbours, buffer_size, 3);
             vel_space = Kokkos::View<double***, MemorySpace>("temp_velocity", nr_neighbours, buffer_size, 3);
             cutoff_space = Kokkos::View<double**, MemorySpace>("temp_cutoff", nr_neighbours, buffer_size);
@@ -327,7 +325,6 @@ template<class aosoa> class Migrator{
         auto pos_s = Cabana::slice<core_part_position>(particle_aosoa, "position");
         auto vel_s = Cabana::slice<core_part_velocity>(particle_aosoa, "velocity");
         auto cutoff_s = Cabana::slice<neighbour_part_cutoff>(particle_aosoa, "cutoff");
-        auto neighbour_part_deletion_flag_s = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa, "neighbour_part_deletion_flag");
         int *send_count = (int*) malloc(sizeof(int) * neighbors.size());
         int count_neighbours = 0;
         int end = particle_aosoa.size() - 1;
@@ -352,7 +349,6 @@ template<class aosoa> class Migrator{
             vel_space(therank, pos, 1) = vel_s(i, 1);
             vel_space(therank, pos, 2) = vel_s(i, 2);
             cutoff_space(therank, pos) = cutoff_s(i);
-            neighbour_part_deletion_flag_space(therank, pos) = neighbour_part_deletion_flag_s(i);
             send_count[therank]++;
 
             while(rank_slice(end) != myrank && end > 0){
@@ -367,7 +363,6 @@ template<class aosoa> class Migrator{
                 vel_s(i, 1) = vel_s(end, 1);
                 vel_s(i, 2) = vel_s(end, 2);
                 cutoff_s(i) = cutoff_s(end);
-                neighbour_part_deletion_flag_s(i) = neighbour_part_deletion_flag_s(end);
                 rank_slice(end) = -1;
             }else{
                 rank_slice(i) = -1;
@@ -398,10 +393,9 @@ template<class aosoa> class Migrator{
     Kokkos::View<double***, MemorySpace> r_pos_space("temp_pos", neighbors.size(), total_size, 3);
     Kokkos::View<double***, MemorySpace> r_vel_space("temp_vel", neighbors.size(), total_size, 3);
     Kokkos::View<double**, MemorySpace> r_cutoff_space("temp_cutoff", neighbors.size(), total_size);
-    Kokkos::View<int**, MemorySpace> r_neighbour_part_deletion_flag_space("temp_neighbour_part_deletion_flag", neighbors.size(), total_size);
 
     free(requests);
-    requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbors.size() * 2 * 4);
+    requests = (MPI_Request*) malloc(sizeof(MPI_Request) * neighbors.size() * 2 * 3);
     req_num = 0;
     int tag = 0;
     for(int i = 0; i < neighbors.size(); i++){
@@ -410,12 +404,10 @@ template<class aosoa> class Migrator{
             MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(1)*i], recv_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Irecv(&r_neighbour_part_deletion_flag_space.data()[r_neighbour_part_deletion_flag_space.extent(1)*i], recv_count[i], MPI_INT, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             tag = 0;
             MPI_Isend(&pos_space.data()[pos_space.extent(1)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Isend(&vel_space.data()[vel_space.extent(1)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Isend(&cutoff_space.data()[cutoff_space.extent(1)*i], send_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Isend(&neighbour_part_deletion_flag_space.data()[neighbour_part_deletion_flag_space.extent(1)*i], send_count[i], MPI_INT, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
         }
     }
     MPI_Waitall(req_num, requests, MPI_STATUSES_IGNORE);
@@ -448,7 +440,6 @@ template<class aosoa> class Migrator{
     auto new_pos_s = Cabana::slice<core_part_position>(particle_aosoa, "new_position");
     auto new_vel_s = Cabana::slice<core_part_velocity>(particle_aosoa, "new_velocity");
     auto new_cutoff_s = Cabana::slice<neighbour_part_cutoff>(particle_aosoa, "new_cutoff");
-    auto new_neighbour_part_deletion_flag_s = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa, "new_neighbour_part_deletion_flag");
     int x = 0;
     for(int j = 0; j < neighbors.size(); j++){
         for(int i = 0; i < recv_count[j]; i++){
@@ -459,7 +450,6 @@ template<class aosoa> class Migrator{
             new_vel_s(end+x, 1) = r_vel_space(j,i,1);
             new_vel_s(end+x, 2) = r_vel_space(j,i,2);
             new_cutoff_s(end+x) = r_cutoff_space(j,i);
-            new_neighbour_part_deletion_flag_s(end+x) = r_neighbour_part_deletion_flag_space(j,i);
             x++;
         }
     }
