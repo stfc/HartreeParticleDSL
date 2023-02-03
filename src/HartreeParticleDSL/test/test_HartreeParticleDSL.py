@@ -115,9 +115,6 @@ def test_generate_code(capsys):
     correct = correct + "#include \"part.h\"\n"
     correct = correct + "#include <stdlib.h>\n"
     correct = correct + "#include \"random_io.h\"\n\n"
-    correct = correct + "double random_double(){\n"
-    correct = correct + "    return (double)(rand()) / (double)(RAND_MAX);\n"
-    correct = correct + "}\n"
     correct = correct + "void kern( struct part *part1, struct config_type *config )\n"
     correct = correct + "{\n"
     correct = correct + "    s = ( s - 1 );\n"
@@ -160,8 +157,7 @@ def test_global_gen_code(capsys):
     HartreeParticleDSL.gen_code()
     captured = capsys.readouterr()
     assert ("#include <math.h>\n#include <stdio.h>\n#include \"part.h\""
-            "\n\ndouble random_double(){\n"
-            "    return (double)(rand()) / (double)(RAND_MAX);\n}\n") == captured.out
+            "\n\n") == captured.out
 
 def test_global_initalise():
     '''Test the globally used initalise function'''

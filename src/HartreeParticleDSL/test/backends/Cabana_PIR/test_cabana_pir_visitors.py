@@ -679,6 +679,7 @@ def test_pir_cabana_mainkernel():
     core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);
     core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
     neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
+    neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);
     neighbour_part_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa);
     neighbour_part_old_position_slice = Cabana::slice<neighbour_part_old_position>(particle_aosoa);
     simd_policy = Cabana::SimdPolicy<VectorLength, ExecutionSpace>(0, particle_aosoa.size());
@@ -688,6 +689,7 @@ def test_pir_cabana_mainkernel():
 }
 '''
     set_mpi(False)
+    print(out)
     assert correct == out
     # TODO Add structure
 
@@ -713,7 +715,7 @@ def test_pir_cabana_mainkernel():
     }
 
     x.update_structs(xs);
-    Cabana::simd_parallel_for(simd_policy, _periodic_boundaries, "_periodic_boundaries");
+    Cabana::simd_parallel_for(simd_policy, periodic_boundaries, "periodic_boundaries");
     Kokkos::fence();
     Cabana::deep_copy(particle_aosoa_host, particle_aosoa);
     _migrator.exchange_data(particle_aosoa_host, neighbors, myrank, particle_aosoa_host.size());
@@ -722,6 +724,7 @@ def test_pir_cabana_mainkernel():
     core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);
     core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
     neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
+    neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);
     neighbour_part_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa);
     neighbour_part_old_position_slice = Cabana::slice<neighbour_part_old_position>(particle_aosoa);
     simd_policy = Cabana::SimdPolicy<VectorLength, ExecutionSpace>(0, particle_aosoa.size());
