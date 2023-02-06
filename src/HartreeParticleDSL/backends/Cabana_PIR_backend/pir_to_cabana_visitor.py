@@ -647,7 +647,10 @@ class Cabana_PIR_Visitor(PIR_Visitor):
                 # TODO Check if we need to block (i.e. only if kernel dependencies or final kernel)
                 rval = rval + self._nindent + "Kokkos::fence();"
             elif isinstance(pir_kernel, SourceBoundaryKernel):
-                rval = rval + f"{self._nindent}" + "{\n"
+                if HartreeParticleDSL.get_mpi():
+                    rval = rval + f"{self._nindent}if(myrank == 0){\n"
+                else:
+                    rval = rval + f"{self._nindent}" + "{\n"
                 self.indent()
                 rval = rval + f"{self._nindent}int new_parts = {invoke.value}.get_inflow_count();\n"
                 rval = rval + f"{self._nindent}int old_size = particle_aosoa.size();\n"

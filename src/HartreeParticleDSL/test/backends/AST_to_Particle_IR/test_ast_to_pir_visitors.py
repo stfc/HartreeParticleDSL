@@ -1204,3 +1204,74 @@ def test_perpart_visitor():
         out = v.visit(c)
     assert ("First argument to PerPartKernel must be a particle."
             in str(excinfo.value))
+
+def test_source_boundary_visitor():
+    class temp_class():
+        def get_source_count(self):
+            return 1
+    v = pir_source_boundary_visitor(temp_class())
+
+    class temp_Backend(Backend):
+        def get_extra_symbols(self, arg):
+            return [ ("b", ScalarTypeSymbol("b", INT_TYPE))]
+    set_backend(temp_Backend())
+
+    def y(arg: part):
+        create_variable(c_int, a)
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(y)))
+    with pytest.raises(IRGenerationError) as excinfo:
+        out = v.visit(c)
+    assert ("Particle IR expects at least 2 arguments for a source boundary kernel, "
+            "but got 1." in str(excinfo.value))
+
+
+    def z(arg: c_int, c: c_int):
+        create_variable(c_int, a)
+    c = ast.parse(textwrap.dedent(inspect.getsource(z)))
+    with pytest.raises(IRGenerationError) as excinfo:
+        out = v.visit(c)
+    assert ("First argument to SourceBoundaryKernel must be a particle."
+            in str(excinfo.value))
+
+    def z2(arg: part, c: c_int):
+        create_variable(c_int, a)
+    c = ast.parse(textwrap.dedent(inspect.getsource(z2)))
+    out = v.visit(c)
+    assert isinstance(out, SourceBoundaryKernel)
+    assert len(out.children[0].children) == 1
+    assert isinstance(out.children[0].children[0], EmptyStatement)
+
+def test_sink_boundary_visitor():
+    v = pir_sink_boundary_visitor()
+
+    class temp_Backend(Backend):
+        def get_extra_symbols(self, arg):
+            return [ ("b", ScalarTypeSymbol("b", INT_TYPE))]
+    set_backend(temp_Backend())
+
+    def y(arg: part):
+        create_variable(c_int, a)
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(y)))
+    with pytest.raises(IRGenerationError) as excinfo:
+        out = v.visit(c)
+    assert ("Particle IR expects at least 2 arguments for a sink boundary kernel, "
+            "but got 1." in str(excinfo.value))
+
+
+    def z(arg: c_int, c: c_int):
+        create_variable(c_int, a)
+    c = ast.parse(textwrap.dedent(inspect.getsource(z)))
+    with pytest.raises(IRGenerationError) as excinfo:
+        out = v.visit(c)
+    assert ("First argument to SinkBoundaryKernel must be a particle."
+            in str(excinfo.value))
+
+    def z2(arg: part, c: c_int):
+        create_variable(c_int, a)
+    c = ast.parse(textwrap.dedent(inspect.getsource(z2)))
+    out = v.visit(c)
+    assert isinstance(out, SinkBoundaryKernel)
+    assert len(out.children[0].children) == 1
+    assert isinstance(out.children[0].children[0], EmptyStatement)
