@@ -639,11 +639,11 @@ class pir_sink_boundary_visitor(ast_to_pir_visitor):
 
         if len(args) < 2:
             raise IRGenerationError("Particle IR expects at least 2 arguments "
-                                    "for a source boundary kernel, but got "
+                                    "for a sink boundary kernel, but got "
                                     f"{len(args)}.")
 
         if not isinstance(args[0], ParticleReference):
-            raise IRGenerationError("First argument to SourceBoundaryKernel must "
+            raise IRGenerationError("First argument to SinkBoundaryKernel must "
                                     "be a particle.")
 
         for name, symbol in extra_symbols:
