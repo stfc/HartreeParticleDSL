@@ -648,7 +648,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
                 rval = rval + self._nindent + "Kokkos::fence();"
             elif isinstance(pir_kernel, SourceBoundaryKernel):
                 if HartreeParticleDSL.get_mpi():
-                    rval = rval + f"{self._nindent}if(myrank == 0){\n"
+                    rval = rval + f"{self._nindent}if(myrank == 0)" + "{\n"
                 else:
                     rval = rval + f"{self._nindent}" + "{\n"
                 self.indent()
