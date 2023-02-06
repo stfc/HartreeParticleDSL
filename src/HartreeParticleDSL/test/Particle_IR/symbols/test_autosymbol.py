@@ -2,7 +2,6 @@ import pytest
 
 from HartreeParticleDSL.Particle_IR.symbols.autosymbol import AutoSymbol
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
-from HartreeParticleDSL.Particle_IR.datatypes.datatype import AutoType
 from HartreeParticleDSL.Particle_IR.nodes import Node
 
 def test_autosymbol():
@@ -14,9 +13,9 @@ def test_autosymbol():
     
     with pytest.raises(TypeError) as excinfo:
         AutoSymbol(name="scalartype1", initial_value=12)
-    assert ("The datatype of a <class 'HartreeParticleDSL.Particle_IR"
+    assert ("The initial_value of a <class 'HartreeParticleDSL.Particle_IR"
             ".symbols.autosymbol.AutoSymbol'> must be specified using "
-            "a ScalarType but got <class 'int'>.") in str(excinfo.value)
+            "a str but got <class 'int'>.") in str(excinfo.value)
 
 
 
