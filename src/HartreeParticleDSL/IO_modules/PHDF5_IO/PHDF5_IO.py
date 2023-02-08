@@ -49,6 +49,9 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
         self._indent = indent
         self._current_indent = 0
 
+    def get_linked_libraries(self):
+        return ["${HDF5_C_LIBRARIES}"]
+
     def add_input(self, hdf_input: str, particle_input: str) -> None:
         '''
         Tells the PHDF5 IO module to read in a particular element

@@ -1636,6 +1636,8 @@ class Cabana_PIR(Backend):
 #            if get_mpi():
 #                required_packages.append("MPI")
 #            # TODO IF we have GPU we need CUDAToolkit
+#            if get_cuda():
+#                required_packages.append("CUDAToolkit")
 #            # Check with IO and coupled systems for their needs
 #            for sys in self._coupled_systems:
 #                sys_req_pack = sys.get_required_packages()
@@ -1661,9 +1663,19 @@ class Cabana_PIR(Backend):
 #
 ##target_link_libraries(Cabana_PIC.exe ${HDF5_C_LIBRARIES})
 #            link_libraries = ["Cabana::cabanacore", "Kokkos::kokkos"]
+#            input_module_libs = self._input_module.get_linked_libraries()
+#            for mod in input_module_libs:
+#                if mod not in link_libraries:
+#                    link_libraries.append(mod)
+#            output_module_libs = self._output_module.get_linked_libraries()
+#            for mod in output_module_libs:
+#                if mod not in link_libraries:
+#                    link_libraries.append(mod)
 #            if get_mpi():
 #                link_libraries.append("${MPI_C_LIBRARIES}")
 #            # TODO If we have GPU we need CUDArt or something
+#            if get_cuda():
+#                link_libraries.append("CUDArt")
 #            # TODO Implement coupled system and IO requirements
 #            for lib in link_libraries:
 #                output = output + "target_link_libraries(" + project_name + ".exe" + lib + ")\n"
