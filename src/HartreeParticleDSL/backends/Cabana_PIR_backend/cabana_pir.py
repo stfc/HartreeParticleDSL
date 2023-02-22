@@ -876,10 +876,16 @@ class Cabana_PIR(Backend):
             for name in self._global_values:
                 symbol = HartreeParticleDSL.global_symbol_table().lookup(name)
                 dt_str = Cabana_PIR_Visitor.get_cpp_datatype(symbol.datatype)
-                if self._global_values[name] is not None:
-                    f.write(f"extern {dt_str} {name};\n")
+                if HartreeParticleDSL.get_cuda():
+                    if self._global_values[name] is None:
+                        raise NotImplementedError("Non-constant global variables are"
+                                "not supported in Cabana_PIR with CUDA enabled.")
+                    f.write(f"#define {name} {self._global_values[name]}\n")
                 else:
-                    f.write(f"extern {dt_str} {name};\n")
+                    if self._global_values[name] is not None:
+                        f.write(f"extern {dt_str} {name};\n")
+                    else:
+                        f.write(f"extern {dt_str} {name};\n")
 
             f.write(config_output)
             f.write(part_output)
@@ -993,11 +999,16 @@ class Cabana_PIR(Backend):
             f.write(includes + "\n")
             for name in self._global_values:
                 symbol = HartreeParticleDSL.global_symbol_table().lookup(name)
-                dt_str = Cabana_PIR_Visitor.get_cpp_datatype(symbol.datatype)
-                if self._global_values[name] is not None:
-                    f.write(f"{dt_str} {name} = {self._global_values[name]};\n")
+                if HartreeParticleDSL.get_cuda():
+                    if self._global_values[name] is None:
+                        raise NotImplementedError("Non-constant global variables are"
+                                "not supported in Cabana_PIR with CUDA enabled.")
                 else:
-                    f.write(f"{dt_str} {name};\n")
+                    dt_str = Cabana_PIR_Visitor.get_cpp_datatype(symbol.datatype)
+                    if self._global_values[name] is not None:
+                        f.write(f"{dt_str} {name} = {self._global_values[name]};\n")
+                    else:
+                        f.write(f"{dt_str} {name};\n")
             input_module_header = ""
             if self._input_module is not None:
                 input_module_header = self._input_module.gen_code_cabana_pir(self._part_type) #FIXME
@@ -1291,6 +1302,12 @@ class Cabana_PIR(Backend):
             # If the decomposition wasn't done by the coupler we need to do it here
             if not decomposition_done:
                 raise NotImplementedError("Can't yet do a decomposition when coupled systems didn't do it for us.")
+        else:
+            # If no MPI, just setup testcase
+            for coupler in self._coupled_systems:
+                if coupler.has_preferred_decomposition():
+                    rval = rval + coupler.setup_testcase(filename, current_indent=current_indent)
+            
 
         # Load the input file.
         rval = rval + space*current_indent + f"{self._input_module.call_input_cabana_pir(int(particle_count), filename, current_indent=current_indent)}\n"

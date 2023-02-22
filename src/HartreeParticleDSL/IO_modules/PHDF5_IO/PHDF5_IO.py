@@ -4,6 +4,7 @@ from HartreeParticleDSL.IO_modules.base_IO_module.IO_module import IO_Module
 from HartreeParticleDSL.backends.Cabana_PIR_backend.cabana_pir import Cabana_PIR
 from HartreeParticleDSL.backends.Cabana_PIR_backend.Cabana_PIR_IO_Mixin import Cabana_PIR_IO_Mixin
 from HartreeParticleDSL.HartreeParticleDSLExceptions import UnsupportedCodeError
+import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
 
 
 # New style module to go with Cabana_PIR and MPI.
@@ -100,7 +101,8 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
         '''
         includes = []
         includes.append("\"hdf5.h\"")
-        includes.append("\"mpi.h\"")
+        if HartreeParticleDSL.get_mpi():
+            includes.append("\"mpi.h\"")
         return includes
 
     def get_includes_cabana_pir(self):
@@ -112,7 +114,8 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
         '''
         includes = []
         includes.append("\"hdf5.h\"")
-        includes.append("\"mpi.h\"")
+        if HartreeParticleDSL.get_mpi():
+            includes.append("\"mpi.h\"")
         return includes
 
     def gen_code_cabana_pir(self, part_type):
@@ -246,15 +249,18 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
             # First count how many we have and resize the AoSoA
             code = code + self.indent() + "int global_parts = dims[0];\n"
             code = code + self.indent() + "int num_parts = 0;\n"
-            code = code + self.indent() + "for(int i = 0; i < global_parts; i++){\n"
-            self._increment_indent()
-            code = code + self.indent() + "if(" + condition + "){\n"
-            self._increment_indent()
-            code = code + self.indent() + "num_parts++;\n"
-            self._decrement_indent()
-            code = code + self.indent() + "}\n"
-            self._decrement_indent()
-            code = code + self.indent() + "}\n"
+            if HartreeParticleDSL.get_mpi():
+                code = code + self.indent() + "for(int i = 0; i < global_parts; i++){\n"
+                self._increment_indent()
+                code = code + self.indent() + "if(" + condition + "){\n"
+                self._increment_indent()
+                code = code + self.indent() + "num_parts++;\n"
+                self._decrement_indent()
+                code = code + self.indent() + "}\n"
+                self._decrement_indent()
+                code = code + self.indent() + "}\n"
+            else:
+                code = code + self.indent() + "num_parts = global_parts;\n"
             code = code + self.indent() + "int new_size = static_cast<int>(num_parts);\n"
             code = code + self.indent() + "particle_aosoa.resize(new_size);\n"
             code = code + self.indent() + "non_host_aosoa.resize(new_size);\n"
@@ -264,14 +270,16 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
             code = code + self.indent() + "auto pos_slice = Cabana::slice<core_part_position>(particle_aosoa);\n"
             code = code + self.indent() + "for(int i = 0; i < global_parts; i++){\n"
             self._increment_indent()
-            code = code + self.indent() + "if(" + condition + "){\n"
-            self._increment_indent()
+            if HartreeParticleDSL.get_mpi():
+                code = code + self.indent() + "if(" + condition + "){\n"
+                self._increment_indent()
             for index, key in enumerate(positions):
                 if key is not None:
                     code = code + self.indent() + f"pos_slice(counter, {index}) = {key}_temp_array[i];\n"
             code = code + self.indent() + "counter++;\n"
-            self._decrement_indent()
-            code = code + self.indent() + "}\n"
+            if HartreeParticleDSL.get_mpi():
+                self._decrement_indent()
+                code = code + self.indent() + "}\n"
             self._decrement_indent()
             code = code + self.indent() + "}\n"
 
@@ -314,21 +322,18 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
                 code = code + self.indent() + "counter = 0;\n"
                 code = code + self.indent() + "for(int i = 0; i < global_parts; i++){\n"
                 self._increment_indent()
-                code = code + self.indent() + "if(" + condition + "){\n"
-                self._increment_indent()
+                if HartreeParticleDSL.get_mpi():
+                    code = code + self.indent() + "if(" + condition + "){\n"
+                    self._increment_indent()
                 code = code + self.indent() + "{0}_slice(counter{2}) = {1}_temp_array[i];\n".format(key, key, part_indexing)
                 code = code + self.indent() + "counter++;\n"
-                self._decrement_indent()
-                code = code + self.indent() + "}\n"
+                if HartreeParticleDSL.get_mpi():
+                    self._decrement_indent()
+                    code = code + self.indent() + "}\n"
                 self._decrement_indent()
                 code = code + self.indent() + "}\n"
                 code = code + self.indent() + "free({0}_temp_array);\n".format(key)
                 code = code + self.indent() + "H5Dclose({0}_read_var);\n".format(key)
-
-
-
-
-
 
             # At the end we need to cleanup.
             for index, key in enumerate(positions):
@@ -350,14 +355,19 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
 
             # Create the HDF5 file
             code = code + self.indent() + "hid_t acc_template = H5Pcreate(H5P_FILE_ACCESS);\n"
-            code = code + self.indent() + "MPI_Info info; MPI_Info_create(&info);\n"
-            code = code + self.indent() + "H5Pset_fapl_mpio(acc_template, MPI_COMM_WORLD, info);\n"
-            code = code + self.indent() + "H5Pset_coll_metadata_write(acc_template, 1); //metadata writes are collective\n"
+            if HartreeParticleDSL.get_mpi():
+                code = code + self.indent() + "MPI_Info info; MPI_Info_create(&info);\n"
+                code = code + self.indent() + "H5Pset_fapl_mpio(acc_template, MPI_COMM_WORLD, info);\n"
+                code = code + self.indent() + "H5Pset_coll_metadata_write(acc_template, 1); //metadata writes are collective\n"
             code = code + self.indent() + "hid_t file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, acc_template);\n"
             code = code + self.indent() + "if(file_id < 0){\n"
             self._increment_indent()
             code = code + self.indent() + "std::cout << \"[\" << myrank << \"] failed to open \" << filename << \"\\n\";\n"
-            code = code + self.indent() + "MPI_Abort(MPI_COMM_WORLD, 1);\n"
+
+            if HartreeParticleDSL.get_mpi():
+                code = code + self.indent() + "MPI_Abort(MPI_COMM_WORLD, 1);\n"
+            else:
+                code = code + self.indent() + "abort();\n"
             self._decrement_indent()
             code = code + self.indent() + "}\n\n"
 
@@ -368,30 +378,36 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
 
             code = code + self.indent() + "int my_offset = 0;\n"
 
-            code = code + self.indent() + "if(myrank == 0 && nranks > 1){\n"
-            self._increment_indent()
-            code = code + self.indent() + "int npart = particle_aosoa.size();"
-            code = code + self.indent() + "MPI_Send(&npart, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);\n"
-            self._decrement_indent()
-            code = code + self.indent() + "}else if (myrank == nranks-1){\n"
-            self._increment_indent()
-            code = code + self.indent() + "MPI_Recv(&my_offset, 1, MPI_INT, myrank-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);\n"
-            self._decrement_indent()
-            code = code + self.indent() + "}else{\n"
-            self._increment_indent()
-            code = code + self.indent() + "MPI_Recv(&my_offset, 1, MPI_INT, myrank-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);\n"
-            code = code + self.indent() + "int npart = my_offset + particle_aosoa.size();\n"
-            code = code + self.indent() + "MPI_Send(&npart, 1, MPI_INT, myrank+1, 0, MPI_COMM_WORLD);\n"
-            self._decrement_indent()
-            code = code + self.indent() + "}\n"
+            if HartreeParticleDSL.get_mpi():
+                code = code + self.indent() + "if(myrank == 0 && nranks > 1){\n"
+                self._increment_indent()
+                code = code + self.indent() + "int npart = particle_aosoa.size();"
+                code = code + self.indent() + "MPI_Send(&npart, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);\n"
+                self._decrement_indent()
+                code = code + self.indent() + "}else if (myrank == nranks-1){\n"
+                self._increment_indent()
+                code = code + self.indent() + "MPI_Recv(&my_offset, 1, MPI_INT, myrank-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);\n"
+                self._decrement_indent()
+                code = code + self.indent() + "}else{\n"
+                self._increment_indent()
+                code = code + self.indent() + "MPI_Recv(&my_offset, 1, MPI_INT, myrank-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);\n"
+                code = code + self.indent() + "int npart = my_offset + particle_aosoa.size();\n"
+                code = code + self.indent() + "MPI_Send(&npart, 1, MPI_INT, myrank+1, 0, MPI_COMM_WORLD);\n"
+                self._decrement_indent()
+                code = code + self.indent() + "}\n"
 
-            # More setup stuff
-            code = code + self.indent() + "hid_t xf_id = H5Pcreate(H5P_DATASET_XFER);\n"
-            code = code + self.indent() + "H5Pset_dxpl_mpio(xf_id, H5FD_MPIO_COLLECTIVE);\n"
+                # More setup stuff
+                code = code + self.indent() + "hid_t xf_id = H5Pcreate(H5P_DATASET_XFER);\n"
+                code = code + self.indent() + "H5Pset_dxpl_mpio(xf_id, H5FD_MPIO_COLLECTIVE);\n"
+            else:
+                code = code + self.indent() + "hid_t xf_id = H5P_DEFAULT;\n"
 
             # Get global dimensions
             code = code + self.indent() + "int global_part_count = 0;\n"
-            code = code + self.indent() + "MPI_Allreduce( &h_dims[0], &global_part_count, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);\n"
+            if HartreeParticleDSL.get_mpi():
+                code = code + self.indent() + "MPI_Allreduce( &h_dims[0], &global_part_count, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);\n"
+            else:
+                code = code + self.indent() + "global_part_count = h_dims[0];\n"
             code = code + self.indent() + "hsize_t gpc = (hsize_t) global_part_count;\n"
             code = code + self.indent() + "hid_t global_dim = H5Screate_simple(1, &gpc, NULL);\n"
 
@@ -523,8 +539,12 @@ class PHDF5_IO(IO_Module, Cabana_PIR_IO_Mixin):
                 code = code + current_indent * " " + "char filename[300]" + f" = \"{filename}\";\n"
         code = code + current_indent * " " + "Cabana::deep_copy(particle_aosoa_host, particle_aosoa);\n"
         code = code + current_indent * " " + "int myrank, nranks;\n"
-        code = code + current_indent * " " + "MPI_Comm_rank( MPI_COMM_WORLD, &myrank );\n"
-        code = code + current_indent * " " + "MPI_Comm_size( MPI_COMM_WORLD, &nranks );\n"
+        if HartreeParticleDSL.get_mpi():
+            code = code + current_indent * " " + "MPI_Comm_rank( MPI_COMM_WORLD, &myrank );\n"
+            code = code + current_indent * " " + "MPI_Comm_size( MPI_COMM_WORLD, &nranks );\n"
+        else:
+            code = code + current_indent * " " + "myrank = 0;\n"
+            code = code + current_indent * " " + "nranks = 1;\n"
         code = code + current_indent * " " + "hdf5_output<decltype(particle_aosoa_host)>(particle_aosoa_host, filename, config.config_host(0).space.box_dims, config, myrank, nranks);\n"
         current_indent = current_indent - indentation
         code = code + current_indent * " " + "}\n"

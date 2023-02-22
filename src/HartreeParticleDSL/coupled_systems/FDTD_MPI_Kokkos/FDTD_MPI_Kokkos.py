@@ -6,6 +6,7 @@ import os
 
 from HartreeParticleDSL.coupled_systems.generic_force_solver.force_solver import force_solver
 from HartreeParticleDSL.HartreeParticleDSL import get_backend
+import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
 
 from HartreeParticleDSL.backends.Cabana_PIR_backend.pir_to_cabana_visitor import Cabana_PIR_Visitor
 
@@ -472,6 +473,10 @@ class FDTD_MPI_Kokkos(force_solver):
         Copies the files required to use this coupled system into the output
         directory.
         '''
+        if HartreeParticleDSL.get_mpi():
+            subfolder = "MPI_version"
+        else:
+            subfolder = "serial_version"
         files = ['FDTD_MPI_IO_HDF5.cpp',
                  'FDTD_MPI_IO_HDF5.hpp',
                  'FDTD_MPI_boundaries.cpp',
@@ -484,7 +489,7 @@ class FDTD_MPI_Kokkos(force_solver):
                  'FDTD_MPI_step.hpp']
         BASEPATH = os.path.dirname(inspect.getfile(FDTD_MPI_Kokkos))
         for f in files:
-            copy(os.path.join(BASEPATH, f), f)
+            copy(os.path.join(BASEPATH, subfolder, f), f)
 
     def compilation_files(self):
         '''
