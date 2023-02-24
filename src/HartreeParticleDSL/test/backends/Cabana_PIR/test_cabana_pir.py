@@ -3,7 +3,7 @@ import inspect
 import pytest
 
 import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
-from HartreeParticleDSL.HartreeParticleDSL import Particle, Config, _HartreeParticleDSL
+from HartreeParticleDSL.HartreeParticleDSL import Particle, Config, _HartreeParticleDSL, set_mpi, reset_for_tests
 from HartreeParticleDSL.HartreeParticleDSL import part, config
 
 from HartreeParticleDSL.backends.Cabana_PIR_backend.cabana_pir import Cabana_PIR
@@ -28,7 +28,7 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import InvalidNameError, \
                                                             IRGenerationError
 
 
-from HartreeParticleDSL.inbuilt_kernels.boundaries import periodic_boundaries
+from HartreeParticleDSL.inbuilt_kernels.boundaries.periodic_boundaries import periodic_boundaries
 
 
 class coupler_test(base_coupler):
@@ -51,7 +51,7 @@ class coupler_test(base_coupler):
         pass
 
     def setup_testcase(self, filename, current_indent=0):
-        return current_indent * " " + "setup_testcase()"
+        return current_indent * " " + "setup_testcase();\n"
 
     def has_preferred_decomposition(self):
         return True
@@ -526,12 +526,19 @@ struct _rank_update_functor{
     assert f_str == correct
 
     HartreeParticleDSL.set_cuda(True)
+    with pytest.raises(NotImplementedError) as excinfo:
+        backend.gen_headers(config, part)
+    assert "Non-constant global variables arenot supported in Cabana_PIR with CUDA enabled." in str(excinfo.value)
+
+    backend = Cabana_PIR()
     backend.gen_headers(config, part)
     f_str = ""
     with open('part.h', 'r') as f:
         f_str = f.readlines()
     f_str = "".join(f_str)
     assert "using MemorySpace = Kokkos::CudaSpace;" in f_str
+    HartreeParticleDSL.set_cuda(False)
+
 def kern2(part: part, config: config):
     create_variable(c_double, a, 2.0)
     part.core_part.position[0] = part.core_part.position[0] + 2.0
@@ -603,6 +610,7 @@ def test_print_main():
     config.config_host = Kokkos::create_mirror_view(config.config);
     int myrank = 0;
     int nranks = 1;
+    setup_testcase();
     Cabana::AoSoA<DataTypes, DeviceType, VectorLength> particle_aosoa( "particle_list", 0);
     Cabana::AoSoA<DataTypes, HostType, VectorLength> particle_aosoa_host( "particle_list_host", 0);
     random_io<decltype(particle_aosoa_host)>(particle_aosoa_host, config);
@@ -614,14 +622,14 @@ def test_print_main():
     auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
     auto x_slice = Cabana::slice<x>(particle_aosoa);
     kern2_functor<decltype(core_part_position_slice), decltype(x_slice)> kern2(core_part_position_slice, x_slice, config.config);
-    _periodic_boundaries_functor<decltype(core_part_position_slice)> _periodic_boundaries(core_part_position_slice, config.config);
+    periodic_boundaries_functor<decltype(core_part_position_slice)> periodic_boundaries(core_part_position_slice, config.config);
 
     a = 0;
     a = (a + 1);
     Kokkos::deep_copy(config.config, config.config_host);
     Cabana::simd_parallel_for(simd_policy, kern2, "kern2");
     Kokkos::fence();
-    Cabana::simd_parallel_for(simd_policy, _periodic_boundaries, "_periodic_boundaries");
+    Cabana::simd_parallel_for(simd_policy, periodic_boundaries, "periodic_boundaries");
     Kokkos::fence();
     }
 

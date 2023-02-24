@@ -6,7 +6,7 @@ from HartreeParticleDSL.backends.Cabana_PIR_backend.pir_to_cabana_visitor import
 from HartreeParticleDSL.backends.Cabana_PIR_backend.cabana_pir import *
 from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import *
 
-from HartreeParticleDSL.inbuilt_kernels.boundaries import periodic_boundaries
+from HartreeParticleDSL.inbuilt_kernels.boundaries.periodic_boundaries import periodic_boundaries
 
 from HartreeParticleDSL.Particle_IR.symbols.arraysymbol import ArraySymbol
 from HartreeParticleDSL.Particle_IR.symbols.pointersymbol import PointerSymbol
@@ -713,7 +713,7 @@ def test_pir_cabana_mainkernel():
     }
 
     x.update_structs(xs);
-    Cabana::simd_parallel_for(simd_policy, _periodic_boundaries, "_periodic_boundaries");
+    Cabana::simd_parallel_for(simd_policy, periodic_boundaries, "periodic_boundaries");
     Kokkos::fence();
     Cabana::deep_copy(particle_aosoa_host, particle_aosoa);
     _migrator.exchange_data(particle_aosoa_host, neighbors, myrank, particle_aosoa_host.size());
