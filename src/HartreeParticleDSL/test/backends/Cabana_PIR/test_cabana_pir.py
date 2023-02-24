@@ -528,7 +528,7 @@ struct _rank_update_functor{
     HartreeParticleDSL.set_cuda(True)
     with pytest.raises(NotImplementedError) as excinfo:
         backend.gen_headers(config, part)
-    assert "Non-constant global variables arenot supported in Cabana_PIR with CUDA enabled." in str(excinfo.value)
+    assert "Non-constant global variables are not supported in Cabana_PIR with CUDA enabled." in str(excinfo.value)
 
     backend = Cabana_PIR()
     backend.gen_headers(config, part)
@@ -660,6 +660,12 @@ int hello2;
 void func(){}
 void func(){}'''
         assert correct in out
+    HartreeParticleDSL.set_cuda(True)
+    with pytest.raises(NotImplementedError) as excinfo:
+        backend.print_main(m)
+    assert "Non-constant global variables are not supported in Cabana_PIR with CUDA enabled." in str(excinfo.value)
+    HartreeParticleDSL.set_cuda(False)
+
 
 
 def test_cabana_pir_set_cutoff():

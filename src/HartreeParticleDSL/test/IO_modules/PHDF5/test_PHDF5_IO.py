@@ -441,6 +441,7 @@ template <class aosoa_class, class aosoa_host_class> void hdf5_input(aosoa_class
     a.add_output("vel_x", "core_part.velocity[0]")
     a.add_output("vel_y", "core_part.velocity[1]")
     a.add_output("vel_z", "core_part.velocity[2]")
+    set_mpi(True)
     out = a.gen_code_cabana_pir(part)
     correct = '''template <class aosoa_host_class> void hdf5_output(aosoa_host_class &particle_aosoa,
     const char* filename, boundary &box, config_type &config, int myrank, int nranks){
@@ -548,6 +549,7 @@ template <class aosoa_class, class aosoa_host_class> void hdf5_input(aosoa_class
 
     H5Fclose(file_id);
 }'''
+    assert correct in out
     set_mpi(False)
     out = a.gen_code_cabana_pir(part)
     correct = '''template <class aosoa_host_class> void hdf5_output(aosoa_host_class &particle_aosoa,

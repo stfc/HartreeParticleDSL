@@ -879,7 +879,7 @@ class Cabana_PIR(Backend):
                 if HartreeParticleDSL.get_cuda():
                     if self._global_values[name] is None:
                         raise NotImplementedError("Non-constant global variables are"
-                                "not supported in Cabana_PIR with CUDA enabled.")
+                                " not supported in Cabana_PIR with CUDA enabled.")
                     f.write(f"#define {name} {self._global_values[name]}\n")
                 else:
                     if self._global_values[name] is not None:
@@ -1002,7 +1002,7 @@ class Cabana_PIR(Backend):
                 if HartreeParticleDSL.get_cuda():
                     if self._global_values[name] is None:
                         raise NotImplementedError("Non-constant global variables are"
-                                "not supported in Cabana_PIR with CUDA enabled.")
+                                " not supported in Cabana_PIR with CUDA enabled.")
                 else:
                     dt_str = Cabana_PIR_Visitor.get_cpp_datatype(symbol.datatype)
                     if self._global_values[name] is not None:
