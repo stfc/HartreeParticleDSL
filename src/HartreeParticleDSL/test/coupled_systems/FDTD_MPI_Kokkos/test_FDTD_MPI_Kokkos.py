@@ -384,6 +384,15 @@ def test_FDTD_MPI_Kokkos_copy_files():
         if os.path.exists(f):
             os.remove(f)
     assert success
+    HartreeParticleDSL.set_mpi(True)
+    a.copy_files()
+    success = True
+    for f in files:
+        success = success and os.path.exists(f)
+        if os.path.exists(f):
+            os.remove(f)
+    assert success
+    HartreeParticleDSL.set_mpi(False)
 
 def test_FDTD_MPI_Kokkos_compilation_files():
     backend = Cabana_PIR()
