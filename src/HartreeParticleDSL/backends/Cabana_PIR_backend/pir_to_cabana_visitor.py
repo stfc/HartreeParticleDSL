@@ -163,7 +163,11 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         symbol_list = ""
         for pairs in symbols.keys():
             symbol = symbols[pairs]
+<<<<<<< HEAD
             if pairs not in (argument_names + list(extra_arrays.keys())):
+=======
+            if pairs not in argument_names:
+>>>>>>> 986570123daef5ff10cdc94338bbb619cff2e64d
                 if not isinstance(symbol, AutoSymbol):
                     sym = self._visit(symbol)
                     symbol_list = symbol_list + self._nindent + sym + " " + pairs + ";\n"
@@ -215,10 +219,13 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         all_slices.append("config_struct_type " + node.arguments[1].symbol.name)
         if self._parent.get_require_random():
             all_slices.append("Kokkos::Random_XorShift64_Pool<> random_pool")
+<<<<<<< HEAD
 
         for name in extra_arrays.keys():
             all_slices.append(f"Kokkos::View<{extra_arrays[name][0]}, MemorySpace> _{name}")
 
+=======
+>>>>>>> 986570123daef5ff10cdc94338bbb619cff2e64d
         for structure in self._parent.structures:
             if self._parent._structures[structure] in type_mapping_str.values():
                 typename = [k for k, v in type_mapping_str.items() if v == self._parent._structures[structure]][0]
@@ -234,8 +241,11 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             all_slices.append(f"{structure}({structure.upper()})")
         if self._parent.get_require_random():
             all_slices.append("_random_pool(random_pool)")
+<<<<<<< HEAD
         for name in extra_arrays.keys():
             all_slices.append(f"{name}(_{name})")
+=======
+>>>>>>> 986570123daef5ff10cdc94338bbb619cff2e64d
         classes = ", ".join(all_slices)
         rval = rval + f"{self._nindent}{classes}"
         if len(all_slices) > 0:

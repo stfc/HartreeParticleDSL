@@ -1619,6 +1619,7 @@ class Cabana_PIR(Backend):
                 slice_names.append("random_pool")
             for array in self._extra_writable_arrays.keys():
                 slice_names.append(array)
+
             if len(slice_names) > 0:
                 rval = rval + ","
             rval = rval + ", ".join(slice_names) + ");\n" 
