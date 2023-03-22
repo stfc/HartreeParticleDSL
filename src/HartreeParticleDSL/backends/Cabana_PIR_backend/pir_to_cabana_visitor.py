@@ -7,6 +7,7 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import IllegalLoopError, Un
 from HartreeParticleDSL.Particle_IR.nodes.array_mixin import ArrayMixin
 from HartreeParticleDSL.Particle_IR.nodes.assignment import Assignment
 from HartreeParticleDSL.Particle_IR.nodes.auto_reference import AutoReference
+from HartreeParticleDSL.Particle_IR.nodes.body import Body
 from HartreeParticleDSL.Particle_IR.nodes.call import Call
 from HartreeParticleDSL.Particle_IR.nodes.funcdef import FuncDef
 from HartreeParticleDSL.Particle_IR.nodes.invoke import Invoke
@@ -154,6 +155,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             argument_names.append(arg.symbol.name)
 
         self.indent()
+        extra_arrays = self._parent.get_writable_arrays()
         # Extra indentation for symbol table
         self.indent()
         symbols = node.symbol_table.get_symbols()
@@ -161,7 +163,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         symbol_list = ""
         for pairs in symbols.keys():
             symbol = symbols[pairs]
-            if pairs not in argument_names:
+            if pairs not in (argument_names + list(extra_arrays.keys())):
                 if not isinstance(symbol, AutoSymbol):
                     sym = self._visit(symbol)
                     symbol_list = symbol_list + self._nindent + sym + " " + pairs + ";\n"
@@ -192,6 +194,10 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         all_slices = []
         for slices in self._slices:
             rval = rval + f"{self._nindent}{slices.upper()} _{slices};\n"
+
+        for name in extra_arrays.keys():
+            rval = rval + f"{self._nindent}Kokkos::View<{extra_arrays[name][0]}, MemorySpace> {name};\n"
+
         for structure in self._parent.structures:
             if self._parent._structures[structure] in type_mapping_str.values():
                 typename = [k for k, v in type_mapping_str.items() if v == self._parent._structures[structure]][0]
@@ -209,6 +215,10 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         all_slices.append("config_struct_type " + node.arguments[1].symbol.name)
         if self._parent.get_require_random():
             all_slices.append("Kokkos::Random_XorShift64_Pool<> random_pool")
+
+        for name in extra_arrays.keys():
+            all_slices.append(f"Kokkos::View<{extra_arrays[name][0]}, MemorySpace> _{name}")
+
         for structure in self._parent.structures:
             if self._parent._structures[structure] in type_mapping_str.values():
                 typename = [k for k, v in type_mapping_str.items() if v == self._parent._structures[structure]][0]
@@ -224,6 +234,8 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             all_slices.append(f"{structure}({structure.upper()})")
         if self._parent.get_require_random():
             all_slices.append("_random_pool(random_pool)")
+        for name in extra_arrays.keys():
+            all_slices.append(f"{name}(_{name})")
         classes = ", ".join(all_slices)
         rval = rval + f"{self._nindent}{classes}"
         if len(all_slices) > 0:
@@ -248,6 +260,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             rval = rval + self._nindent + "}\n"
 
         rval = rval + "\n"
+        rval = rval + self._nindent + "KOKKOS_INLINE_FUNCTION\n"
         rval = rval + self._nindent + "void operator()(const int i, const int a) const{\n"
         rval = rval + symbol_list
         rval = rval + kernel_body
@@ -298,6 +311,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             # Need the correct typing on these arguments
             argument_names.append(arg.symbol.name)
 
+        extra_arrays = self._parent.get_writable_arrays()
         self.indent()
         # Extra indentation for symbol table
         self.indent()
@@ -306,7 +320,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         symbol_list = ""
         for pairs in symbols.keys():
             symbol = symbols[pairs]
-            if pairs not in argument_names:
+            if pairs not in (argument_names + list(extra_arrays.keys())):
                 if not isinstance(symbol, AutoSymbol):
                     sym = self._visit(symbol)
                     symbol_list = symbol_list + self._nindent + sym + " " + pairs + ";\n"
@@ -334,6 +348,8 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         rval = rval + f"{self._nindent}config_struct_type _{node.arguments[1].symbol.name};\n"
         if self._parent.get_require_random():
             rval = rval + f"{self._nindent}Kokkos::Random_XorShift64_Pool<> _random_pool;\n"
+        for name in extra_arrays.keys():
+            rval = rval + f"{self._nindent}Kokkos::View<{extra_arrays[name][0]}, MemorySpace> {name};\n"
         all_slices = []
         for slices in self._slices:
             rval = rval + f"{self._nindent}{slices.upper()} _{slices};\n"
@@ -354,6 +370,8 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         all_slices.append("config_struct_type " + node.arguments[1].symbol.name)
         if self._parent.get_require_random():
             all_slices.append("Kokkos::Random_XorShift64_Pool<> random_pool")
+        for name in extra_arrays.keys():
+            all_slices.append(f"Kokkos::View<{extra_arrays[name][0]}, MemorySpace> _{name}")
         for structure in self._parent.structures:
             if self._parent._structures[structure] in type_mapping_str.values():
                 typename = [k for k, v in type_mapping_str.items() if v == self._parent._structures[structure]][0]
@@ -369,6 +387,8 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             all_slices.append(f"{structure}({structure.upper()})")
         if self._parent.get_require_random():
             all_slices.append("_random_pool(random_pool)")
+        for name in extra_arrays.keys():
+            all_slices.append(f"{name}(_{name})")
         classes = ", ".join(all_slices)
         rval = rval + f"{self._nindent}{classes}"
         if len(all_slices) > 0:
@@ -401,6 +421,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
 
 
         rval = rval + "\n"
+        rval = rval + self._nindent + "KOKKOS_INLINE_FUNCTION\n"
         rval = rval + self._nindent + "void operator()(const int i, const int a) const{\n"
         rval = rval + symbol_list
         rval = rval + kernel_body
@@ -453,6 +474,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             # Need the correct typing on these arguments
             argument_names.append(arg.symbol.name)
 
+        extra_arrays = self._parent.get_writable_arrays()
         self.indent()
         # Extra indentation for symbol table
         self.indent()
@@ -461,7 +483,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         symbol_list = ""
         for pairs in symbols.keys():
             symbol = symbols[pairs]
-            if pairs not in argument_names:
+            if pairs not in (argument_names + list(extra_arrays.keys())):
                 if not isinstance(symbol, AutoSymbol):
                     sym = self._visit(symbol)
                     symbol_list = symbol_list + self._nindent + sym + " " + pairs + ";\n"
@@ -488,7 +510,9 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         self.indent()
         rval = rval + f"{self._nindent}config_struct_type _{node.arguments[1].symbol.name};\n"
         if self._parent.get_require_random():
-            all_slices.append("Kokkos::Random_XorShift64_Pool<> random_pool")
+            rval = rval + f"{self._nindent}Kokkos::Random_XorShift64_Pool<> _random_pool;\n"
+        for name in extra_arrays.keys():
+            rval = rval + f"{self._nindent}Kokkos::View<{extra_arrays[name][0]}, MemorySpace> {name};\n"
         all_slices = []
         for slices in self._slices:
             rval = rval + f"{self._nindent}{slices.upper()} _{slices};\n"
@@ -509,6 +533,8 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         all_slices.append("config_struct_type " + node.arguments[1].symbol.name)
         if self._parent.get_require_random():
             all_slices.append("Kokkos::Random_XorShift64_Pool<> random_pool")
+        for name in extra_arrays.keys():
+            all_slices.append(f"Kokkos::View<{extra_arrays[name][0]}, MemorySpace> _{name}")
         for structure in self._parent.structures:
             if self._parent._structures[structure] in type_mapping_str.values():
                 typename = [k for k, v in type_mapping_str.items() if v == self._parent._structures[structure]][0]
@@ -524,6 +550,8 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             all_slices.append(f"{structure}({structure.upper()})")
         if self._parent.get_require_random():
             all_slices.append("_random_pool(random_pool)")
+        for name in extra_arrays.keys():
+            all_slices.append(f"{name}(_{name})")
         classes = ", ".join(all_slices)
         rval = rval + f"{self._nindent}{classes}"
         if len(all_slices) > 0:
@@ -548,6 +576,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             rval = rval + self._nindent + "}\n"
 
         rval = rval + "\n"
+        rval = rval + self._nindent + "KOKKOS_INLINE_FUNCTION\n"
         rval = rval + self._nindent + "void operator()(const int i, const int a) const{\n"
         rval = rval + symbol_list
         rval = rval + kernel_body
@@ -647,7 +676,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
                 # TODO Check if we need to block (i.e. only if kernel dependencies or final kernel)
                 rval = rval + self._nindent + "Kokkos::fence();"
             elif isinstance(pir_kernel, SourceBoundaryKernel):
-                if HartreeParticleDSL.get_mpi():
+                if get_mpi():
                     rval = rval + f"{self._nindent}if(myrank == 0)" + "{\n"
                 else:
                     rval = rval + f"{self._nindent}" + "{\n"
@@ -675,7 +704,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
                 rval = rval + f"{self._nindent}Cabana::simd_parallel_for(simd_policy, {invoke.value}, "
                 rval = rval + "\"" + invoke.value + "\");\n"
                 # Positive values are deleted
-                rval = rval + f"{self._nindent}auto sort_data = Cabana::bin_by_key(neighbour_part_deletion_flag_slice, 2);\n"
+                rval = rval + f"{self._nindent}auto sort_data = Cabana::binByKey(neighbour_part_deletion_flag_slice, 2);\n"
                 rval = rval + f"{self._nindent}Cabana::permute(sort_data, particle_aosoa);\n"
                 # TODO Resize the array.
                 rval = rval + f"{self._nindent}Cabana::deep_copy(particle_aosoa_host, particle_aosoa);\n"
@@ -683,7 +712,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
                 rval = rval + f"{self._nindent}int end = particle_aosoa.size();\n"
                 rval = rval + f"{self._nindent}for(int j = particle_aosoa.size()-1; j > 0; j--)" + "{\n"
                 self.indent()
-                rval = rval + f"{self._nindent}if(local_deletion_flags <= 0)" + "{\n"
+                rval = rval + f"{self._nindent}if(local_deletion_flags.size() <= 0)" + "{\n"
                 self.indent()
                 rval = rval + f"{self._nindent}end = j+1;\n"
                 rval = rval + f"{self._nindent}break;\n"
@@ -731,6 +760,11 @@ class Cabana_PIR_Visitor(PIR_Visitor):
 
     def visit_arrayreference_node(self, node: ArrayReference) -> str:
         indices = []
+        extra_arrays = list(self._parent.get_writable_arrays().keys())
+        if node.symbol.name in extra_arrays:
+            for index in node.indices:
+                indices.append(f"{self._visit(index)}")
+            return node.symbol.name + "(" + ", ".join(indices) + ")"
         for index in node.indices:
             indices.append(f"[{self._visit(index)}]")
         return node.symbol.name + "".join(indices)
@@ -755,7 +789,9 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         except AttributeError as err:
             pass
         arg_string = ", ".join(args)
-        end = ";"
+        end = ""
+        if isinstance(node.parent, Body):
+            end = ";"
         return f"{func_name}({arg_string}){end}"
 
     def visit_funcdef_node(self, node: FuncDef) -> str:
@@ -794,6 +830,9 @@ class Cabana_PIR_Visitor(PIR_Visitor):
                 argument_names.append(f"*{typ} {name}")
             else:
                 argument_names.append(f"{typ} {name}")
+        extra_array_names = []
+        for name in self._parent.get_writable_arrays().keys():
+            extra_array_names.append(name)
 
         symbols = node.symbol_table.get_symbols()
         sym_strings = []
@@ -801,7 +840,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         self.indent()
         for pairs in symbols.keys():
             symbol = symbols[pairs]
-            if pairs not in arg_base_names:
+            if pairs not in (arg_base_names + extra_array_names):
                 sym = self._visit(symbol)
                 symbol_list = symbol_list + self._nindent + sym + " " + pairs + ";\n"
         self.dedent()
@@ -880,6 +919,22 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         # TODO We should check which particle this accesses when pariwise is
         # supported.
         return f"_core_part_position.access(i, a, {node.dimension})"
+
+    def visit_particlecorereference_node(self, node: ParticleCoreReference) -> str:
+        # TODO We should check which particle this accesses when pariwise is
+        # supported.
+        slice_name = "core_part_" + node.member.name
+        self.addSlice(slice_name)
+
+        rstr = f"_{slice_name}.access(i, a"
+        if isinstance(node.member, ArrayMixin):
+            indices = []
+            for index in node.member.indices:
+                indices.append(self._visit(index))
+            rstr = rstr + ", " + ", ".join(indices) + ")"
+        else:
+            rstr = rstr + ")"
+        return rstr
 
     def visit_particlereference_node(self, node: ParticleReference) -> str:
         # TODO We should check which particle this accesses when pariwise is

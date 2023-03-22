@@ -11,7 +11,7 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import SingletonInstanceErr
 
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import StructureType, type_mapping_str, \
                                                             PARTICLE_POSITION_TYPE, ArrayType, \
-                                                            DOUBLE_TYPE
+                                                            DOUBLE_TYPE, INT64_TYPE
 
 class _HartreeParticleDSL():
     '''
@@ -537,6 +537,7 @@ class Config():
         BOUNDARY_TYPE.components["local_y_max"] = DOUBLE_TYPE
         BOUNDARY_TYPE.components["local_z_min"] = DOUBLE_TYPE
         BOUNDARY_TYPE.components["local_z_max"] = DOUBLE_TYPE
+        self._pir_type.components["nparts"] = INT64_TYPE
         space.components["box_dims"] = BOUNDARY_TYPE
         type_mapping_str["config"] = self._pir_type
         #TODO Neighbour config type? Also need to add the struct space_type so
@@ -567,6 +568,7 @@ class Config():
         BOUNDARY_TYPE.components["local_z_min"] = DOUBLE_TYPE
         BOUNDARY_TYPE.components["local_z_max"] = DOUBLE_TYPE
         space.components["box_dims"] = BOUNDARY_TYPE
+        self._pir_type.components["nparts"] = INT64_TYPE
         type_mapping_str["config"] = self._pir_type
         #TODO Neighbour config type? Also need to add the struct space_type so
         #the DSL knows how to define them both

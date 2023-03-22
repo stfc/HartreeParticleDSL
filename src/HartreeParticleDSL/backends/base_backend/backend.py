@@ -5,6 +5,9 @@ class Backend(metaclass=ABCMeta):
     def __init__(self):
         pass
 
+    def get_writable_arrays(self) -> dict:
+        return self._extra_writable_arrays
+
     @property
     def variable_scope(self):
         return None

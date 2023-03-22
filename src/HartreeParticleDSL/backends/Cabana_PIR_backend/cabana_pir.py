@@ -74,6 +74,8 @@ class Cabana_PIR(Backend):
         self._kernels = {}
         self._kernels_pir = {}
 
+        self._extra_writable_arrays = {}
+
         # The Cabana backend needs to store the particle type reference
         self._particle = None #TODO Remove & pull from PIR
 
@@ -86,6 +88,9 @@ class Cabana_PIR(Backend):
         self._current_kernel = None
 
         self._require_random = False
+
+    def get_writable_arrays(self) -> dict:
+        return self._extra_writable_arrays
 
     def set_boundary_condition(self, boundary_condition_kernel) -> None:
         '''
@@ -598,9 +603,9 @@ class Cabana_PIR(Backend):
         rval = rval + get_indent() + "if(neighbors[i] != myrank){\n"
         inc_indent()
         rval = rval + get_indent() + "tag = 0;\n"
-        rval = rval + get_indent() + "MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*i], recv_count[i]*3,"
+        rval = rval + get_indent() + "MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*r_pos_space.extent(2)*i], recv_count[i]*3,"
         rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
-        rval = rval + get_indent() + "MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*i], recv_count[i]*3,"
+        rval = rval + get_indent() + "MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*r_vel_space.extent(2)*i], recv_count[i]*3,"
         rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
         rval = rval + get_indent() + "MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(1)*i], recv_count[i],"
         rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
@@ -632,9 +637,9 @@ class Cabana_PIR(Backend):
 
         # Now do sends
         rval = rval + get_indent() + "tag = 0;\n"
-        rval = rval + get_indent() + "MPI_Isend(&pos_space.data()[pos_space.extent(1)*i], send_count[i]*3,"
+        rval = rval + get_indent() + "MPI_Isend(&pos_space.data()[pos_space.extent(1)*pos_space.extent(2)*i], send_count[i]*3,"
         rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
-        rval = rval + get_indent() + "MPI_Isend(&vel_space.data()[vel_space.extent(1)*i], send_count[i]*3,"
+        rval = rval + get_indent() + "MPI_Isend(&vel_space.data()[vel_space.extent(1)*vel_space.extent(2)*i], send_count[i]*3,"
         rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
         rval = rval + get_indent() + "MPI_Isend(&cutoff_space.data()[cutoff_space.extent(1)*i], send_count[i],"
         rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
@@ -1231,6 +1236,35 @@ class Cabana_PIR(Backend):
         rval = "\n}\n" # Choosing no indentation for this } to match the outer one.
         return rval
 
+    def add_writable_array(self, name: str, type_name: str, length: str, *args, **kwargs) -> None:
+        '''
+        Adds an extra writeable array to the simulation, which can be accessed
+        from Kernels for non-standard usages. These can be dynamically sized,
+        whilst arrays added to the config need to be fixed dimension.
+        '''
+        if self._extra_writable_arrays.get(name) is not None:
+            assert False
+        self._extra_writable_arrays[name] = (type_name, length)
+
+    def reset_array(self, writable_array_name: str, value: str="0", *args, **kwargs):
+        if self._extra_writable_arrays.get(writable_array_name) is None:
+            assert False
+        current_indent = kwargs.get("current_indent", 0)
+        indent = kwargs.get("indent", 4)
+        rval = "{\n"
+        current_indent = current_indent + indent
+        rval = rval + " " * current_indent + f"auto host_{writable_array_name} = Kokkos::create_mirror_view({writable_array_name});" + "\n"
+        rval = rval + " " * current_indent + f"Kokkos::parallel_for(host_{writable_array_name}.size()," + "\n"
+        rval = rval + " " * (current_indent+indent) + "KOKKOS_LAMBDA (const size_t i) {\n"
+        rval = rval + " " * (current_indent+indent) + f"host_{writable_array_name}(i) = {value};" + "\n"
+        rval = rval + " " * current_indent + "});\n"
+        rval = rval + " " * current_indent + f"Kokkos::deep_copy({writable_array_name}, host_{writable_array_name});" + "\n"
+        current_indent = current_indent - indent
+        rval = rval + " " * current_indent + "}\n"
+        
+        return rval
+
+
     def println(self, string, *args, **kwargs):
         '''
         Function to output the println string for the Cabana PIR module.
@@ -1398,6 +1432,11 @@ class Cabana_PIR(Backend):
             if key != "core_part" and key != "neighbour_part" and "neighbour_part" not in key:
                 rval = rval + space*current_indent + f"auto {key}_slice = Cabana::slice<{key}>" + "(particle_aosoa);\n"
 
+        if len(self._extra_writable_arrays.keys()) > 0:
+            for name in self._extra_writable_arrays.keys():
+                array_type = self._extra_writable_arrays[name][0]
+                array_length = self._extra_writable_arrays[name][1]
+                rval = rval + space*current_indent + f"Kokkos::View<{array_type}, MemorySpace> {name} = Kokkos::View<{array_type}, MemorySpace>(" + "\"" + name + "\", "+ f"{array_length});\n"
 
         # Generate the functors
         for key in self._kernel_slices.keys():
@@ -1417,6 +1456,10 @@ class Cabana_PIR(Backend):
             slice_names = []
             for struct in self._structures.keys():
                 slice_names.append(struct)
+            if self.get_require_random():
+                slice_names.append("random_pool")
+            for array in self._extra_writable_arrays.keys():
+                slice_names.append(array)
             if len(slice_names) > 0:
                 rval = rval + ", "
             rval = rval + ", ".join(slice_names) + ");\n"
@@ -1572,6 +1615,10 @@ class Cabana_PIR(Backend):
             slice_names = []
             for struct in self._structures.keys():
                 slice_names.append(struct)
+            if self.get_require_random():
+                slice_names.append("random_pool")
+            for array in self._extra_writable_arrays.keys():
+                slice_names.append(array)
             if len(slice_names) > 0:
                 rval = rval + ","
             rval = rval + ", ".join(slice_names) + ");\n" 
@@ -1630,6 +1677,10 @@ class Cabana_PIR(Backend):
             slice_names = []
             for slices in self._kernel_slices[key]:
                 slice_names.append(f"{slices}_slice")
+            if self.get_require_random():
+                slice_names.append("random_pool")
+            for name in self._extra_writable_arrays.keys():
+                slice_names.append(name)
             rval = rval + ", ".join(slice_names) + ", config.config"
             slice_names = []
             for struct in self._structures.keys():

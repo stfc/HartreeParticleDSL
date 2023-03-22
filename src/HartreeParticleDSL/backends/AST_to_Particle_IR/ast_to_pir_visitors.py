@@ -9,7 +9,7 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import ScalarType, BOOL_TYPE,\
                                                      type_mapping_str, INT_TYPE, STRING_TYPE, \
-                                                     StructureType
+                                                     StructureType, ArrayType
 
 from HartreeParticleDSL.Particle_IR.nodes.symbol_to_reference import symbol_to_reference
 
@@ -32,6 +32,7 @@ from HartreeParticleDSL.Particle_IR.nodes.member import Member
 from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, \
                                                            UnaryOperation
 from HartreeParticleDSL.Particle_IR.nodes.particle_reference import ParticleReference
+from HartreeParticleDSL.Particle_IR.nodes.particle_core_reference import ParticleCoreReference
 from HartreeParticleDSL.Particle_IR.nodes.particle_position_reference import ParticlePositionReference
 from HartreeParticleDSL.Particle_IR.nodes.scalar_reference import ScalarReference
 from HartreeParticleDSL.Particle_IR.nodes.structure_reference import StructureReference
@@ -40,6 +41,7 @@ from HartreeParticleDSL.Particle_IR.nodes.statement import EmptyStatement, Break
 from HartreeParticleDSL.Particle_IR.nodes.while_loop import While
 
 
+from HartreeParticleDSL.Particle_IR.symbols.arraysymbol import ArraySymbol
 from HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol import ScalarTypeSymbol
 from HartreeParticleDSL.Particle_IR.symbols.symbol_map import datatype_to_symbol
 
@@ -206,6 +208,12 @@ class ast_to_pir_visitor(ast.NodeVisitor):
                         raise IRGenerationError("Attempted to access unknown element "
                                 f"of particle position. Got {attribute_names[2]}")
                 return ParticlePositionReference(sym, 0)
+            elif (len(attribute_names) >= 2 and attribute_names[0] == "core_part"):
+                inner_member = Member(attribute_names[-1])
+                for i in range(len(attribute_names)-2, 1, -1):
+                    inner_member = StructureMember(attribute_names[i], inner_member)
+                print(inner_member)
+                return ParticleCoreReference(sym, inner_member)
         if len(attribute_names) == 1:
             # Check validity
             if attribute_names[0] not in sym.datatype.components:
@@ -499,6 +507,7 @@ class pir_main_visitor(ast_to_pir_visitor):
             fcv.visit(node)
             calls = fcv.calls
             extra_symbols = backend.get_extra_symbols(calls)
+
         body = []
         if node.name != "main":
             raise IRGenerationError("Attempting to create a main function "
@@ -530,6 +539,7 @@ class pir_pairwise_visitor(ast_to_pir_visitor):
             calls = fcv.calls
             extra_symbols = backend.get_extra_symbols(calls)
 
+
         name = node.name
         kern = PairwiseKernel(name)
         self._symbol_table = kern.symbol_table
@@ -546,6 +556,15 @@ class pir_pairwise_visitor(ast_to_pir_visitor):
 
         for name, symbol in extra_symbols:
             self._symbol_table.add(symbol)
+
+        extra_arrays = {}
+        if backend is not None:
+            extra_arrays = backend.get_writable_arrays()
+        for name in extra_arrays.keys():
+            datatype = type_mapping_str[extra_arrays[name][0]]
+            datatype = ArrayType(datatype, [int(extra_arrays[name][1])])
+            sym = ArraySymbol(name, datatype)
+            self._symbol_table.add(sym)
 
         for child in node.body:
             kern.body.addchild(self.visit(child))
@@ -577,6 +596,15 @@ class pir_perpart_visitor(ast_to_pir_visitor):
 
         for name, symbol in extra_symbols:
             self._symbol_table.add(symbol)
+
+        extra_arrays = {}
+        if backend is not None:
+            extra_arrays = backend.get_writable_arrays()
+        for name in extra_arrays.keys():
+            datatype = type_mapping_str[extra_arrays[name][0]]
+            datatype = ArrayType(datatype, [int(extra_arrays[name][1])])
+            sym = ArraySymbol(name, datatype)
+            self._symbol_table.add(sym)
 
         # TODO check for 1 particle reference
         for child in node.body:
@@ -616,6 +644,15 @@ class pir_source_boundary_visitor(ast_to_pir_visitor):
         for name, symbol in extra_symbols:
             self._symbol_table.add(symbol)
 
+        extra_arrays = {}
+        if backend is not None:
+            extra_arrays = backend.get_writable_arrays()
+        for name in extra_arrays.keys():
+            datatype = type_mapping_str[extra_arrays[name][0]]
+            datatype = ArrayType(datatype, [int(extra_arrays[name][1])])
+            sym = ArraySymbol(name, datatype)
+            self._symbol_table.add(sym)
+
         for child in node.body:
             kernel.body.addchild(self.visit(child))
         kernel.arguments = args
@@ -648,6 +685,15 @@ class pir_sink_boundary_visitor(ast_to_pir_visitor):
 
         for name, symbol in extra_symbols:
             self._symbol_table.add(symbol)
+
+        extra_arrays = {}
+        if backend is not None:
+            extra_arrays = backend.get_writable_arrays()
+        for name in extra_arrays.keys():
+            datatype = type_mapping_str[extra_arrays[name][0]]
+            datatype = ArrayType(datatype, [int(extra_arrays[name][1])])
+            sym = ArraySymbol(name, datatype)
+            self._symbol_table.add(sym)
 
         for child in node.body:
             kernel.body.addchild(self.visit(child))

@@ -5,7 +5,7 @@
 void field_bc_mpi(field_type field, int nx, int ng){
     //Copy ends of real domain into ghost cells.
     Kokkos::parallel_for(ng,
-        [=] (const size_t i) {
+        KOKKOS_LAMBDA (const size_t i) {
         field(ng+nx+i) = field(ng+i);
         field(i) = field(nx+i);
     }
@@ -32,7 +32,7 @@ void processor_summation_boundaries_mpi(field_type field, int nx, int ng){
 
     // Summation boundary
     Kokkos::parallel_for(ng,
-        [=] (const size_t i) {
+        KOKKOS_LAMBDA (const size_t i) {
         field(nx+i) += field(i);
         field(ng+i) += field(nx+ng+i);
    }

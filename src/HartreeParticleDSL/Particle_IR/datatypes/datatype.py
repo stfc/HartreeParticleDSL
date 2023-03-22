@@ -308,6 +308,7 @@ _BOUNDARY_TYPE.components["local_z_min"] = DOUBLE_TYPE
 _BOUNDARY_TYPE.components["local_z_max"] = DOUBLE_TYPE
 _SPACE_TYPE.components["box_dims"] = _BOUNDARY_TYPE
 BASE_CONFIG_TYPE.components["space"] = _SPACE_TYPE
+BASE_CONFIG_TYPE.components["nparts"] = INT64_TYPE
 
 type_mapping_str = {"c_int": INT_TYPE,
                     "int": INT_TYPE,
@@ -358,6 +359,7 @@ def reset_part_and_config():
     _BOUNDARY_TYPE.components["local_z_max"] = DOUBLE_TYPE
     _SPACE_TYPE.components["box_dims"] = _BOUNDARY_TYPE
     BASE_CONFIG_TYPE.components["space"] = _SPACE_TYPE
+    BASE_CONFIG_TYPE.components["nparts"] = INT64_TYPE
     type_mapping_str["part"] = BASE_PARTICLE_TYPE
     type_mapping_str["config"] = BASE_CONFIG_TYPE
 

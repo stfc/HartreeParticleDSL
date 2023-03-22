@@ -208,6 +208,16 @@ void load_grid_hdf5(struct FDTD_field &field, char* filename,
     }else{
         field.field.cfl = 120.0/149.0;
     }
+
+    Kokkos::deep_copy(field.ex, host_ex);
+    Kokkos::deep_copy(field.ey, host_ey);
+    Kokkos::deep_copy(field.ez, host_ez);
+    Kokkos::deep_copy(field.bx, host_bx);
+    Kokkos::deep_copy(field.by, host_by);
+    Kokkos::deep_copy(field.bz, host_bz);
+    Kokkos::deep_copy(field.jx, host_jx);
+    Kokkos::deep_copy(field.jy, host_jy);
+    Kokkos::deep_copy(field.jz, host_jz);
 }
 
 
