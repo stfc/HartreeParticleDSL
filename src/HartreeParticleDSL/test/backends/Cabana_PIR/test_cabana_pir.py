@@ -401,12 +401,12 @@ template<class aosoa> class Migrator{
     for(int i = 0; i < neighbors.size(); i++){
         if(neighbors[i] != myrank){
             tag = 0;
-            MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*r_pos_space.extent(2)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*r_vel_space.extent(2)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(1)*i], recv_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             tag = 0;
-            MPI_Isend(&pos_space.data()[pos_space.extent(1)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Isend(&vel_space.data()[vel_space.extent(1)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&pos_space.data()[pos_space.extent(1)*pos_space.extent(2)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&vel_space.data()[vel_space.extent(1)*vel_space.extent(2)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Isend(&cutoff_space.data()[cutoff_space.extent(1)*i], send_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
         }
     }
@@ -651,6 +651,7 @@ struct kern2_functor{
      kern2_functor( CORE_PART_POSITION core_part_position, X x, config_struct_type config):
     _core_part_position(core_part_position), _x(x), _config(config){}
 
+    KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int a) const{
         double a;
         a = 2.0;
@@ -861,7 +862,7 @@ def test_cabana_pir_add_coupler():
     test_visitor = Cabana_PIR_Visitor(backend)
     assert test_visitor._visit(call) == "test_string()"
     call = Call("not_a_function")
-    assert test_visitor._visit(call) == "not_a_function();"
+    assert test_visitor._visit(call) == "not_a_function()"
 
 
 def test_cabana_pir_write_output():
@@ -1038,16 +1039,16 @@ template<class aosoa> class Migrator{
     for(int i = 0; i < neighbors.size(); i++){
         if(neighbors[i] != myrank){
             tag = 0;
-            MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*r_pos_space.extent(2)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*r_vel_space.extent(2)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(1)*i], recv_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Irecv(&r_testvar_space.data()[r_testvar_space.extent(1) * r_testvar_space.extent(2) * r_testvar_space.extent(3) * i], recv_count[i] * 4 * 2, MPI_INT, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Irecv(&r_testvar2_space.data()[r_testvar2_space.extent(1)*i], recv_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Irecv(&r_testvar3_space.data()[r_testvar3_space.extent(1)*i], recv_count[i], MPI_FLOAT, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Irecv(&r_testvar4_space.data()[r_testvar4_space.extent(1)*i], recv_count[i], MPI_INT64_T, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             tag = 0;
-            MPI_Isend(&pos_space.data()[pos_space.extent(1)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Isend(&vel_space.data()[vel_space.extent(1)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&pos_space.data()[pos_space.extent(1)*pos_space.extent(2)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&vel_space.data()[vel_space.extent(1)*vel_space.extent(2)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Isend(&cutoff_space.data()[cutoff_space.extent(1)*i], send_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Isend(&testvar_space.data()[testvar_space.extent(1) * r_testvar_space.extent(2) * r_testvar_space.extent(3) * i], send_count[i] * 4 * 2, MPI_INT, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Isend(&testvar2_space.data()[testvar2_space.extent(1)*i], send_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);

@@ -165,9 +165,14 @@ def test_FDTD_MPI_Kokkos_call_reset_current():
     out = a.call_reset_current()
     reset_type_mapping_str()
     reset_part_and_config()
-    assert out == "current_start(field, field.nx, field.ng);\n"
+    assert out == '''field.scatter_jx.reset();
+field.scatter_jy.reset();
+field.scatter_jz.reset();
+current_start(field, field.nx, field.ng);\n'''
 
 def test_FDTD_MPI_Kokkos_call_finish_current():
+    reset_type_mapping_str()
+    reset_part_and_config()
     backend = Cabana_PIR()
     HartreeParticleDSL.set_backend(backend)
     a = FDTD_MPI_Kokkos()
@@ -177,15 +182,14 @@ def test_FDTD_MPI_Kokkos_call_finish_current():
     correct = '''Kokkos::Experimental::contribute(field.jx, field.scatter_jx);
 Kokkos::Experimental::contribute(field.jy, field.scatter_jy);
 Kokkos::Experimental::contribute(field.jz, field.scatter_jz);
-field.scatter_jx.reset();
-field.scatter_jy.reset();
-field.scatter_jz.reset();
 current_finish(field.jx, field.jy, field.jz,
                field.nx, field.ng);
 '''
     assert out == correct
 
 def test_FDTD_MPI_Kokkos_output_grid():
+    reset_type_mapping_str()
+    reset_part_and_config()
     backend = Cabana_PIR()
     HartreeParticleDSL.set_backend(backend)
     a = FDTD_MPI_Kokkos()
@@ -227,6 +231,8 @@ grid_hdf5_output( field, filename, myrank, nranks);
     assert out == correct
 
 def test_FDTD_MPI_Kokkos_get_extra_symbols():
+    reset_type_mapping_str()
+    reset_part_and_config()
     backend = Cabana_PIR()
     HartreeParticleDSL.set_backend(backend)
     a = FDTD_MPI_Kokkos()
@@ -241,6 +247,8 @@ def test_FDTD_MPI_Kokkos_get_extra_symbols():
     assert out[0][0] == "idt"
 
 def test_FDTD_MPI_Kokkos_call_interpolate_to_particles():
+    reset_type_mapping_str()
+    reset_part_and_config()
     backend = Cabana_PIR()
     HartreeParticleDSL.set_backend(backend)
     # Create a perpart_kernel
@@ -316,6 +324,8 @@ idt, idx, dtco2, idtf, idxf, field.nx, fcx, fcy, field.ng);
     assert out == correct
 
 def test_FDTD_MPI_Kokkos_gather_forces_to_grid():
+    reset_type_mapping_str()
+    reset_part_and_config()
     backend = Cabana_PIR()
     HartreeParticleDSL.set_backend(backend)
     a = FDTD_MPI_Kokkos()
@@ -346,6 +356,8 @@ field.nx, fcx, fcy, field.ng);
     assert correct == out
 
 def test_FDTD_MPI_Kokkos_has_preferred_decomposition():
+    reset_type_mapping_str()
+    reset_part_and_config()
     backend = Cabana_PIR()
     HartreeParticleDSL.set_backend(backend)
     a = FDTD_MPI_Kokkos()
@@ -354,6 +366,8 @@ def test_FDTD_MPI_Kokkos_has_preferred_decomposition():
     assert a.has_preferred_decomposition() == True
 
 def test_FDTD_MPI_Kokkos_get_preferred_decomposition():
+    reset_type_mapping_str()
+    reset_part_and_config()
     backend = Cabana_PIR()
     HartreeParticleDSL.set_backend(backend)
     a = FDTD_MPI_Kokkos()
@@ -362,6 +376,8 @@ def test_FDTD_MPI_Kokkos_get_preferred_decomposition():
     assert a.get_preferred_decomposition("box") == "store_domain_decomposition(field, box);\n"
 
 def test_FDTD_MPI_Kokkos_copy_files():
+    reset_type_mapping_str()
+    reset_part_and_config()
     backend = Cabana_PIR()
     HartreeParticleDSL.set_backend(backend)
     a = FDTD_MPI_Kokkos()
@@ -395,6 +411,8 @@ def test_FDTD_MPI_Kokkos_copy_files():
     HartreeParticleDSL.set_mpi(False)
 
 def test_FDTD_MPI_Kokkos_compilation_files():
+    reset_type_mapping_str()
+    reset_part_and_config()
     backend = Cabana_PIR()
     HartreeParticleDSL.set_backend(backend)
     a = FDTD_MPI_Kokkos()
@@ -408,6 +426,8 @@ def test_FDTD_MPI_Kokkos_compilation_files():
     assert len(out) == 4
 
 def test_FDTD_MPI_Kokkos_get_required_packages():
+    reset_type_mapping_str()
+    reset_part_and_config()
     backend = Cabana_PIR()
     HartreeParticleDSL.set_backend(backend)
     a = FDTD_MPI_Kokkos()

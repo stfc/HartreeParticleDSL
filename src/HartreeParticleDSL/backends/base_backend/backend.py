@@ -6,7 +6,7 @@ class Backend(metaclass=ABCMeta):
         pass
 
     def get_writable_arrays(self) -> dict:
-        return self._extra_writable_arrays
+        return {}
 
     @property
     def variable_scope(self):

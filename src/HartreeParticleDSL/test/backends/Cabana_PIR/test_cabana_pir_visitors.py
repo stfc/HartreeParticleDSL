@@ -21,7 +21,7 @@ import inspect
 import textwrap
 import pytest
 
-def test_pir_cabana_visit_break():
+def test_pir_cabana_isit_break():
     def a():
         while(True):
             break
@@ -30,7 +30,7 @@ def test_pir_cabana_visit_break():
     a = ast_to_pir_visitor()
     pir = a.visit(c)
 
-    b = Cabana_PIR_Visitor(None)
+    b = Cabana_PIR_Visitor(Cabana_PIR())
     out = b(pir)
     correct = '''void a(){
     while(true){
@@ -42,7 +42,7 @@ def test_pir_cabana_visit_break():
 
 def test_pir_cabana_visit_return():
     astpir = ast_to_pir_visitor()
-    cpir = Cabana_PIR_Visitor(None)
+    cpir = Cabana_PIR_Visitor(Cabana_PIR())
     def a():
         return
     c = ast.parse(textwrap.dedent(inspect.getsource(a)))
@@ -226,7 +226,7 @@ def test_pir_cabana_visit_ifdef():
             b = 2
 
     astpir = ast_to_pir_visitor()
-    cpir = Cabana_PIR_Visitor(None)
+    cpir = Cabana_PIR_Visitor(Cabana_PIR())
 
     correct = '''void a(){
     int b;
@@ -274,7 +274,7 @@ def test_pir_cabana_visit_ifdef():
 
 def test_pir_cabana_visit_loop():
     astpir = ast_to_pir_visitor()
-    cpir = Cabana_PIR_Visitor(None)
+    cpir = Cabana_PIR_Visitor(Cabana_PIR())
     def a():
         create_variable(c_int, b)
         for b in range(0, 3):
@@ -293,7 +293,7 @@ def test_pir_cabana_visit_loop():
 
 def test_pir_cabana_visit_while():
     astpir = ast_to_pir_visitor()
-    cpir = Cabana_PIR_Visitor(None)
+    cpir = Cabana_PIR_Visitor(Cabana_PIR())
     def a():
         while True:
             break
@@ -310,7 +310,7 @@ def test_pir_cabana_visit_while():
 
 def test_pir_cabana_visit_operations():
     astpir = ast_to_pir_visitor()
-    cpir = Cabana_PIR_Visitor(None)
+    cpir = Cabana_PIR_Visitor(Cabana_PIR())
     def a(b: c_int, c: c_double, d: c_bool):
         b = b + 1
         c = c - 1.0
@@ -353,7 +353,7 @@ def test_pir_cabana_visit_operations():
 
 def test_pir_cabana_visit_call():
     astpir = ast_to_pir_visitor()
-    cpir = Cabana_PIR_Visitor(None)
+    cpir = Cabana_PIR_Visitor(Cabana_PIR())
     # TODO Check backend call functionality.
 
     def d():
@@ -372,7 +372,7 @@ def test_pir_cabana_visit_call():
 
 def test_pir_cabana_visit_members():
     astpir = ast_to_pir_visitor()
-    cpir = Cabana_PIR_Visitor(None)
+    cpir = Cabana_PIR_Visitor(Cabana_PIR())
     mystruc1 = StructureType()
     mystruc1.add("d", INT_TYPE)
     type_mapping_str["mystruc1"]=mystruc1
@@ -433,18 +433,18 @@ def test_pir_cabana_visit_members():
 
 def test_pir_cabana_pointer_reference():
     a = PointerReference(PointerSymbol("a", PointerType(INT_TYPE)))
-    cpir = Cabana_PIR_Visitor(None)
+    cpir = Cabana_PIR_Visitor(Cabana_PIR())
     out = cpir(a)
     assert "*a" == out
 
 def test_pir_cabana_pointer_symbol():
     a = PointerSymbol("a", PointerType(INT_TYPE))
-    cpir = Cabana_PIR_Visitor(None)
+    cpir = Cabana_PIR_Visitor(Cabana_PIR)
     out = cpir.visit_pointersymbol_node(a)
     assert "int*" == out
 
 def test_pir_cabana_arrayreference():
-    cpir = Cabana_PIR_Visitor(None)
+    cpir = Cabana_PIR_Visitor(Cabana_PIR())
     ar = ArrayReference(ArraySymbol("x", ArrayType(INT_TYPE, [2,2])), [Literal("2", INT_TYPE), Literal("2", INT_TYPE)])
     out = cpir(ar)
     assert out == "x[2][2]"
@@ -469,6 +469,7 @@ def test_pir_cabana_config_reference():
      x_functor( config_struct_type conf):
     _conf(conf){}
 
+    KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int a) const{
         _conf(0).space = 1;
     }
@@ -524,6 +525,7 @@ struct x_functor{
         xs = XS;
     }
 
+    KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int a) const{
         _subpart.access(i, a) = 1;
         _subarray.access(i, a, 0) = 1;
@@ -568,6 +570,7 @@ struct y_functor{
         xs = XS;
     }
 
+    KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int a) const{
         int b;
         int f;
