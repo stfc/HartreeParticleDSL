@@ -809,8 +809,7 @@ def test_cabana_pir_initialise():
     auto core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
     auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
     auto neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);
-    slice1_functor<decltype(s1_slice), decltype(s2_slice)> slice1(s1_slice, s2_slice, config.config, mystruct, mystruct2);
-'''
+    slice1_functor<decltype(s1_slice), decltype(s2_slice)> slice1(s1_slice, s2_slice, config.config, mystruct, mystruct2)'''
     assert correct == out
 
     HartreeParticleDSL.set_mpi(True)

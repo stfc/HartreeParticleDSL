@@ -1464,6 +1464,8 @@ class Cabana_PIR(Backend):
                 rval = rval + ", "
             rval = rval + ", ".join(slice_names) + ");\n"
 
+        # Delete the final ;\n as this is added by the visitor.
+        rval = rval[:-2]
         # TODO Initial MPI Communication and binning of particles
         # See issue #62
         return rval
@@ -1547,7 +1549,7 @@ class Cabana_PIR(Backend):
         results = []
         if "random_number" in function_list:
             self._require_random = True
-            results.append( ("_generator", AutoSymbol("_generator", "_random_pool.get_state(); _random_pool.free_state(_generator);"))) # TODO Fix.
+            results.append( ("_generator", AutoSymbol("_generator", "_random_pool.get_state()")))
         for struct in self._structures.keys():
             results.append( (struct, StructureSymbol(struct, self._structures[struct])) )
 

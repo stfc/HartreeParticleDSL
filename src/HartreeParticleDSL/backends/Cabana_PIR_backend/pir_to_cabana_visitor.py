@@ -125,26 +125,28 @@ class Cabana_PIR_Visitor(PIR_Visitor):
 
         # Need to find any random number calls
         calls = node.walk(Call)
+        first_random_call = None
+        last_random_call = None
         for call in calls:
             if call.func_name == "random_number":
-                # Whenever we find a random number we need to wrap it in
-                # the wrapper calls.
-                # Find the generator symbol
-                generator_symbol = node.symbol_table.lookup("_generator")
-                pre_assign = Assignment.create(AutoReference(generator_symbol), Call.create("_random_pool.get_state", []))
-                post_assign = Call.create("_random_pool.free_state", [AutoReference(generator_symbol)])
-                if isinstance(call.parent, Assignment):
-                    # If its in an assignment then we add them around the
-                    # assignment instead
-                    container = call.parent.parent
-                    position = call.parent.position
-                    container.addchild(post_assign, position+1)
-                    container.addchild(post_assign, position)
-                else:
-                    container = call.parent
-                    position = call.position
-                    container.addchild(post_assign, position+1)
-                    container.addchild(post_assign, position)
+                if first_random_call == None:
+                    first_random_call = call
+                last_random_call = call
+        # If we have a random call then we wrap in the wrapper calls
+        # The auto symbol handles the initialisation of the random state so
+        # we just add something after the last.
+        if first_random_call is not None:
+            generator_symbol = node.symbol_table.lookup("_generator")
+            post_assign = Call.create("_random_pool.free_state", [AutoReference(generator_symbol)])
+            assign_ancestor = call.ancestor(Assignment)
+            if assign_ancestor is not None:
+                container = assign_ancestor.parent
+                position = assign_ancestor.position
+                container.addchild(post_assign, position+1)
+            else:
+                container = call.parent
+                position = call.position
+                container.addchild(post_assign, position+1)
 
         # Arg 1 is always a particle
         #TODO Save the particle 1 symbol name.
@@ -276,30 +278,32 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         self._slices = []
         # Check rules. Doesn't contain invokes.
         if len(node.walk(Invoke)) != 0:
-            raise UnsupportedCodeError("Per part kernel cannot contain Invokes.")
+            raise UnsupportedCodeError("Source boundary kernel cannot contain Invokes.")
 
         # Need to find any random number calls
         calls = node.walk(Call)
+        first_random_call = None
+        last_random_call = None
         for call in calls:
             if call.func_name == "random_number":
-                # Whenever we find a random number we need to wrap it in
-                # the wrapper calls.
-                # Find the generator symbol
-                generator_symbol = node.symbol_table.lookup("_generator")
-                pre_assign = Assignment.create(AutoReference(generator_symbol), Call.create("_random_pool.get_state", []))
-                post_assign = Call.create("_random_pool.free_state", [AutoReference(generator_symbol)])
-                if isinstance(call.parent, Assignment):
-                    # If its in an assignment then we add them around the
-                    # assignment instead
-                    container = call.parent.parent
-                    position = call.parent.position
-                    container.addchild(post_assign, position+1)
-                    container.addchild(pre_assign, position)
-                else:
-                    container = call.parent
-                    position = call.position
-                    container.addchild(post_assign, position+1)
-                    container.addchild(pre_assign, position)
+                if first_random_call == None:
+                    first_random_call = call
+                last_random_call = call
+        # If we have a random call then we wrap in the wrapper calls
+        # The auto symbol handles the initialisation of the random state so
+        # we just add something after the last.
+        if first_random_call is not None:
+            generator_symbol = node.symbol_table.lookup("_generator")
+            post_assign = Call.create("_random_pool.free_state", [AutoReference(generator_symbol)])
+            assign_ancestor = call.ancestor(Assignment)
+            if assign_ancestor is not None:
+                container = assign_ancestor.parent
+                position = assign_ancestor.position
+                container.addchild(post_assign, position+1)
+            else:
+                container = call.parent
+                position = call.position
+                container.addchild(post_assign, position+1)
 
         # Arg 1 is always a particle
         #TODO Save the particle 1 symbol name.
@@ -443,26 +447,28 @@ class Cabana_PIR_Visitor(PIR_Visitor):
 
         # Need to find any random number calls
         calls = node.walk(Call)
+        first_random_call = None
+        last_random_call = None
         for call in calls:
             if call.func_name == "random_number":
-                # Whenever we find a random number we need to wrap it in
-                # the wrapper calls.
-                # Find the generator symbol
-                generator_symbol = node.symbol_table.lookup("_generator")
-                pre_assign = Assignment.create(AutoReference(generator_symbol), Call.create("_random_pool.get_state", []))
-                post_assign = Call.create("_random_pool.free_state", [AutoReference(generator_symbol)])
-                if isinstance(call.parent, Assignment):
-                    # If its in an assignment then we add them around the
-                    # assignment instead
-                    container = call.parent.parent
-                    position = call.parent.position
-                    container.addchild(post_assign, position+1)
-                    container.addchild(post_assign, position)
-                else:
-                    container = call.parent
-                    position = call.position
-                    container.addchild(post_assign, position+1)
-                    container.addchild(post_assign, position)
+                if first_random_call == None:
+                    first_random_call = call
+                last_random_call = call
+        # If we have a random call then we wrap in the wrapper calls
+        # The auto symbol handles the initialisation of the random state so
+        # we just add something after the last.
+        if first_random_call is not None:
+            generator_symbol = node.symbol_table.lookup("_generator")
+            post_assign = Call.create("_random_pool.free_state", [AutoReference(generator_symbol)])
+            assign_ancestor = call.ancestor(Assignment)
+            if assign_ancestor is not None:
+                container = assign_ancestor.parent
+                position = assign_ancestor.position
+                container.addchild(post_assign, position+1)
+            else:
+                container = call.parent
+                position = call.position
+                container.addchild(post_assign, position+1)
 
         # Arg 1 is always a particle
         #TODO Save the particle 1 symbol name.
@@ -782,8 +788,12 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         try:
             current_indent = len(self._nindent)
             indent = len(self._indent)
-            return self._parent.call_language_function(func_name, *args,
+            call_str = self._parent.call_language_function(func_name, *args,
                     current_indent=current_indent, indent=indent).lstrip()
+            end = ""
+            if isinstance(node.parent, Body) and func_name != "cleanup":
+                end = ";\n"
+            return call_str + end
         except AttributeError as err:
             pass
         arg_string = ", ".join(args)

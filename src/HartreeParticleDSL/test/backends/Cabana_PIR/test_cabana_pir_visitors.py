@@ -9,6 +9,7 @@ from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import *
 from HartreeParticleDSL.inbuilt_kernels.boundaries.periodic_boundaries import periodic_boundaries
 
 from HartreeParticleDSL.Particle_IR.symbols.arraysymbol import ArraySymbol
+from HartreeParticleDSL.Particle_IR.symbols.autosymbol import AutoSymbol
 from HartreeParticleDSL.Particle_IR.symbols.pointersymbol import PointerSymbol
 from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, ScalarType, \
@@ -439,9 +440,16 @@ def test_pir_cabana_pointer_reference():
 
 def test_pir_cabana_pointer_symbol():
     a = PointerSymbol("a", PointerType(INT_TYPE))
-    cpir = Cabana_PIR_Visitor(Cabana_PIR)
+    cpir = Cabana_PIR_Visitor(Cabana_PIR())
     out = cpir.visit_pointersymbol_node(a)
     assert "int*" == out
+
+def test_pir_cabana_auto_symbol():
+    a = AutoSymbol("a", "fake_call()")
+    cpir = Cabana_PIR_Visitor(Cabana_PIR())
+    out = cpir.visit_autosymbol_node(a)
+    assert "auto a = fake_call()" == out
+
 
 def test_pir_cabana_arrayreference():
     cpir = Cabana_PIR_Visitor(Cabana_PIR())
@@ -587,6 +595,75 @@ struct y_functor{
     with pytest.raises(NotImplementedError):
         cpir(fake)
 
+    def rtest1(arg: part, c: c_int):
+        create_variable(c_double, b)
+        b = random_number()
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(rtest1)))
+    pir = v.visit(c)
+    out = cpir(pir)
+    # Random pool isn't generated here as that comes from the backend
+    # process, which isn't done here.
+    correct = '''struct rtest1_functor{
+    config_struct_type _c;
+    xs xs;
+
+    KOKKOS_INLINE_FUNCTION
+     rtest1_functor( config_struct_type c, xs XS):
+    xs(XS), _c(c){}
+
+    void update_structs(xs XS){
+        xs = XS;
+    }
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int a) const{
+        auto _generator = _random_pool.get_state();
+        double b;
+        b = _generator.drand(0., 1.);
+        _random_pool.free_state(_generator);
+    }
+};
+'''
+    assert out == correct
+
+    def rtest2(arg: part, c: c_int):
+        create_variable(c_double, b)
+        b = random_number()
+        b = b + random_number()
+        random_number()
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(rtest2)))
+    pir = v.visit(c)
+    out = cpir(pir)
+    # Random pool isn't generated here as that comes from the backend
+    # process, which isn't done here.
+    correct = '''struct rtest2_functor{
+    config_struct_type _c;
+    xs xs;
+
+    KOKKOS_INLINE_FUNCTION
+     rtest2_functor( config_struct_type c, xs XS):
+    xs(XS), _c(c){}
+
+    void update_structs(xs XS){
+        xs = XS;
+    }
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int a) const{
+        auto _generator = _random_pool.get_state();
+        double b;
+        b = _generator.drand(0., 1.);
+        b = (b + _generator.drand(0., 1.));
+        _generator.drand(0., 1.);
+
+        _random_pool.free_state(_generator);
+    }
+};
+'''
+    assert out == correct
+
 
 def test_pir_cabana_pairwise():
     backend = Cabana_PIR()
@@ -601,6 +678,98 @@ def test_pir_cabana_pairwise():
     with pytest.raises(NotImplementedError) as excinfo:
         out = cpir(pir)
     assert "Pairwise kernels not yet supported in cabana." in str(excinfo.value)
+
+def test_pir_cabana_sink_boundary():
+    backend = Cabana_PIR()
+    cpir = Cabana_PIR_Visitor(backend)
+    def x(arg1: part,  c: c_int):
+        create_variable(c_double, b)
+        b = random_number()
+        b = b + random_number()
+        random_number()
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(x)))
+    v = pir_sink_boundary_visitor()
+    pir = v.visit(c)
+    out = cpir(pir)
+    
+    correct = '''struct x_functor{
+    config_struct_type _c;
+
+    KOKKOS_INLINE_FUNCTION
+     x_functor( config_struct_type c):
+    _c(c){}
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int a) const{
+        auto _generator = _random_pool.get_state();
+        double b;
+        b = _generator.drand(0., 1.);
+        b = (b + _generator.drand(0., 1.));
+        _generator.drand(0., 1.);
+
+        _random_pool.free_state(_generator);
+    }
+};
+'''
+    assert out == correct
+
+    def z(arg: part, c: c_int):
+        invoke(x)
+    c = ast.parse(textwrap.dedent(inspect.getsource(z)))
+    pir = v.visit(c)
+    with pytest.raises(UnsupportedCodeError) as excinfo:
+        out = cpir(pir)
+    assert "Sink boundary kernel cannot contain Invokes." in str(excinfo.value)
+
+def test_pir_cabana_source_boundary():
+    backend = Cabana_PIR()
+    cpir = Cabana_PIR_Visitor(backend)
+    def x(arg1: part,  c: c_int):
+        create_variable(c_double, b)
+        b = random_number()
+        b = b + random_number()
+        random_number()
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(x)))
+    from HartreeParticleDSL.kernel_types.kernels import source_boundary_kernel_wrapper
+    sbkw = source_boundary_kernel_wrapper(c)
+    sbkw.set_source_count(10000)
+    v = pir_source_boundary_visitor(sbkw)
+    pir = v.visit(c)
+    out = cpir(pir)
+    correct = '''struct x_functor{
+    config_struct_type _c;
+
+    KOKKOS_INLINE_FUNCTION
+     x_functor( config_struct_type c):
+    _c(c){}
+
+    int get_inflow_count(){
+        return 10000;
+    }
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int a) const{
+        auto _generator = _random_pool.get_state();
+        double b;
+        b = _generator.drand(0., 1.);
+        b = (b + _generator.drand(0., 1.));
+        _generator.drand(0., 1.);
+
+        _random_pool.free_state(_generator);
+    }
+};
+'''
+    assert out == correct
+
+    def z(arg: part, c: c_int):
+        invoke(x)
+    c = ast.parse(textwrap.dedent(inspect.getsource(z)))
+    pir = v.visit(c)
+    with pytest.raises(UnsupportedCodeError) as excinfo:
+        out = cpir(pir)
+    assert "Source boundary kernel cannot contain Invokes." in str(excinfo.value)
 
 def test_pir_cabana_mainkernel():
     backend = Cabana_PIR()
