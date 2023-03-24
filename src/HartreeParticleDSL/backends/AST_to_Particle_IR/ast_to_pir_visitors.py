@@ -631,7 +631,6 @@ class pir_source_boundary_visitor(ast_to_pir_visitor):
         kernel = SourceBoundaryKernel(name, self._source_count) 
         self._symbol_table = kernel.symbol_table
         args = self.visit(node.args)
-
         if len(args) < 2:
             raise IRGenerationError("Particle IR expects at least 2 arguments "
                                     "for a source boundary kernel, but got "

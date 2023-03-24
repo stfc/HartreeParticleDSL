@@ -691,8 +691,8 @@ def test_pir_cabana_sink_boundary():
     def x(arg1: part,  c: c_int):
         create_variable(c_double, b)
         b = random_number()
-        b = b + random_number()
         random_number()
+        b = b + random_number()
 
     c = ast.parse(textwrap.dedent(inspect.getsource(x)))
     v = pir_sink_boundary_visitor()
@@ -713,7 +713,51 @@ def test_pir_cabana_sink_boundary():
         auto _generator = _random_pool.get_state();
         double b;
         b = _generator.drand(0., 1.);
+        _generator.drand(0., 1.);
+
         b = (b + _generator.drand(0., 1.));
+        _random_pool.free_state(_generator);
+    }
+};
+'''
+    assert out == correct
+
+    def y(arg1: part,  c: c_int):
+        create_variable(c_double, b)
+        b = random_number()
+        arg1.core_part.position = b + random_number()
+        random_number()
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(y)))
+    v = pir_sink_boundary_visitor()
+    pir = v.visit(c)
+    xs = StructureType()
+    xs.add("boo", INT_TYPE)
+    backend.add_structure(xs, "xs")
+    out = cpir(pir)
+    
+    correct = '''template < class CORE_PART_POSITION >
+struct y_functor{
+    config_struct_type _c;
+    Kokkos::Random_XorShift64_Pool<> _random_pool;
+    Kokkos::View<double, MemorySpace> ea;
+    CORE_PART_POSITION _core_part_position;
+    xs xs;
+
+    KOKKOS_INLINE_FUNCTION
+     y_functor( CORE_PART_POSITION core_part_position, config_struct_type c, Kokkos::Random_XorShift64_Pool<> random_pool, Kokkos::View<double, MemorySpace> _ea, xs XS):
+    _core_part_position(core_part_position), xs(XS), _random_pool(random_pool), ea(_ea), _c(c){}
+
+    void update_structs(xs XS){
+        xs = XS;
+    }
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int a) const{
+        auto _generator = _random_pool.get_state();
+        double b;
+        b = _generator.drand(0., 1.);
+        _core_part_position.access(i, a, 0) = (b + _generator.drand(0., 1.));
         _generator.drand(0., 1.);
 
         _random_pool.free_state(_generator);
@@ -738,8 +782,8 @@ def test_pir_cabana_source_boundary():
     def x(arg1: part,  c: c_int):
         create_variable(c_double, b)
         b = random_number()
-        b = b + random_number()
         random_number()
+        b = b + random_number()
 
     c = ast.parse(textwrap.dedent(inspect.getsource(x)))
     from HartreeParticleDSL.kernel_types.kernels import source_boundary_kernel_wrapper
@@ -766,7 +810,57 @@ def test_pir_cabana_source_boundary():
         auto _generator = _random_pool.get_state();
         double b;
         b = _generator.drand(0., 1.);
+        _generator.drand(0., 1.);
+
         b = (b + _generator.drand(0., 1.));
+        _random_pool.free_state(_generator);
+    }
+};
+'''
+    assert out == correct
+
+    def y(arg1: part,  c: c_int):
+        create_variable(c_double, b)
+        b = random_number()
+        arg1.core_part.position = b + random_number()
+        random_number()
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(y)))
+    from HartreeParticleDSL.kernel_types.kernels import source_boundary_kernel_wrapper
+    sbkw = source_boundary_kernel_wrapper(c)
+    sbkw.set_source_count(10000)
+    v = pir_source_boundary_visitor(sbkw)
+    pir = v.visit(c)
+    xs = StructureType()
+    xs.add("boo", INT_TYPE)
+    backend.add_structure(xs, "xs")
+    out = cpir(pir)
+    correct = '''template < class CORE_PART_POSITION >
+struct y_functor{
+    config_struct_type _c;
+    Kokkos::Random_XorShift64_Pool<> _random_pool;
+    Kokkos::View<double, MemorySpace> ea;
+    CORE_PART_POSITION _core_part_position;
+    xs xs;
+
+    KOKKOS_INLINE_FUNCTION
+     y_functor( CORE_PART_POSITION core_part_position, config_struct_type c, Kokkos::Random_XorShift64_Pool<> random_pool, Kokkos::View<double, MemorySpace> _ea, xs XS):
+    _core_part_position(core_part_position), xs(XS), _random_pool(random_pool), ea(_ea), _c(c){}
+
+    void update_structs(xs XS){
+        xs = XS;
+    }
+
+    int get_inflow_count(){
+        return 10000;
+    }
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int a) const{
+        auto _generator = _random_pool.get_state();
+        double b;
+        b = _generator.drand(0., 1.);
+        _core_part_position.access(i, a, 0) = (b + _generator.drand(0., 1.));
         _generator.drand(0., 1.);
 
         _random_pool.free_state(_generator);
@@ -873,7 +967,6 @@ def test_pir_cabana_mainkernel():
 }
 '''
     set_mpi(False)
-    print(out)
     assert correct == out
     # TODO Add structure
 
@@ -918,3 +1011,161 @@ def test_pir_cabana_mainkernel():
 }
 '''
     assert correct == out
+
+def test_main_more():
+    backend = Cabana_PIR()
+    cpir = Cabana_PIR_Visitor(backend)
+    backend._require_random = True
+    def x(arg1: part,  c: c_int):
+        create_variable(c_double, b)
+        b = 1.0
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(x)))
+    from HartreeParticleDSL.kernel_types.kernels import source_boundary_kernel_wrapper
+    sbkw = source_boundary_kernel_wrapper(c)
+    sbkw.set_source_count(10000)
+    v = pir_source_boundary_visitor(sbkw)
+    pir = v.visit(c)
+    out = cpir(pir)
+
+    def main():
+        invoke(x)
+    c = ast.parse(textwrap.dedent(inspect.getsource(main)))
+    v = pir_main_visitor()
+    pir = v.visit(c)
+    xs = StructureType()
+    xs.add("boo", INT_TYPE)
+    backend.add_structure(xs, "xs")
+    out = cpir(pir)
+    correct = '''int main( int argc, char* argv[] ){
+    Kokkos::deep_copy(config.config, config.config_host);
+    x.update_structs(xs);
+    {
+        int new_parts = x.get_inflow_count();
+        int old_size = particle_aosoa.size();
+        int new_size = old_size + new_parts;
+        particle_aosoa.resize(new_size);
+        particle_aosoa_host.resize(new_size);
+        core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);
+        core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
+        neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
+        neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);
+        simd_policy = Cabana::SimdPolicy<VectorLength, ExecutionSpace>(0, particle_aosoa.size());
+        Cabana::SimdPolicy<VectorLength, ExecutionSpace> simd(old_size+1, new_size);
+        Cabana::simd_parallel_for(simd, x, "x");
+    }
+
+}
+'''
+    assert correct == out
+
+    set_mpi(True)
+    pir = v.visit(c)
+    out = cpir(pir)
+
+    set_mpi(False)
+    correct = '''int main( int argc, char* argv[] ){
+    Kokkos::deep_copy(config.config, config.config_host);
+    x.update_structs(xs);
+    if(myrank == 0){
+        int new_parts = x.get_inflow_count();
+        int old_size = particle_aosoa.size();
+        int new_size = old_size + new_parts;
+        particle_aosoa.resize(new_size);
+        particle_aosoa_host.resize(new_size);
+        core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);
+        core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
+        neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
+        neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);
+        neighbour_part_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa);
+        neighbour_part_old_position_slice = Cabana::slice<neighbour_part_old_position>(particle_aosoa);
+        simd_policy = Cabana::SimdPolicy<VectorLength, ExecutionSpace>(0, particle_aosoa.size());
+        Cabana::SimdPolicy<VectorLength, ExecutionSpace> simd(old_size+1, new_size);
+        Cabana::simd_parallel_for(simd, x, "x");
+    }
+
+}
+'''
+    assert out == correct
+
+    backend = Cabana_PIR()
+    cpir = Cabana_PIR_Visitor(backend)
+    def z(arg1: part,  c: c_int):
+        create_variable(c_double, b)
+        b = b + c
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(z)))
+    v = pir_sink_boundary_visitor()
+    pir = v.visit(c)
+    out = cpir(pir)
+    def main():
+        invoke(z)
+    c = ast.parse(textwrap.dedent(inspect.getsource(main)))
+    v = pir_main_visitor()
+    pir = v.visit(c)
+    xs = StructureType()
+    xs.add("boo", INT_TYPE)
+    backend.add_structure(xs, "xs")
+    out = cpir(pir)
+    correct = '''int main( int argc, char* argv[] ){
+    Kokkos::deep_copy(config.config, config.config_host);
+    z.update_structs(xs);
+    {
+        Cabana::simd_parallel_for(simd_policy, z, "z");
+        auto sort_data = Cabana::binByKey(neighbour_part_deletion_flag_slice, 2);
+        Cabana::permute(sort_data, particle_aosoa);
+        Cabana::deep_copy(particle_aosoa_host, particle_aosoa);
+        auto local_deletion_flags = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa_host);
+        int end = particle_aosoa.size();
+        for(int j = particle_aosoa.size()-1; j > 0; j--){
+            if(local_deletion_flags.size() <= 0){
+                end = j+1;
+                break;
+            }
+        }
+        particle_aosoa.resize(end);
+        particle_aosoa_host.resize(end);
+        core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);
+        core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
+        neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
+        neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);
+        simd_policy = Cabana::SimdPolicy<VectorLength, ExecutionSpace>(0, particle_aosoa.size());
+    }
+
+}
+'''
+    assert correct == out
+
+    set_mpi(True)
+    out = cpir(pir)
+    set_mpi(False)
+    correct = '''int main( int argc, char* argv[] ){
+    Kokkos::deep_copy(config.config, config.config_host);
+    z.update_structs(xs);
+    {
+        Cabana::simd_parallel_for(simd_policy, z, "z");
+        auto sort_data = Cabana::binByKey(neighbour_part_deletion_flag_slice, 2);
+        Cabana::permute(sort_data, particle_aosoa);
+        Cabana::deep_copy(particle_aosoa_host, particle_aosoa);
+        auto local_deletion_flags = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa_host);
+        int end = particle_aosoa.size();
+        for(int j = particle_aosoa.size()-1; j > 0; j--){
+            if(local_deletion_flags.size() <= 0){
+                end = j+1;
+                break;
+            }
+        }
+        particle_aosoa.resize(end);
+        particle_aosoa_host.resize(end);
+        core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);
+        core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
+        neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
+        neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);
+        neighbour_part_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa);
+        neighbour_part_old_position_slice = Cabana::slice<neighbour_part_old_position>(particle_aosoa);
+        simd_policy = Cabana::SimdPolicy<VectorLength, ExecutionSpace>(0, particle_aosoa.size());
+    }
+
+}
+'''
+    assert out == correct
