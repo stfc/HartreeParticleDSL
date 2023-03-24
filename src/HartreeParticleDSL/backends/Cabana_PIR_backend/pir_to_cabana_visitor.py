@@ -138,14 +138,14 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         if first_random_call is not None:
             generator_symbol = node.symbol_table.lookup("_generator")
             post_assign = Call.create("_random_pool.free_state", [AutoReference(generator_symbol)])
-            assign_ancestor = call.ancestor(Assignment)
+            assign_ancestor = last_random_call.ancestor(Assignment)
             if assign_ancestor is not None:
                 container = assign_ancestor.parent
                 position = assign_ancestor.position
                 container.addchild(post_assign, position+1)
             else:
-                container = call.parent
-                position = call.position
+                container = last_random_call.parent
+                position = last_random_call.position
                 container.addchild(post_assign, position+1)
 
         # Arg 1 is always a particle
@@ -295,14 +295,14 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         if first_random_call is not None:
             generator_symbol = node.symbol_table.lookup("_generator")
             post_assign = Call.create("_random_pool.free_state", [AutoReference(generator_symbol)])
-            assign_ancestor = call.ancestor(Assignment)
+            assign_ancestor = last_random_call.ancestor(Assignment)
             if assign_ancestor is not None:
                 container = assign_ancestor.parent
                 position = assign_ancestor.position
                 container.addchild(post_assign, position+1)
             else:
-                container = call.parent
-                position = call.position
+                container = last_random_call.parent
+                position = last_random_call.position
                 container.addchild(post_assign, position+1)
 
         # Arg 1 is always a particle
@@ -460,14 +460,14 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         if first_random_call is not None:
             generator_symbol = node.symbol_table.lookup("_generator")
             post_assign = Call.create("_random_pool.free_state", [AutoReference(generator_symbol)])
-            assign_ancestor = call.ancestor(Assignment)
+            assign_ancestor = last_random_call.ancestor(Assignment)
             if assign_ancestor is not None:
                 container = assign_ancestor.parent
                 position = assign_ancestor.position
                 container.addchild(post_assign, position+1)
             else:
-                container = call.parent
-                position = call.position
+                container = last_random_call.parent
+                position = last_random_call.position
                 container.addchild(post_assign, position+1)
 
         # Arg 1 is always a particle

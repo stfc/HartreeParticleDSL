@@ -635,16 +635,20 @@ struct y_functor{
 
     c = ast.parse(textwrap.dedent(inspect.getsource(rtest2)))
     pir = v.visit(c)
+    backend._require_random = True
+    backend.add_writable_array("ea", "double", "24")
     out = cpir(pir)
     # Random pool isn't generated here as that comes from the backend
     # process, which isn't done here.
     correct = '''struct rtest2_functor{
     config_struct_type _c;
+    Kokkos::Random_XorShift64_Pool<> _random_pool;
+    Kokkos::View<double, MemorySpace> ea;
     xs xs;
 
     KOKKOS_INLINE_FUNCTION
-     rtest2_functor( config_struct_type c, xs XS):
-    xs(XS), _c(c){}
+     rtest2_functor( config_struct_type c, Kokkos::Random_XorShift64_Pool<> random_pool, Kokkos::View<double, MemorySpace> _ea, xs XS):
+    xs(XS), _random_pool(random_pool), ea(_ea), _c(c){}
 
     void update_structs(xs XS){
         xs = XS;
@@ -682,6 +686,8 @@ def test_pir_cabana_pairwise():
 def test_pir_cabana_sink_boundary():
     backend = Cabana_PIR()
     cpir = Cabana_PIR_Visitor(backend)
+    backend._require_random = True
+    backend.add_writable_array("ea", "double", "24")
     def x(arg1: part,  c: c_int):
         create_variable(c_double, b)
         b = random_number()
@@ -695,10 +701,12 @@ def test_pir_cabana_sink_boundary():
     
     correct = '''struct x_functor{
     config_struct_type _c;
+    Kokkos::Random_XorShift64_Pool<> _random_pool;
+    Kokkos::View<double, MemorySpace> ea;
 
     KOKKOS_INLINE_FUNCTION
-     x_functor( config_struct_type c):
-    _c(c){}
+     x_functor( config_struct_type c, Kokkos::Random_XorShift64_Pool<> random_pool, Kokkos::View<double, MemorySpace> _ea):
+    _random_pool(random_pool), ea(_ea), _c(c){}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int a) const{
@@ -725,6 +733,8 @@ def test_pir_cabana_sink_boundary():
 def test_pir_cabana_source_boundary():
     backend = Cabana_PIR()
     cpir = Cabana_PIR_Visitor(backend)
+    backend._require_random = True
+    backend.add_writable_array("ea", "double", "24")
     def x(arg1: part,  c: c_int):
         create_variable(c_double, b)
         b = random_number()
@@ -740,10 +750,12 @@ def test_pir_cabana_source_boundary():
     out = cpir(pir)
     correct = '''struct x_functor{
     config_struct_type _c;
+    Kokkos::Random_XorShift64_Pool<> _random_pool;
+    Kokkos::View<double, MemorySpace> ea;
 
     KOKKOS_INLINE_FUNCTION
-     x_functor( config_struct_type c):
-    _c(c){}
+     x_functor( config_struct_type c, Kokkos::Random_XorShift64_Pool<> random_pool, Kokkos::View<double, MemorySpace> _ea):
+    _random_pool(random_pool), ea(_ea), _c(c){}
 
     int get_inflow_count(){
         return 10000;
