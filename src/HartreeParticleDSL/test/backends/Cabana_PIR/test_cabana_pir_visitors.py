@@ -373,7 +373,8 @@ def test_pir_cabana_visit_call():
 
 def test_pir_cabana_visit_members():
     astpir = ast_to_pir_visitor()
-    cpir = Cabana_PIR_Visitor(Cabana_PIR())
+    backend = Cabana_PIR()
+    cpir = Cabana_PIR_Visitor(backend)
     mystruc1 = StructureType()
     mystruc1.add("d", INT_TYPE)
     type_mapping_str["mystruc1"]=mystruc1
@@ -417,6 +418,7 @@ def test_pir_cabana_visit_members():
     substruc1 = ArrayType(INT_TYPE, [ArrayType.Extent.DYNAMIC])
     mystruc2.add("c", substruc1)
     type_mapping_str["mystruc2"]=mystruc2
+    backend.add_writable_array("ea", "double", "24")
     def d():
         create_variable(mystruc2, b)
         b.c[0] = 1
@@ -456,6 +458,14 @@ def test_pir_cabana_arrayreference():
     ar = ArrayReference(ArraySymbol("x", ArrayType(INT_TYPE, [2,2])), [Literal("2", INT_TYPE), Literal("2", INT_TYPE)])
     out = cpir(ar)
     assert out == "x[2][2]"
+
+    backend = Cabana_PIR()
+    backend.add_writable_array("ea", "double", "24")
+    cpir = Cabana_PIR_Visitor(backend)
+    ar = ArrayReference(ArraySymbol("ea", ArrayType(DOUBLE_TYPE, [24])), [Literal("2", INT_TYPE)])
+    out = cpir(ar)
+    assert out == "ea(2)"
+
 
 def test_pir_cabana_config_reference():
 
@@ -509,25 +519,30 @@ def test_pir_cabana_particle_references_and_perpart():
     type_mapping_str["part"].add("subpart", INT_TYPE)
     new_type = ArrayType(INT_TYPE, [3])
     type_mapping_str["part"].add("subarray", new_type)
+    type_mapping_str["part"].components["core_part"].add("subcore", INT_TYPE)
     def x(arg: part, c: c_int):
         arg.subpart = 1
         arg.subarray[0] = 1
         arg.core_part.position[0] = 2.0
+        arg.core_part.velocity[0] = 2.0
+        arg.core_part.subcore = 2
 
     c = ast.parse(textwrap.dedent(inspect.getsource(x)))
     pir = v.visit(c)
     out = cpir(pir)
-    correct = '''template < class SUBPART, class SUBARRAY, class CORE_PART_POSITION >
+    correct = '''template < class SUBPART, class SUBARRAY, class CORE_PART_POSITION, class CORE_PART_VELOCITY, class CORE_PART_SUBCORE >
 struct x_functor{
     config_struct_type _c;
     SUBPART _subpart;
     SUBARRAY _subarray;
     CORE_PART_POSITION _core_part_position;
+    CORE_PART_VELOCITY _core_part_velocity;
+    CORE_PART_SUBCORE _core_part_subcore;
     abc xs;
 
     KOKKOS_INLINE_FUNCTION
-     x_functor( SUBPART subpart, SUBARRAY subarray, CORE_PART_POSITION core_part_position, config_struct_type c, abc XS):
-    _subpart(subpart), _subarray(subarray), _core_part_position(core_part_position), xs(XS), _c(c){}
+     x_functor( SUBPART subpart, SUBARRAY subarray, CORE_PART_POSITION core_part_position, CORE_PART_VELOCITY core_part_velocity, CORE_PART_SUBCORE core_part_subcore, config_struct_type c, abc XS):
+    _subpart(subpart), _subarray(subarray), _core_part_position(core_part_position), _core_part_velocity(core_part_velocity), _core_part_subcore(core_part_subcore), xs(XS), _c(c){}
 
     void update_structs(abc XS){
         xs = XS;
@@ -538,6 +553,8 @@ struct x_functor{
         _subpart.access(i, a) = 1;
         _subarray.access(i, a, 0) = 1;
         _core_part_position.access(i, a, 0) = 2.0;
+        _core_part_velocity.access(i, a, 0) = 2.0;
+        _core_part_subcore.access(i, a) = 2;
     }
 };
 '''
