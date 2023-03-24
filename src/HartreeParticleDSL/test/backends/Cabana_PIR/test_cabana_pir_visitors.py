@@ -766,6 +766,49 @@ struct y_functor{
 '''
     assert out == correct
 
+    def k(arg1: part,  c: c_int):
+        create_variable(c_double, b)
+        b = random_number()
+        arg1.core_part.position = b + random_number()
+        random_number()
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(k)))
+    v = pir_sink_boundary_visitor()
+    pir = v.visit(c)
+    type_mapping_str["abc"] = xs
+    out = cpir(pir)
+
+    del(type_mapping_str["abc"])
+    correct = '''template < class CORE_PART_POSITION >
+struct k_functor{
+    config_struct_type _c;
+    Kokkos::Random_XorShift64_Pool<> _random_pool;
+    Kokkos::View<double, MemorySpace> ea;
+    CORE_PART_POSITION _core_part_position;
+    abc xs;
+
+    KOKKOS_INLINE_FUNCTION
+     k_functor( CORE_PART_POSITION core_part_position, config_struct_type c, Kokkos::Random_XorShift64_Pool<> random_pool, Kokkos::View<double, MemorySpace> _ea, abc XS):
+    _core_part_position(core_part_position), xs(XS), _random_pool(random_pool), ea(_ea), _c(c){}
+
+    void update_structs(abc XS){
+        xs = XS;
+    }
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int a) const{
+        auto _generator = _random_pool.get_state();
+        double b;
+        b = _generator.drand(0., 1.);
+        _core_part_position.access(i, a, 0) = (b + _generator.drand(0., 1.));
+        _generator.drand(0., 1.);
+
+        _random_pool.free_state(_generator);
+    }
+};
+'''
+    assert out == correct
+
     def z(arg: part, c: c_int):
         invoke(x)
     c = ast.parse(textwrap.dedent(inspect.getsource(z)))
@@ -867,6 +910,55 @@ struct y_functor{
     }
 };
 '''
+    assert out == correct
+
+    def k(arg1: part,  c: c_int):
+        create_variable(c_double, b)
+        b = random_number()
+        arg1.core_part.position = b + random_number()
+        random_number()
+
+    c = ast.parse(textwrap.dedent(inspect.getsource(k)))
+    from HartreeParticleDSL.kernel_types.kernels import source_boundary_kernel_wrapper
+    sbkw = source_boundary_kernel_wrapper(c)
+    sbkw.set_source_count(10000)
+    v = pir_source_boundary_visitor(sbkw)
+    pir = v.visit(c)
+    type_mapping_str["abc"] = xs
+    out = cpir(pir) #TODO This test for sink
+    correct = '''template < class CORE_PART_POSITION >
+struct k_functor{
+    config_struct_type _c;
+    Kokkos::Random_XorShift64_Pool<> _random_pool;
+    Kokkos::View<double, MemorySpace> ea;
+    CORE_PART_POSITION _core_part_position;
+    abc xs;
+
+    KOKKOS_INLINE_FUNCTION
+     k_functor( CORE_PART_POSITION core_part_position, config_struct_type c, Kokkos::Random_XorShift64_Pool<> random_pool, Kokkos::View<double, MemorySpace> _ea, abc XS):
+    _core_part_position(core_part_position), xs(XS), _random_pool(random_pool), ea(_ea), _c(c){}
+
+    void update_structs(abc XS){
+        xs = XS;
+    }
+
+    int get_inflow_count(){
+        return 10000;
+    }
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int a) const{
+        auto _generator = _random_pool.get_state();
+        double b;
+        b = _generator.drand(0., 1.);
+        _core_part_position.access(i, a, 0) = (b + _generator.drand(0., 1.));
+        _generator.drand(0., 1.);
+
+        _random_pool.free_state(_generator);
+    }
+};
+'''
+    del(type_mapping_str["abc"])
     assert out == correct
 
     def z(arg: part, c: c_int):
