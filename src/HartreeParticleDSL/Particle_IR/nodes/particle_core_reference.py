@@ -1,5 +1,5 @@
 '''
-This module contains the ParticleReference class.
+This module contains the ParticleCoreReference class.
 '''
 
 from __future__ import annotations
@@ -60,7 +60,7 @@ class ParticleCoreReference(StructureReference):
         :raises TypeError: if the member is not the correct type.
         '''
         if not isinstance(member, Member):
-            raise TypeError("Attempted to make a ParticleReference with a non-Member access. "
+            raise TypeError("Attempted to make a ParticleCoreReference with a non-Member access. "
                             f"Got {type(member)} as input.")
         self._member = member
 

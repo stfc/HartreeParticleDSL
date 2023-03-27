@@ -1069,6 +1069,14 @@ def test_particle_visitors():
     assert("Particle IR doesn't currently support accessing a full particle "
            "type in a single statement." in str(excinfo.value))
 
+    def e(part1: part):
+        part1.core_part.a.b = 1
+    c = ast.parse(textwrap.dedent(inspect.getsource(e)))
+    out = v.visit(c)
+    assert isinstance(out.body.children[0].lhs, ParticleCoreReference)
+    assert out.body.children[0].lhs.symbol.name == "part1"
+    assert isinstance(out.body.children[0].lhs.member, StructureMember)
+
 
 
 

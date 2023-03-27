@@ -733,7 +733,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
                 self.dedent()
                 rval = rval + f"{self._nindent}" + "}\n"
             else: # pragma: no cover
-                raise NotImplementedError()
+                raise NotImplementedError() # pragma: no cover
             # If we have MPI and move particles do the pre-boundary condition stuff.
             if updates_part_pos and get_mpi():
                 rval = rval + "\n" + self._parent.gen_mpi_comm_before_bcs(len(self._nindent), len(self._indent))
@@ -839,7 +839,6 @@ class Cabana_PIR_Visitor(PIR_Visitor):
             else:
                 argument_names.append(f"{typ} {name}")
         extra_array_names = []
-        print("Hello", self._parent.get_writable_arrays().keys())
         for name in self._parent.get_writable_arrays().keys():
             extra_array_names.append(name)
 

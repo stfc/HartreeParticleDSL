@@ -13,3 +13,8 @@ def test_auto_reference():
     assert ref.symbol is sym
 
     assert ref.is_array == False
+
+    with pytest.raises(TypeError) as excinfo:
+        ref = AutoReference("not a symbol")
+    print(str(excinfo.value))
+    assert "Attempted to make an AutoReference to a non-AutoSymbol. Got <class 'str'> as input." in str(excinfo.value)

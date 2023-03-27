@@ -35,7 +35,7 @@ class AutoReference(Reference):
         :raises TypeError: if the symbol is not the correct type.
         '''
         if not isinstance(symbol, AutoSymbol):
-            raise TypeError("Attempted to make a AutoReference to a non-AutoSymbol. "
+            raise TypeError("Attempted to make an AutoReference to a non-AutoSymbol. "
                             f"Got {type(symbol)} as input.")
         # Weird workaround to use the parent setter. See
         # https://stackoverflow.com/questions/1021464/how-to-call-a-property-of-the-base-class-if-this-property-is-being-overwritten-i

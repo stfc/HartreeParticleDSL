@@ -770,3 +770,7 @@ def test_phdf5_call_output_cabana_pir():
     }'''
     assert correct in out
     reset_for_tests()
+
+def test_phdf5_get_linked_libraries():
+    a = PHDF5_IO.PHDF5_IO()
+    assert a.get_linked_libraries() == ["${HDF5_C_LIBRARIES}"]

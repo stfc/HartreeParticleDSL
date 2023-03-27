@@ -89,3 +89,6 @@ def test_get_header_includes_and_box_size_cabana_pir():
     assert mod.call_get_box_size_pir(None, None) == ""
     assert len(mod.get_header_includes_cabana_pir()) == 0
 
+def test_base_get_linked_libraries():
+    mod = Random_Particles()
+    assert len(mod.get_linked_libraries()) == 0
