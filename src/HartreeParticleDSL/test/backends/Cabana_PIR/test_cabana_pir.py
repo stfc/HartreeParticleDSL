@@ -25,7 +25,8 @@ import HartreeParticleDSL.kernel_types.kernels as kernels
 from HartreeParticleDSL.HartreeParticleDSLExceptions import InvalidNameError, \
                                                             UnsupportedTypeError, \
                                                             InternalError, \
-                                                            IRGenerationError
+                                                            IRGenerationError, \
+                                                            RepeatedNameError
 
 
 from HartreeParticleDSL.inbuilt_kernels.boundaries.periodic_boundaries import periodic_boundaries
@@ -572,6 +573,20 @@ def test_cabana_pir_gen_kernel():
     assert ("Cabana PIR backend doesn't yet support kernel of type <class 'str'>."
             in str(excinfo.value))
 
+    _HartreeParticleDSL.the_instance = None
+    backend = Cabana_PIR()
+    config = Config()
+    part = Particle()
+    part.add_element("x", "int")
+    kernel = kernels.source_boundary(kern2)
+    kernel.set_source_count(1000)
+    backend.gen_kernel(kernel)
+    assert backend._kernels_pir["kern2"] is not None
+
+    kernel = kernels.sink_boundary(kern3)
+    backend.gen_kernel(kernel)
+    assert backend._kernels_pir["kern3"] is not None
+
 def main():
     initialise(particle_count=0, filename="abd")
     create_variable(c_int, a, 0)
@@ -789,12 +804,15 @@ def test_cabana_pir_initialise():
     backend.add_structure(temp, "mystruct2")
     type_mapping_str["test"] = temp
     backend._kernel_slices["slice1"] = ["s1", "s2"]
+    backend._require_random = True
+    backend.add_writable_array("arr1", "double", "3")
     out = backend.initialise(123, "myfile", 4)
     correct = '''    Kokkos::ScopeGuard scope_guard(argc, argv);
 {
     config_type config;
     config.config = config_struct_type("config", 1);
     config.config_host = Kokkos::create_mirror_view(config.config);
+    Kokkos::Random_XorShift64_Pool<> random_pool(/*seed=*/12345);
     mystruct mystruct;
     test mystruct2;
     int myrank = 0;
@@ -809,7 +827,8 @@ def test_cabana_pir_initialise():
     auto core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
     auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
     auto neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);
-    slice1_functor<decltype(s1_slice), decltype(s2_slice)> slice1(s1_slice, s2_slice, config.config, mystruct, mystruct2)'''
+    Kokkos::View<double, MemorySpace> arr1 = Kokkos::View<double, MemorySpace>("arr1", 3);
+    slice1_functor<decltype(s1_slice), decltype(s2_slice)> slice1(s1_slice, s2_slice, config.config, mystruct, mystruct2, random_pool, arr1)'''
     assert correct == out
 
     HartreeParticleDSL.set_mpi(True)
@@ -835,6 +854,31 @@ def test_cabana_pir_initialise():
     HartreeParticleDSL.set_mpi(False)
     assert ("Can't handle multiple coupled systems with a preferred "
             "decomposition" in str(excinfo.value))
+
+def test_cabana_pir_gen_slices_and_functors():
+    mod = Random_Particles()
+    backend = Cabana_PIR()
+    part = Particle()
+    config = Config()
+    backend.set_io_modules(mod, mod)
+    backend.gen_particle(part)
+    backend.gen_config(config)
+    backend.add_structure("c_int", "mystruct")
+    temp = StructureType()
+    backend.add_structure(temp, "mystruct2")
+    type_mapping_str["test"] = temp
+    backend._kernel_slices["slice1"] = ["s1", "s2"]
+    backend._require_random = True
+    backend.add_writable_array("arr1", "double", "3")
+    out = backend.gen_slices_and_functors()
+    correct = '''    core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);
+    core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
+    neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
+    neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);
+    simd_policy = Cabana::SimdPolicy<VectorLength, ExecutionSpace>(0, particle_aosoa.size());
+    slice1 = slice1_functor<decltype(s1_slice), decltype(s2_slice)>(s1_slice, s2_slice, config.config,mystruct, mystruct2, random_pool, arr1);
+'''
+    assert correct == out
 
 def test_cabana_pir_call_language_function():
     backend = Cabana_PIR()
@@ -1211,6 +1255,8 @@ def test_cabana_pir_get_mpi_comm_after_bcs():
     part = Particle()
     part.add_element("test", "int")
     a._particle = part
+    a._require_random = True
+    a.add_writable_array("arr1", "double", "3")
     out = a.gen_mpi_comm_after_bcs()
     correct = '''    Cabana::deep_copy(particle_aosoa_host, particle_aosoa);
     _migrator.exchange_data(particle_aosoa_host, neighbors, myrank, particle_aosoa_host.size());
@@ -1231,3 +1277,35 @@ def test_cabana_pir_gen_makefile():
     a = Cabana_PIR()
     with pytest.raises(NotImplementedError):
         a._gen_makefile()
+
+def test_cabana_pir_add_writable_array():
+    a = Cabana_PIR()
+    a.add_writable_array("arr1", "double", "3")
+    assert a._extra_writable_arrays["arr1"] == ("double", "3")
+
+    with pytest.raises(RepeatedNameError) as excinfo:
+        a.add_writable_array("arr1", "", "")
+    assert "Tried to create array with name arr1 but an array with that name already exists." in str(excinfo.value)
+
+def test_cabana_pir_reset_array():
+    a = Cabana_PIR()
+    with pytest.raises(InvalidNameError) as excinfo:
+        a.reset_array("arr1")
+    assert "Tried to reset array with name arr1 but no array with that name exists." in str(excinfo.value)
+
+    a.add_writable_array("arr1", "double", "3")
+    out = a.reset_array("arr1", "0")
+    correct = '''{
+    auto host_arr1 = Kokkos::create_mirror_view(arr1);
+    Kokkos::parallel_for(host_arr1.size(),
+        KOKKOS_LAMBDA (const size_t i) {
+        host_arr1(i) = 0;
+    });
+    Kokkos::deep_copy(arr1, host_arr1);
+}
+'''
+    assert out == correct
+
+def test_cabana_pir_pi():
+    a = Cabana_PIR()
+    assert a.pi() == "M_PI"

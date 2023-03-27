@@ -9,7 +9,8 @@ import HartreeParticleDSL.kernel_types.kernels as kernels
 from HartreeParticleDSL.IO_modules.IO_Exceptions import *
 from HartreeParticleDSL.HartreeParticleDSLExceptions import InvalidNameError, \
                                                             UnsupportedTypeError, \
-                                                            InternalError
+                                                            InternalError, \
+                                                            RepeatedNameError
 from HartreeParticleDSL.c_types import c_int, c_double, c_float, c_int64_t, \
                                        c_int32_t, c_int8_t, c_bool
 
@@ -1243,12 +1244,14 @@ class Cabana_PIR(Backend):
         whilst arrays added to the config need to be fixed dimension.
         '''
         if self._extra_writable_arrays.get(name) is not None:
-            assert False
+            raise RepeatedNameError(f"Tried to create array with name {name} but "
+                                    "an array with that name already exists.")
         self._extra_writable_arrays[name] = (type_name, length)
 
     def reset_array(self, writable_array_name: str, value: str="0", *args, **kwargs):
         if self._extra_writable_arrays.get(writable_array_name) is None:
-            assert False
+            raise InvalidNameError(f"Tried to reset array with name {writable_array_name} but "
+                                   "no array with that name exists.")
         current_indent = kwargs.get("current_indent", 0)
         indent = kwargs.get("indent", 4)
         rval = "{\n"
