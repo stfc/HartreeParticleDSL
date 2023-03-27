@@ -281,7 +281,7 @@ class SourceBoundaryKernel(Kern):
         '''
         '''
         if not isinstance(name, str):
-            raise TypeError("Expected SinkBoundaryKernel name to be a str but got "
+            raise TypeError("Expected SourceBoundaryKernel name to be a str but got "
                             f"{type(name)}.")
         self._name = name
 
@@ -294,8 +294,8 @@ class SourceBoundaryKernel(Kern):
     @source_count.setter
     def source_count(self, source_count: int) -> None:
         if not isinstance(source_count, int):
-            raise TypeError("Expected SinkBoundaryKernel source_count to be an "
-                            f"int but got {type(name)}.")
+            raise TypeError("Expected SourceBoundaryKernel source_count to be an "
+                            f"int but got {type(source_count)}.")
         self._source_count = source_count
 
     @property
@@ -319,7 +319,7 @@ class SourceBoundaryKernel(Kern):
         '''
         self._arguments = []
         if len(arguments) < 2:
-            raise IRGenerationError("Perpart kernel requires at least two arguments"
+            raise IRGenerationError("Source boundary kernel requires at least two arguments"
                                     f", but only got {len(arguments)}.")
         for arg in arguments:
             if not isinstance(arg, Reference):
@@ -381,7 +381,7 @@ class SinkBoundaryKernel(Kern):
         '''
         self._arguments = []
         if len(arguments) < 2:
-            raise IRGenerationError("Perpart kernel requires at least two arguments"
+            raise IRGenerationError("Sink boundary kernel requires at least two arguments"
                                     f", but only got {len(arguments)}.")
         for arg in arguments:
             if not isinstance(arg, Reference):
