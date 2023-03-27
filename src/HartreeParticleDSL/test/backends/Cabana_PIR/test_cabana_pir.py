@@ -860,6 +860,7 @@ def test_cabana_pir_gen_slices_and_functors():
     backend = Cabana_PIR()
     part = Particle()
     config = Config()
+    part.add_element("thing2", "double")
     backend.set_io_modules(mod, mod)
     backend.gen_particle(part)
     backend.gen_config(config)
@@ -875,6 +876,7 @@ def test_cabana_pir_gen_slices_and_functors():
     core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
     neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
     neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);
+    thing2_slice = Cabana::slice<thing2>(particle_aosoa);
     simd_policy = Cabana::SimdPolicy<VectorLength, ExecutionSpace>(0, particle_aosoa.size());
     slice1 = slice1_functor<decltype(s1_slice), decltype(s2_slice)>(s1_slice, s2_slice, config.config,mystruct, mystruct2, random_pool, arr1);
 '''
@@ -1250,13 +1252,18 @@ def test_cabana_pir_get_extra_symbols():
     assert result[1] == "x"
 
 def test_cabana_pir_get_mpi_comm_after_bcs():
+    _HartreeParticleDSL.the_instance = None
     a = Cabana_PIR()
     
     part = Particle()
     part.add_element("test", "int")
+    part.add_element("x", "int")
     a._particle = part
     a._require_random = True
     a.add_writable_array("arr1", "double", "3")
+    kernel = kernels.perpart_interaction(kern2)
+    a.gen_kernel(kernel)
+    a._kernel_slices["kern2"] = {"x"}
     out = a.gen_mpi_comm_after_bcs()
     correct = '''    Cabana::deep_copy(particle_aosoa_host, particle_aosoa);
     _migrator.exchange_data(particle_aosoa_host, neighbors, myrank, particle_aosoa_host.size());
@@ -1268,9 +1275,14 @@ def test_cabana_pir_get_mpi_comm_after_bcs():
     neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);
     test_slice = Cabana::slice<test>(particle_aosoa);
 
+    x_slice = Cabana::slice<x>(particle_aosoa);
+
     simd_policy = Cabana::SimdPolicy<VectorLength, ExecutionSpace>(0, particle_aosoa.size());
 
+    kern2 = kern2_functor<decltype(x_slice)>(x_slice, random_pool, arr1, config.config);
 '''
+    _HartreeParticleDSL.the_instance = None
+    a._require_random = False
     assert out == correct
 
 def test_cabana_pir_gen_makefile():

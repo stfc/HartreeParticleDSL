@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from HartreeParticleDSL.HartreeParticleDSL import set_mpi
-
+import HartreeParticleDSL.HartreeParticleDSL as HartreeParticleDSL
 from HartreeParticleDSL.backends.Cabana_PIR_backend.pir_to_cabana_visitor import *
 from HartreeParticleDSL.backends.Cabana_PIR_backend.cabana_pir import *
 from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import *
@@ -509,6 +509,7 @@ def test_pir_cabana_config_reference():
 
 def test_pir_cabana_particle_references_and_perpart():
     backend = Cabana_PIR()
+    HartreeParticleDSL.set_backend(backend)
     cpir = Cabana_PIR_Visitor(backend)
     xs = StructureType()
     xs.add("boo", INT_TYPE)
@@ -623,11 +624,12 @@ struct y_functor{
     # process, which isn't done here.
     correct = '''struct rtest1_functor{
     config_struct_type _c;
+    Kokkos::Random_XorShift64_Pool<> _random_pool;
     xs xs;
 
     KOKKOS_INLINE_FUNCTION
-     rtest1_functor( config_struct_type c, xs XS):
-    xs(XS), _c(c){}
+     rtest1_functor( config_struct_type c, Kokkos::Random_XorShift64_Pool<> random_pool, xs XS):
+    xs(XS), _random_pool(random_pool), _c(c){}
 
     void update_structs(xs XS){
         xs = XS;

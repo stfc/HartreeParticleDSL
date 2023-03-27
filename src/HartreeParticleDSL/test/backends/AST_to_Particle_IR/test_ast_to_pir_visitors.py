@@ -1148,6 +1148,8 @@ def test_pairwise_visitor():
     class temp_Backend(Backend):
         def get_extra_symbols(self, arg):
             return [ ("b", ScalarTypeSymbol("b", INT_TYPE))]
+        def get_writable_arrays(self):
+            return {"temp": ("c_double", 10)}
     set_backend(temp_Backend())
 
     def x(arg: part, arg2: part, c: c_int):
@@ -1184,6 +1186,8 @@ def test_perpart_visitor():
     class temp_Backend(Backend):
         def get_extra_symbols(self, arg):
             return [ ("b", ScalarTypeSymbol("b", INT_TYPE))]
+        def get_writable_arrays(self):
+            return {"temp": ("c_double", 10)}
     set_backend(temp_Backend())
 
     def x(arg: part, c: c_int):
@@ -1222,6 +1226,8 @@ def test_source_boundary_visitor():
     class temp_Backend(Backend):
         def get_extra_symbols(self, arg):
             return [ ("b", ScalarTypeSymbol("b", INT_TYPE))]
+        def get_writable_arrays(self):
+            return {"temp": ("c_double", 10)}
     set_backend(temp_Backend())
 
     def y(arg: part):
@@ -1256,6 +1262,8 @@ def test_sink_boundary_visitor():
     class temp_Backend(Backend):
         def get_extra_symbols(self, arg):
             return [ ("b", ScalarTypeSymbol("b", INT_TYPE))]
+        def get_writable_arrays(self):
+            return {"temp": ("c_double", 10)}
     set_backend(temp_Backend())
 
     def y(arg: part):

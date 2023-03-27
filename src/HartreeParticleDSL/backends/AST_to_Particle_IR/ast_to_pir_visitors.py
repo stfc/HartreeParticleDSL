@@ -212,8 +212,6 @@ class ast_to_pir_visitor(ast.NodeVisitor):
                 inner_member = Member(attribute_names[-1])
                 for i in range(len(attribute_names)-1, 1, -1):
                     inner_member = StructureMember(attribute_names[i], inner_member)
-                print(len(attribute_names))
-                print(type(inner_member))
                 return ParticleCoreReference(sym, inner_member)
         if len(attribute_names) == 1:
             # Check validity
