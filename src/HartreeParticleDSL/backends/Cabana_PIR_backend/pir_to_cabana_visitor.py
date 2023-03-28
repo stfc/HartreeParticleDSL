@@ -732,8 +732,8 @@ class Cabana_PIR_Visitor(PIR_Visitor):
                 rval = rval + self._parent.gen_slices_and_functors(current_indent=current_indent, indent=indent)
                 self.dedent()
                 rval = rval + f"{self._nindent}" + "}\n"
-            else: # pragma: no cover
-                raise NotImplementedError() # pragma: no cover
+            else:
+                raise NotImplementedError()
             # If we have MPI and move particles do the pre-boundary condition stuff.
             if updates_part_pos and get_mpi():
                 rval = rval + "\n" + self._parent.gen_mpi_comm_before_bcs(len(self._nindent), len(self._indent))

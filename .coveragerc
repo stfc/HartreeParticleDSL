@@ -6,4 +6,3 @@ exclude_lines =
     @kernels.source_boundary
     import HartreeParticleDSL.kernel_types.kernels as kernels
     from HartreeParticleDSL.c_types import c_double
-    raise NotImplementedError() # pragma: no cover

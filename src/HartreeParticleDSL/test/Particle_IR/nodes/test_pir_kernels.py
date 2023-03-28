@@ -223,6 +223,9 @@ def test_source_boundary():
     assert pk1.body.children[0] is assign
     assert isinstance(pk1.symbol_table, SymbolTable)
 
+    pk1.name = "newname"
+    assert pk1.name == "newname"
+
     with pytest.raises(IRGenerationError) as excinfo:
         pk1.arguments = []
     assert "Source boundary kernel requires at least two arguments, but only got 0." in str(excinfo.value)
@@ -232,6 +235,8 @@ def test_source_boundary():
     assert "Each argument must be a Reference, but found <class 'str'>." in str(excinfo.value)
 
     assert pk1.source_count == 100000
+    pk1.source_count = 123
+    assert pk1.source_count == 123
 
     with pytest.raises(TypeError) as excinfo:
         pk1.source_count = "a"
@@ -258,6 +263,9 @@ def test_sink_boundary():
     assert pk1.children[0].children[0] is assign
     assert pk1.body.children[0] is assign
     assert isinstance(pk1.symbol_table, SymbolTable)
+
+    pk1.name = "newname"
+    assert pk1.name == "newname"
 
     with pytest.raises(IRGenerationError) as excinfo:
         pk1.arguments = []

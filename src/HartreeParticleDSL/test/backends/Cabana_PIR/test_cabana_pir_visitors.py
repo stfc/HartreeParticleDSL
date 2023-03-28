@@ -1280,3 +1280,12 @@ def test_main_more():
 }
 '''
     assert out == correct
+
+def test_visit_invoke_not_implemented():
+    backend = Cabana_PIR()
+    backend._kernels["test"] = Literal("string", STRING_TYPE)
+    x = Invoke.create(Literal("test", STRING_TYPE))
+    cpir = Cabana_PIR_Visitor(backend)
+    with pytest.raises(NotImplementedError):
+        cpir.visit_invoke_node(x)
+
