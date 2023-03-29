@@ -7,4 +7,5 @@ exclude_lines =
     import HartreeParticleDSL.kernel_types.kernels as kernels
     from HartreeParticleDSL.c_types import c_double
 omit =
-    inbuild_kernels/*
+    src/HartreeParticlesDSL/inbuilt_kernels/*
+    inbuilt_kernels/*
