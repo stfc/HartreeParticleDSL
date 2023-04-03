@@ -9,7 +9,7 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import ScalarType, BOOL_TYPE,\
                                                      type_mapping_str, INT_TYPE, STRING_TYPE, \
-                                                     StructureType
+                                                     StructureType, ArrayType
 
 from HartreeParticleDSL.Particle_IR.nodes.symbol_to_reference import symbol_to_reference
 
@@ -25,11 +25,14 @@ from HartreeParticleDSL.Particle_IR.nodes.invoke import Invoke
 from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
 from HartreeParticleDSL.Particle_IR.nodes.loop import Loop
 from HartreeParticleDSL.Particle_IR.nodes.kernels import MainKernel, PairwiseKernel, \
-                                                         PerPartKernel
+                                                         PerPartKernel,\
+                                                         SourceBoundaryKernel,\
+                                                         SinkBoundaryKernel
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
 from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, \
                                                            UnaryOperation
 from HartreeParticleDSL.Particle_IR.nodes.particle_reference import ParticleReference
+from HartreeParticleDSL.Particle_IR.nodes.particle_core_reference import ParticleCoreReference
 from HartreeParticleDSL.Particle_IR.nodes.particle_position_reference import ParticlePositionReference
 from HartreeParticleDSL.Particle_IR.nodes.scalar_reference import ScalarReference
 from HartreeParticleDSL.Particle_IR.nodes.structure_reference import StructureReference
@@ -38,6 +41,7 @@ from HartreeParticleDSL.Particle_IR.nodes.statement import EmptyStatement, Break
 from HartreeParticleDSL.Particle_IR.nodes.while_loop import While
 
 
+from HartreeParticleDSL.Particle_IR.symbols.arraysymbol import ArraySymbol
 from HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol import ScalarTypeSymbol
 from HartreeParticleDSL.Particle_IR.symbols.symbol_map import datatype_to_symbol
 
@@ -204,6 +208,11 @@ class ast_to_pir_visitor(ast.NodeVisitor):
                         raise IRGenerationError("Attempted to access unknown element "
                                 f"of particle position. Got {attribute_names[2]}")
                 return ParticlePositionReference(sym, 0)
+            elif (len(attribute_names) >= 2 and attribute_names[0] == "core_part"):
+                inner_member = Member(attribute_names[-1])
+                for i in range(len(attribute_names)-1, 1, -1):
+                    inner_member = StructureMember(attribute_names[i], inner_member)
+                return ParticleCoreReference(sym, inner_member)
         if len(attribute_names) == 1:
             # Check validity
             if attribute_names[0] not in sym.datatype.components:
@@ -489,7 +498,7 @@ class ast_to_pir_visitor(ast.NodeVisitor):
         raise IRGenerationError(f"Found unsupported node of type {type(node)}")
 
 class pir_main_visitor(ast_to_pir_visitor):
-    def visit_FunctionDef(self, node: ast.FuncDef) -> MainKernel:
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> MainKernel:
         backend = get_backend()
         extra_symbols = []
         if backend is not None:
@@ -497,6 +506,7 @@ class pir_main_visitor(ast_to_pir_visitor):
             fcv.visit(node)
             calls = fcv.calls
             extra_symbols = backend.get_extra_symbols(calls)
+
         body = []
         if node.name != "main":
             raise IRGenerationError("Attempting to create a main function "
@@ -519,7 +529,7 @@ class pir_main_visitor(ast_to_pir_visitor):
         return main
 
 class pir_pairwise_visitor(ast_to_pir_visitor):
-    def visit_FunctionDef(self, node: ast.FuncDef) -> PairwiseKernel:
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> PairwiseKernel:
         backend = get_backend()
         extra_symbols = []
         if backend is not None:
@@ -527,6 +537,7 @@ class pir_pairwise_visitor(ast_to_pir_visitor):
             fcv.visit(node)
             calls = fcv.calls
             extra_symbols = backend.get_extra_symbols(calls)
+
 
         name = node.name
         kern = PairwiseKernel(name)
@@ -545,13 +556,22 @@ class pir_pairwise_visitor(ast_to_pir_visitor):
         for name, symbol in extra_symbols:
             self._symbol_table.add(symbol)
 
+        extra_arrays = {}
+        if backend is not None:
+            extra_arrays = backend.get_writable_arrays()
+        for name in extra_arrays.keys():
+            datatype = type_mapping_str[extra_arrays[name][0]]
+            datatype = ArrayType(datatype, [int(extra_arrays[name][1])])
+            sym = ArraySymbol(name, datatype)
+            self._symbol_table.add(sym)
+
         for child in node.body:
             kern.body.addchild(self.visit(child))
         kern.arguments = args
         return kern
 
 class pir_perpart_visitor(ast_to_pir_visitor):
-    def visit_FunctionDef(self, node: ast.FuncDef) -> PerPartKernel:
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> PerPartKernel:
         backend = get_backend()
         extra_symbols = []
         if backend is not None:
@@ -576,7 +596,103 @@ class pir_perpart_visitor(ast_to_pir_visitor):
         for name, symbol in extra_symbols:
             self._symbol_table.add(symbol)
 
+        extra_arrays = {}
+        if backend is not None:
+            extra_arrays = backend.get_writable_arrays()
+        for name in extra_arrays.keys():
+            datatype = type_mapping_str[extra_arrays[name][0]]
+            datatype = ArrayType(datatype, [int(extra_arrays[name][1])])
+            sym = ArraySymbol(name, datatype)
+            self._symbol_table.add(sym)
+
         # TODO check for 1 particle reference
+        for child in node.body:
+            kernel.body.addchild(self.visit(child))
+        kernel.arguments = args
+        return kernel
+
+class pir_source_boundary_visitor(ast_to_pir_visitor):
+
+    def __init__(self, source_boundary_wrapper):
+        super().__init__()
+        self._source_count = source_boundary_wrapper.get_source_count()
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> SourceBoundaryKernel:
+        backend = get_backend()
+        extra_symbols = []
+        if backend is not None:
+            fcv = find_calls_visitor()
+            fcv.visit(node)
+            calls = fcv.calls
+            extra_symbols = backend.get_extra_symbols(calls)
+
+        name = node.name
+        kernel = SourceBoundaryKernel(name, self._source_count) 
+        self._symbol_table = kernel.symbol_table
+        args = self.visit(node.args)
+        if len(args) < 2:
+            raise IRGenerationError("Particle IR expects at least 2 arguments "
+                                    "for a source boundary kernel, but got "
+                                    f"{len(args)}.")
+
+        if not isinstance(args[0], ParticleReference):
+            raise IRGenerationError("First argument to SourceBoundaryKernel must "
+                                    "be a particle.")
+
+        for name, symbol in extra_symbols:
+            self._symbol_table.add(symbol)
+
+        extra_arrays = {}
+        if backend is not None:
+            extra_arrays = backend.get_writable_arrays()
+        for name in extra_arrays.keys():
+            datatype = type_mapping_str[extra_arrays[name][0]]
+            datatype = ArrayType(datatype, [int(extra_arrays[name][1])])
+            sym = ArraySymbol(name, datatype)
+            self._symbol_table.add(sym)
+
+        for child in node.body:
+            kernel.body.addchild(self.visit(child))
+        kernel.arguments = args
+        return kernel
+
+class pir_sink_boundary_visitor(ast_to_pir_visitor):
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> SinkBoundaryKernel:
+        backend = get_backend()
+        extra_symbols = []
+        if backend is not None:
+            fcv = find_calls_visitor()
+            fcv.visit(node)
+            calls = fcv.calls
+            extra_symbols = backend.get_extra_symbols(calls)
+
+        name = node.name
+        kernel = SinkBoundaryKernel(name) 
+        self._symbol_table = kernel.symbol_table
+        args = self.visit(node.args)
+
+        if len(args) < 2:
+            raise IRGenerationError("Particle IR expects at least 2 arguments "
+                                    "for a sink boundary kernel, but got "
+                                    f"{len(args)}.")
+
+        if not isinstance(args[0], ParticleReference):
+            raise IRGenerationError("First argument to SinkBoundaryKernel must "
+                                    "be a particle.")
+
+        for name, symbol in extra_symbols:
+            self._symbol_table.add(symbol)
+
+        extra_arrays = {}
+        if backend is not None:
+            extra_arrays = backend.get_writable_arrays()
+        for name in extra_arrays.keys():
+            datatype = type_mapping_str[extra_arrays[name][0]]
+            datatype = ArrayType(datatype, [int(extra_arrays[name][1])])
+            sym = ArraySymbol(name, datatype)
+            self._symbol_table.add(sym)
+
         for child in node.body:
             kernel.body.addchild(self.visit(child))
         kernel.arguments = args

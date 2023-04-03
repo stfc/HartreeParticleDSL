@@ -2,5 +2,10 @@
 [report]
 exclude_lines = 
     @kernels.perpart_interaction
+    @kernels.sink_boundary
+    @kernels.source_boundary
     import HartreeParticleDSL.kernel_types.kernels as kernels
     from HartreeParticleDSL.c_types import c_double
+omit =
+    src/HartreeParticlesDSL/inbuilt_kernels/*
+    inbuilt_kernels/*

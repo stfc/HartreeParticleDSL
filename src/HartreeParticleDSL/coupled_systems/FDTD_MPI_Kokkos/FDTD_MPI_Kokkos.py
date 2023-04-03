@@ -206,7 +206,10 @@ class FDTD_MPI_Kokkos(force_solver):
         Used in user main function definition.
         '''
         in_str = " " * current_indent
-        code = in_str + "current_start(field, field.nx, field.ng);\n"
+        code = in_str + "field.scatter_jx.reset();\n"
+        code = code + in_str + "field.scatter_jy.reset();\n"
+        code = code + in_str + "field.scatter_jz.reset();\n"
+        code = code + in_str + "current_start(field, field.nx, field.ng);\n"
         return code
 
     def call_finish_current(self, current_indent=0, indent=0):
@@ -220,9 +223,6 @@ class FDTD_MPI_Kokkos(force_solver):
         code = in_str + "Kokkos::Experimental::contribute(field.jx, field.scatter_jx);\n"
         code = code + in_str + "Kokkos::Experimental::contribute(field.jy, field.scatter_jy);\n"
         code = code + in_str + "Kokkos::Experimental::contribute(field.jz, field.scatter_jz);\n"
-        code = code + in_str + "field.scatter_jx.reset();\n"
-        code = code + in_str + "field.scatter_jy.reset();\n"
-        code = code + in_str + "field.scatter_jz.reset();\n"
         code = code + in_str + "current_finish(field.jx, field.jy, field.jz,\n"
         code = code + in_str + "               field.nx, field.ng);\n"
         return code

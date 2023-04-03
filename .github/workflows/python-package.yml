@@ -39,7 +39,7 @@ jobs:
         - name: Test with pytest
           run: |
               locale
-              pytest --cov=HartreeParticleDSL --cov-report=xml src/HartreeParticleDSL/test
+              pytest --cov=HartreeParticleDSL --cov-report=xml --cov-config=.coveragerc src/HartreeParticleDSL/test
           env:
               LC_ALL: C
               LANG: C

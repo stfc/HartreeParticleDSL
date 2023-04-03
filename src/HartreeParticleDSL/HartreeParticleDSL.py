@@ -11,7 +11,7 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import SingletonInstanceErr
 
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import StructureType, type_mapping_str, \
                                                             PARTICLE_POSITION_TYPE, ArrayType, \
-                                                            DOUBLE_TYPE
+                                                            DOUBLE_TYPE, INT64_TYPE
 
 class _HartreeParticleDSL():
     '''
@@ -158,8 +158,6 @@ class _HartreeParticleDSL():
 
         #Get the backend to generate the includes
         print(self._backend.generate_includes())
-        #Dummy placeholder for a generic function I'm using for example
-        self.gen_random_double()
         #Get backends to generate the headers required (e.g. particle and config types)
         self._backend.gen_headers(self._config_type, self._part_type)
         for kernel in self._kernels:
@@ -452,6 +450,7 @@ class Particle():
         self._pir_type = StructureType()
         _CORE_PART_TYPE = StructureType()
         _CORE_PART_TYPE.components["position"] = PARTICLE_POSITION_TYPE
+        _CORE_PART_TYPE.components["velocity"] = ArrayType( DOUBLE_TYPE, [3])
         self._pir_type.components["core_part"] = _CORE_PART_TYPE
         type_mapping_str["part"] = self._pir_type
 
@@ -470,6 +469,7 @@ class Particle():
         self._pir_type = StructureType()
         _CORE_PART_TYPE = StructureType()
         _CORE_PART_TYPE.components["position"] = PARTICLE_POSITION_TYPE
+        _CORE_PART_TYPE.components["velocity"] = ArrayType( DOUBLE_TYPE, [3])
         self._pir_type.components["core_part"] = _CORE_PART_TYPE
         type_mapping_str["part"] = self._pir_type
         #TODO Neighbour part type? Also need to add the struct core_part_type so
@@ -537,6 +537,7 @@ class Config():
         BOUNDARY_TYPE.components["local_y_max"] = DOUBLE_TYPE
         BOUNDARY_TYPE.components["local_z_min"] = DOUBLE_TYPE
         BOUNDARY_TYPE.components["local_z_max"] = DOUBLE_TYPE
+        self._pir_type.components["nparts"] = INT64_TYPE
         space.components["box_dims"] = BOUNDARY_TYPE
         type_mapping_str["config"] = self._pir_type
         #TODO Neighbour config type? Also need to add the struct space_type so
@@ -567,6 +568,7 @@ class Config():
         BOUNDARY_TYPE.components["local_z_min"] = DOUBLE_TYPE
         BOUNDARY_TYPE.components["local_z_max"] = DOUBLE_TYPE
         space.components["box_dims"] = BOUNDARY_TYPE
+        self._pir_type.components["nparts"] = INT64_TYPE
         type_mapping_str["config"] = self._pir_type
         #TODO Neighbour config type? Also need to add the struct space_type so
         #the DSL knows how to define them both

@@ -14,6 +14,67 @@ class kernel():
         '''
         pass
 
+class source_boundary_kernel_wrapper(kernel):
+    '''
+
+    '''
+    def __init__(self, kernel_tree):
+        self._boundary_kernel = kernel_tree
+        self._source_count = 0
+
+    def get_kernel_tree(self):
+        '''
+        Returns the kernel tree held by this object.
+
+        :returns: The Kernel tree held by this object
+        :rtype: :py:class:`ast.Module`
+        '''
+        return self._boundary_kernel
+
+    def set_source_count(self, source_count):
+        self._source_count = source_count
+
+    def get_source_count(self):
+        return self._source_count
+
+def source_boundary(kernel):
+    '''
+    '''
+    def wrapper():
+        import HartreeParticleDSL.HartreeParticleDSL as HPDSL
+        tree = ast.parse(inspect.getsource(kernel))
+        parser = source_boundary_kernel_wrapper(tree)
+        HPDSL.register_kernel(tree.body[0].name, parser)
+        return parser
+    return wrapper()
+
+
+class sink_boundary_kernel_wrapper(kernel):
+    '''
+    '''
+    def __init__(self, kernel_tree):
+        self._boundary_kernel = kernel_tree
+
+    def get_kernel_tree(self):
+        '''
+        Returns the kernel tree held by this object.
+
+        :returns: The Kernel tree held by this object
+        :rtype: :py:class:`ast.Module`
+        '''
+        return self._boundary_kernel
+
+def sink_boundary(kernel):
+    '''
+    '''
+    def wrapper():
+        import HartreeParticleDSL.HartreeParticleDSL as HPDSL
+        tree = ast.parse(inspect.getsource(kernel))
+        parser = sink_boundary_kernel_wrapper(tree)
+        HPDSL.register_kernel(tree.body[0].name, parser)
+        return parser
+    return wrapper()
+
 
 class pairwise_kernel_wrapper(kernel):
     '''

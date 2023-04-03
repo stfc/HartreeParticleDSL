@@ -205,6 +205,7 @@ template <class aosoa_class, class aosoa_host_class> void hdf5_input(aosoa_class
             num_parts++;
         }
     }
+    config.config_host(0).space.nparts = global_parts;
     int new_size = static_cast<int>(num_parts);
     particle_aosoa.resize(new_size);
     non_host_aosoa.resize(new_size);
@@ -377,6 +378,7 @@ template <class aosoa_class, class aosoa_host_class> void hdf5_input(aosoa_class
     int global_parts = dims[0];
     int num_parts = 0;
     num_parts = global_parts;
+    config.config_host(0).space.nparts = global_parts;
     int new_size = static_cast<int>(num_parts);
     particle_aosoa.resize(new_size);
     non_host_aosoa.resize(new_size);
@@ -768,3 +770,7 @@ def test_phdf5_call_output_cabana_pir():
     }'''
     assert correct in out
     reset_for_tests()
+
+def test_phdf5_get_linked_libraries():
+    a = PHDF5_IO.PHDF5_IO()
+    assert a.get_linked_libraries() == ["${HDF5_C_LIBRARIES}"]

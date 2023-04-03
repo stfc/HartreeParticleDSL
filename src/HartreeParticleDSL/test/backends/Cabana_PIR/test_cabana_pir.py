@@ -25,7 +25,8 @@ import HartreeParticleDSL.kernel_types.kernels as kernels
 from HartreeParticleDSL.HartreeParticleDSLExceptions import InvalidNameError, \
                                                             UnsupportedTypeError, \
                                                             InternalError, \
-                                                            IRGenerationError
+                                                            IRGenerationError, \
+                                                            RepeatedNameError
 
 
 from HartreeParticleDSL.inbuilt_kernels.boundaries.periodic_boundaries import periodic_boundaries
@@ -68,6 +69,7 @@ def test_cabana_pir_init():
     assert "<cmath>" in a._includes
     assert "<cstdio>" in a._includes
     assert "\"part.h\"" in a._includes
+    assert "<math.h>" in a._includes
 
 def test_cabana_pir_register_kernel():
     a = Cabana_PIR()
@@ -176,6 +178,7 @@ def test_cabana_pir_generate_includes():
     assert "<iostream>" in strin
     assert "<cmath>" in strin
     assert "<cstdio>" in strin
+    assert "<math.h>" in strin
     backend = Cabana_PIR()
     backend.set_io_modules(None, mod)
     strin = backend.generate_includes()
@@ -187,6 +190,7 @@ def test_cabana_pir_generate_includes():
     assert "<iostream>" in strin
     assert "<cmath>" in strin
     assert "<cstdio>" in strin
+    assert "<math.h>" in strin
 
 class coupler_test2(base_coupler):
     def __init__(self):
@@ -287,12 +291,14 @@ struct config_type{
 enum FieldNames{core_part_velocity = 0,
                  core_part_position,
                  neighbour_part_cutoff,
+                 neighbour_part_deletion_flag,
                  neighbour_part_rank,
                  neighbour_part_old_position
                };
 using DataTypes = Cabana::MemberTypes<double[3],
     double[3],
     double,
+    int,
     int,
     double[3]>;
 
@@ -396,12 +402,12 @@ template<class aosoa> class Migrator{
     for(int i = 0; i < neighbors.size(); i++){
         if(neighbors[i] != myrank){
             tag = 0;
-            MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*r_pos_space.extent(2)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*r_vel_space.extent(2)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(1)*i], recv_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             tag = 0;
-            MPI_Isend(&pos_space.data()[pos_space.extent(1)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Isend(&vel_space.data()[vel_space.extent(1)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&pos_space.data()[pos_space.extent(1)*pos_space.extent(2)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&vel_space.data()[vel_space.extent(1)*vel_space.extent(2)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Isend(&cutoff_space.data()[cutoff_space.extent(1)*i], send_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
         }
     }
@@ -567,6 +573,20 @@ def test_cabana_pir_gen_kernel():
     assert ("Cabana PIR backend doesn't yet support kernel of type <class 'str'>."
             in str(excinfo.value))
 
+    _HartreeParticleDSL.the_instance = None
+    backend = Cabana_PIR()
+    config = Config()
+    part = Particle()
+    part.add_element("x", "int")
+    kernel = kernels.source_boundary(kern2)
+    kernel.set_source_count(1000)
+    backend.gen_kernel(kernel)
+    assert backend._kernels_pir["kern2"] is not None
+
+    kernel = kernels.sink_boundary(kern3)
+    backend.gen_kernel(kernel)
+    assert backend._kernels_pir["kern3"] is not None
+
 def main():
     initialise(particle_count=0, filename="abd")
     create_variable(c_int, a, 0)
@@ -620,6 +640,7 @@ def test_print_main():
     auto core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);
     auto core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
     auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
+    auto neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);
     auto x_slice = Cabana::slice<x>(particle_aosoa);
     kern2_functor<decltype(core_part_position_slice), decltype(x_slice)> kern2(core_part_position_slice, x_slice, config.config);
     periodic_boundaries_functor<decltype(core_part_position_slice)> periodic_boundaries(core_part_position_slice, config.config);
@@ -633,8 +654,7 @@ def test_print_main():
     Kokkos::fence();
     }
 
-}
-'''
+}'''
         assert correct in out
         correct = '''template < class CORE_PART_POSITION, class X >
 struct kern2_functor{
@@ -646,6 +666,7 @@ struct kern2_functor{
      kern2_functor( CORE_PART_POSITION core_part_position, X x, config_struct_type config):
     _core_part_position(core_part_position), _x(x), _config(config){}
 
+    KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int a) const{
         double a;
         a = 2.0;
@@ -697,13 +718,15 @@ def test_cabana_pir_gen_particle():
                  thing2,
                  core_part_velocity,
                  core_part_position,
-                 neighbour_part_cutoff
+                 neighbour_part_cutoff,
+                 neighbour_part_deletion_flag
                };
 using DataTypes = Cabana::MemberTypes<double[4],
     double,
     double[3],
     double[3],
-    double>;
+    double,
+    int>;
 '''
     assert correct == rval
 
@@ -781,12 +804,15 @@ def test_cabana_pir_initialise():
     backend.add_structure(temp, "mystruct2")
     type_mapping_str["test"] = temp
     backend._kernel_slices["slice1"] = ["s1", "s2"]
+    backend._require_random = True
+    backend.add_writable_array("arr1", "double", "3")
     out = backend.initialise(123, "myfile", 4)
     correct = '''    Kokkos::ScopeGuard scope_guard(argc, argv);
 {
     config_type config;
     config.config = config_struct_type("config", 1);
     config.config_host = Kokkos::create_mirror_view(config.config);
+    Kokkos::Random_XorShift64_Pool<> random_pool(/*seed=*/12345);
     mystruct mystruct;
     test mystruct2;
     int myrank = 0;
@@ -800,8 +826,9 @@ def test_cabana_pir_initialise():
     auto core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);
     auto core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
     auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
-    slice1_functor<decltype(s1_slice), decltype(s2_slice)> slice1(s1_slice, s2_slice, config.config, mystruct, mystruct2);
-'''
+    auto neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);
+    Kokkos::View<double, MemorySpace> arr1 = Kokkos::View<double, MemorySpace>("arr1", 3);
+    slice1_functor<decltype(s1_slice), decltype(s2_slice)> slice1(s1_slice, s2_slice, config.config, mystruct, mystruct2, random_pool, arr1)'''
     assert correct == out
 
     HartreeParticleDSL.set_mpi(True)
@@ -828,6 +855,33 @@ def test_cabana_pir_initialise():
     assert ("Can't handle multiple coupled systems with a preferred "
             "decomposition" in str(excinfo.value))
 
+def test_cabana_pir_gen_slices_and_functors():
+    mod = Random_Particles()
+    backend = Cabana_PIR()
+    part = Particle()
+    config = Config()
+    part.add_element("thing2", "double")
+    backend.set_io_modules(mod, mod)
+    backend.gen_particle(part)
+    backend.gen_config(config)
+    backend.add_structure("c_int", "mystruct")
+    temp = StructureType()
+    backend.add_structure(temp, "mystruct2")
+    type_mapping_str["test"] = temp
+    backend._kernel_slices["slice1"] = ["s1", "s2"]
+    backend._require_random = True
+    backend.add_writable_array("arr1", "double", "3")
+    out = backend.gen_slices_and_functors()
+    correct = '''    core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);
+    core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
+    neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
+    neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);
+    thing2_slice = Cabana::slice<thing2>(particle_aosoa);
+    simd_policy = Cabana::SimdPolicy<VectorLength, ExecutionSpace>(0, particle_aosoa.size());
+    slice1 = slice1_functor<decltype(s1_slice), decltype(s2_slice)>(s1_slice, s2_slice, config.config,mystruct, mystruct2, random_pool, arr1);
+'''
+    assert correct == out
+
 def test_cabana_pir_call_language_function():
     backend = Cabana_PIR()
     with pytest.raises(AttributeError):
@@ -853,7 +907,7 @@ def test_cabana_pir_add_coupler():
     test_visitor = Cabana_PIR_Visitor(backend)
     assert test_visitor._visit(call) == "test_string()"
     call = Call("not_a_function")
-    assert test_visitor._visit(call) == "not_a_function();"
+    assert test_visitor._visit(call) == "not_a_function()"
 
 
 def test_cabana_pir_write_output():
@@ -1030,16 +1084,16 @@ template<class aosoa> class Migrator{
     for(int i = 0; i < neighbors.size(); i++){
         if(neighbors[i] != myrank){
             tag = 0;
-            MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*r_pos_space.extent(2)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*r_vel_space.extent(2)*i], recv_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(1)*i], recv_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Irecv(&r_testvar_space.data()[r_testvar_space.extent(1) * r_testvar_space.extent(2) * r_testvar_space.extent(3) * i], recv_count[i] * 4 * 2, MPI_INT, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Irecv(&r_testvar2_space.data()[r_testvar2_space.extent(1)*i], recv_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Irecv(&r_testvar3_space.data()[r_testvar3_space.extent(1)*i], recv_count[i], MPI_FLOAT, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Irecv(&r_testvar4_space.data()[r_testvar4_space.extent(1)*i], recv_count[i], MPI_INT64_T, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             tag = 0;
-            MPI_Isend(&pos_space.data()[pos_space.extent(1)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
-            MPI_Isend(&vel_space.data()[vel_space.extent(1)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&pos_space.data()[pos_space.extent(1)*pos_space.extent(2)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
+            MPI_Isend(&vel_space.data()[vel_space.extent(1)*vel_space.extent(2)*i], send_count[i]*3, MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Isend(&cutoff_space.data()[cutoff_space.extent(1)*i], send_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Isend(&testvar_space.data()[testvar_space.extent(1) * r_testvar_space.extent(2) * r_testvar_space.extent(3) * i], send_count[i] * 4 * 2, MPI_INT, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
             MPI_Isend(&testvar2_space.data()[testvar2_space.extent(1)*i], send_count[i], MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);
@@ -1198,11 +1252,18 @@ def test_cabana_pir_get_extra_symbols():
     assert result[1] == "x"
 
 def test_cabana_pir_get_mpi_comm_after_bcs():
+    _HartreeParticleDSL.the_instance = None
     a = Cabana_PIR()
     
     part = Particle()
     part.add_element("test", "int")
+    part.add_element("x", "int")
     a._particle = part
+    a._require_random = True
+    a.add_writable_array("arr1", "double", "3")
+    kernel = kernels.perpart_interaction(kern2)
+    a.gen_kernel(kernel)
+    a._kernel_slices["kern2"] = {"x"}
     out = a.gen_mpi_comm_after_bcs()
     correct = '''    Cabana::deep_copy(particle_aosoa_host, particle_aosoa);
     _migrator.exchange_data(particle_aosoa_host, neighbors, myrank, particle_aosoa_host.size());
@@ -1211,14 +1272,52 @@ def test_cabana_pir_get_mpi_comm_after_bcs():
     core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);
     core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);
     neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);
+    neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);
     test_slice = Cabana::slice<test>(particle_aosoa);
+
+    x_slice = Cabana::slice<x>(particle_aosoa);
 
     simd_policy = Cabana::SimdPolicy<VectorLength, ExecutionSpace>(0, particle_aosoa.size());
 
+    kern2 = kern2_functor<decltype(x_slice)>(x_slice, random_pool, arr1, config.config);
 '''
+    _HartreeParticleDSL.the_instance = None
+    a._require_random = False
     assert out == correct
 
 def test_cabana_pir_gen_makefile():
     a = Cabana_PIR()
     with pytest.raises(NotImplementedError):
         a._gen_makefile()
+
+def test_cabana_pir_add_writable_array():
+    a = Cabana_PIR()
+    a.add_writable_array("arr1", "double", "3")
+    assert a._extra_writable_arrays["arr1"] == ("double", "3")
+
+    with pytest.raises(RepeatedNameError) as excinfo:
+        a.add_writable_array("arr1", "", "")
+    assert "Tried to create array with name arr1 but an array with that name already exists." in str(excinfo.value)
+
+def test_cabana_pir_reset_array():
+    a = Cabana_PIR()
+    with pytest.raises(InvalidNameError) as excinfo:
+        a.reset_array("arr1")
+    assert "Tried to reset array with name arr1 but no array with that name exists." in str(excinfo.value)
+
+    a.add_writable_array("arr1", "double", "3")
+    out = a.reset_array("arr1", "0")
+    correct = '''{
+    auto host_arr1 = Kokkos::create_mirror_view(arr1);
+    Kokkos::parallel_for(host_arr1.size(),
+        KOKKOS_LAMBDA (const size_t i) {
+        host_arr1(i) = 0;
+    });
+    Kokkos::deep_copy(arr1, host_arr1);
+}
+'''
+    assert out == correct
+
+def test_cabana_pir_pi():
+    a = Cabana_PIR()
+    assert a.pi() == "M_PI"

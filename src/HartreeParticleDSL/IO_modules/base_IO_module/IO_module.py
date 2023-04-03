@@ -6,3 +6,6 @@ class IO_Module(metaclass=ABCMeta):
     @abstractmethod
     def __init__(self):
         pass
+
+    def get_linked_libraries(self):
+        return []

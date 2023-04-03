@@ -9,11 +9,13 @@ import HartreeParticleDSL.kernel_types.kernels as kernels
 from HartreeParticleDSL.IO_modules.IO_Exceptions import *
 from HartreeParticleDSL.HartreeParticleDSLExceptions import InvalidNameError, \
                                                             UnsupportedTypeError, \
-                                                            InternalError
+                                                            InternalError, \
+                                                            RepeatedNameError
 from HartreeParticleDSL.c_types import c_int, c_double, c_float, c_int64_t, \
                                        c_int32_t, c_int8_t, c_bool
 
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, DataType
+from HartreeParticleDSL.Particle_IR.symbols.autosymbol import AutoSymbol
 from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
 
 
@@ -61,6 +63,7 @@ class Cabana_PIR(Backend):
         self._includes.append("<iostream>")
         self._includes.append("<cmath>")
         self._includes.append("<cstdio>")
+        self._includes.append("<math.h>")
         self._includes.append("\"part.h\"")
 
         self._input_module = None
@@ -72,6 +75,8 @@ class Cabana_PIR(Backend):
         self._kernels = {}
         self._kernels_pir = {}
 
+        self._extra_writable_arrays = {}
+
         # The Cabana backend needs to store the particle type reference
         self._particle = None #TODO Remove & pull from PIR
 
@@ -82,6 +87,11 @@ class Cabana_PIR(Backend):
         self._boundary_condition_tree = None
 
         self._current_kernel = None
+
+        self._require_random = False
+
+    def get_writable_arrays(self) -> dict:
+        return self._extra_writable_arrays
 
     def set_boundary_condition(self, boundary_condition_kernel) -> None:
         '''
@@ -286,6 +296,8 @@ class Cabana_PIR(Backend):
         '''
         Generates the extra header file code required for this backend
         if MPI is enabled.
+
+        TODO: Future version of this should not transfer the neighbour_part_deletion_flag
         '''
         #Templated class on aosoa type
         # Needs a space for each member of the particle, e.g.:
@@ -317,7 +329,7 @@ class Cabana_PIR(Backend):
         inc_indent()
         element_info = {} # element name: [datatype, array_dimension (i.e. 0-N), array_indices]
         for element in particle.particle_type:
-            if element == "core_part" or element == "neighbour_part":
+            if element == "core_part" or element == "neighbour_part" or "neighbour_part" in element:
                 continue
             c_type = particle.particle_type[element]['type']
             is_array = particle.particle_type[element]['is_array']
@@ -592,9 +604,9 @@ class Cabana_PIR(Backend):
         rval = rval + get_indent() + "if(neighbors[i] != myrank){\n"
         inc_indent()
         rval = rval + get_indent() + "tag = 0;\n"
-        rval = rval + get_indent() + "MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*i], recv_count[i]*3,"
+        rval = rval + get_indent() + "MPI_Irecv(&r_pos_space.data()[r_pos_space.extent(1)*r_pos_space.extent(2)*i], recv_count[i]*3,"
         rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
-        rval = rval + get_indent() + "MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*i], recv_count[i]*3,"
+        rval = rval + get_indent() + "MPI_Irecv(&r_vel_space.data()[r_vel_space.extent(1)*r_vel_space.extent(2)*i], recv_count[i]*3,"
         rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
         rval = rval + get_indent() + "MPI_Irecv(&r_cutoff_space.data()[r_cutoff_space.extent(1)*i], recv_count[i],"
         rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
@@ -626,9 +638,9 @@ class Cabana_PIR(Backend):
 
         # Now do sends
         rval = rval + get_indent() + "tag = 0;\n"
-        rval = rval + get_indent() + "MPI_Isend(&pos_space.data()[pos_space.extent(1)*i], send_count[i]*3,"
+        rval = rval + get_indent() + "MPI_Isend(&pos_space.data()[pos_space.extent(1)*pos_space.extent(2)*i], send_count[i]*3,"
         rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
-        rval = rval + get_indent() + "MPI_Isend(&vel_space.data()[vel_space.extent(1)*i], send_count[i]*3,"
+        rval = rval + get_indent() + "MPI_Isend(&vel_space.data()[vel_space.extent(1)*vel_space.extent(2)*i], send_count[i]*3,"
         rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
         rval = rval + get_indent() + "MPI_Isend(&cutoff_space.data()[cutoff_space.extent(1)*i], send_count[i],"
         rval = rval + " MPI_DOUBLE, neighbors[i], tag++, MPI_COMM_WORLD, &requests[req_num++]);\n"
@@ -845,6 +857,10 @@ class Cabana_PIR(Backend):
         '''
         self._config = config
         self._part_type = part_type
+
+        # We need to add an extra type to the part type for neighbours_part_deletion_flag
+        if "neighbour_part_deletion_flag" not in part_type.particle_type:
+            part_type.add_element("neighbour_part_deletion_flag", "int")
         config_output = self.gen_config(config)
         part_output = self.gen_particle(part_type)
         with open('part.h', 'w') as f:
@@ -912,13 +928,20 @@ class Cabana_PIR(Backend):
         # to wait and do all the codegen from print_main, and output to file
         # for this backend.
         from HartreeParticleDSL.backends.AST_to_Particle_IR.ast_to_pir_visitors import \
-                pir_perpart_visitor, pir_pairwise_visitor
+                pir_perpart_visitor, pir_pairwise_visitor, pir_source_boundary_visitor, \
+                pir_sink_boundary_visitor
         pir = None
         if isinstance(kernel, kernels.perpart_kernel_wrapper):
             conv = pir_perpart_visitor()
             pir = conv.visit(kernel.get_kernel_tree())
         elif isinstance(kernel, kernels.pairwise_kernel_wrapper):
             conv = pir_pairwise_visitor()
+            pir = conv.visit(kernel.get_kernel_tree())
+        elif isinstance(kernel, kernels.source_boundary_kernel_wrapper):
+            conv = pir_source_boundary_visitor(kernel)
+            pir = conv.visit(kernel.get_kernel_tree())
+        elif isinstance(kernel, kernels.sink_boundary_kernel_wrapper):
+            conv = pir_sink_boundary_visitor()
             pir = conv.visit(kernel.get_kernel_tree())
         else:
             raise NotImplementedError("Cabana PIR backend doesn't yet support "
@@ -1096,7 +1119,7 @@ class Cabana_PIR(Backend):
         output = output + "enum FieldNames{"
         first = True
         for key in sorted_fields:
-            if key != "core_part" and key != "neighbour_part":
+            if key != "core_part" and key != "neighbour_part" and "neighbour_part" not in key:
                 if first:
                     output = output + f"{key} = 0"
                     first = False
@@ -1109,6 +1132,8 @@ class Cabana_PIR(Backend):
             output = output + ",\n                 core_part_velocity"
         output = output + ",\n                 core_part_position"
         output = output + ",\n                 neighbour_part_cutoff"
+        # Delete particles info
+        output = output + ",\n                 neighbour_part_deletion_flag"
         if HartreeParticleDSL.get_mpi():
             output = output + ",\n                 neighbour_part_rank"
             output = output + ",\n                 neighbour_part_old_position"
@@ -1117,7 +1142,7 @@ class Cabana_PIR(Backend):
         output = output + "using DataTypes = Cabana::MemberTypes<"
         first = True
         for key in sorted_fields:
-            if key != "core_part" and key != "neighbour_part":
+            if key != "core_part" and key != "neighbour_part" and "neighbour_part" not in key:
                 if first:
                     c_type = particle.particle_type[key]['type']
                     output = output + c_type
@@ -1132,6 +1157,7 @@ class Cabana_PIR(Backend):
             output = output + ",\n    double[3]"
         output = output + ",\n    double[3]"
         output = output + ",\n    double"
+        output = output + ",\n    int"
         if HartreeParticleDSL.get_mpi():
             output = output + ",\n    int"
             output = output + ",\n    double[3]"
@@ -1211,6 +1237,37 @@ class Cabana_PIR(Backend):
         rval = "\n}\n" # Choosing no indentation for this } to match the outer one.
         return rval
 
+    def add_writable_array(self, name: str, type_name: str, length: str, *args, **kwargs) -> None:
+        '''
+        Adds an extra writeable array to the simulation, which can be accessed
+        from Kernels for non-standard usages. These can be dynamically sized,
+        whilst arrays added to the config need to be fixed dimension.
+        '''
+        if self._extra_writable_arrays.get(name) is not None:
+            raise RepeatedNameError(f"Tried to create array with name {name} but "
+                                    "an array with that name already exists.")
+        self._extra_writable_arrays[name] = (type_name, length)
+
+    def reset_array(self, writable_array_name: str, value: str="0", *args, **kwargs):
+        if self._extra_writable_arrays.get(writable_array_name) is None:
+            raise InvalidNameError(f"Tried to reset array with name {writable_array_name} but "
+                                   "no array with that name exists.")
+        current_indent = kwargs.get("current_indent", 0)
+        indent = kwargs.get("indent", 4)
+        rval = "{\n"
+        current_indent = current_indent + indent
+        rval = rval + " " * current_indent + f"auto host_{writable_array_name} = Kokkos::create_mirror_view({writable_array_name});" + "\n"
+        rval = rval + " " * current_indent + f"Kokkos::parallel_for(host_{writable_array_name}.size()," + "\n"
+        rval = rval + " " * (current_indent+indent) + "KOKKOS_LAMBDA (const size_t i) {\n"
+        rval = rval + " " * (current_indent+indent) + f"host_{writable_array_name}(i) = {value};" + "\n"
+        rval = rval + " " * current_indent + "});\n"
+        rval = rval + " " * current_indent + f"Kokkos::deep_copy({writable_array_name}, host_{writable_array_name});" + "\n"
+        current_indent = current_indent - indent
+        rval = rval + " " * current_indent + "}\n"
+        
+        return rval
+
+
     def println(self, string, *args, **kwargs):
         '''
         Function to output the println string for the Cabana PIR module.
@@ -1238,6 +1295,18 @@ class Cabana_PIR(Backend):
         output = output + " << \"\\n\";\n"
         return output
 
+    def random_number(self, *args, **kwargs):
+        '''
+        TODO
+        '''
+        return "_generator.drand(0., 1.)"
+
+    def pi(self, *args, **kwargs):
+        '''
+        TODO
+        '''
+        return "M_PI"
+
     def initialise(self,particle_count, filename, current_indent, **kwargs) -> str:
         '''
         :param int particle_count: Particle count for the simulation. Passed to \
@@ -1261,6 +1330,8 @@ class Cabana_PIR(Backend):
         rval = rval + space*current_indent + "config_type config;\n"
         rval = rval + space*current_indent + "config.config = config_struct_type(\"config\", 1);\n"
         rval = rval + space*current_indent + "config.config_host = Kokkos::create_mirror_view(config.config);\n"
+        if self.get_require_random():
+            rval = rval + space*current_indent + "Kokkos::Random_XorShift64_Pool<> random_pool(/*seed=*/12345);\n"
 
         # Initialise structures
         for structure in self._structures:
@@ -1356,13 +1427,19 @@ class Cabana_PIR(Backend):
         rval = rval + space*current_indent + "auto core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);\n"
         rval = rval + space*current_indent + "auto core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);\n"
         rval = rval + space*current_indent + "auto neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);\n"
+        rval = rval + space*current_indent + "auto neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);\n"
         if HartreeParticleDSL.get_mpi():
             rval = rval + "    auto neighbour_part_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa);\n"
             rval = rval + "    auto neighbour_part_old_position_slice = Cabana::slice<neighbour_part_old_position>(particle_aosoa);\n"
         for key in self._particle.particle_type:
-            if key != "core_part" and key != "neighbour_part":
+            if key != "core_part" and key != "neighbour_part" and "neighbour_part" not in key:
                 rval = rval + space*current_indent + f"auto {key}_slice = Cabana::slice<{key}>" + "(particle_aosoa);\n"
 
+        if len(self._extra_writable_arrays.keys()) > 0:
+            for name in self._extra_writable_arrays.keys():
+                array_type = self._extra_writable_arrays[name][0]
+                array_length = self._extra_writable_arrays[name][1]
+                rval = rval + space*current_indent + f"Kokkos::View<{array_type}, MemorySpace> {name} = Kokkos::View<{array_type}, MemorySpace>(" + "\"" + name + "\", "+ f"{array_length});\n"
 
         # Generate the functors
         for key in self._kernel_slices.keys():
@@ -1382,10 +1459,16 @@ class Cabana_PIR(Backend):
             slice_names = []
             for struct in self._structures.keys():
                 slice_names.append(struct)
+            if self.get_require_random():
+                slice_names.append("random_pool")
+            for array in self._extra_writable_arrays.keys():
+                slice_names.append(array)
             if len(slice_names) > 0:
                 rval = rval + ", "
             rval = rval + ", ".join(slice_names) + ");\n"
 
+        # Delete the final ;\n as this is added by the visitor.
+        rval = rval[:-2]
         # TODO Initial MPI Communication and binning of particles
         # See issue #62
         return rval
@@ -1452,6 +1535,9 @@ class Cabana_PIR(Backend):
                 pass
         raise AttributeError
 
+    def get_require_random(self) -> bool:
+        return self._require_random
+
     def get_extra_symbols(self, function_list):
         '''
         Returns the list of symbols that need to be added to the symbol table
@@ -1464,8 +1550,12 @@ class Cabana_PIR(Backend):
         '''
         # This backend needs to add any structures created.
         results = []
+        if "random_number" in function_list:
+            self._require_random = True
+            results.append( ("_generator", AutoSymbol("_generator", "_random_pool.get_state()")))
         for struct in self._structures.keys():
             results.append( (struct, StructureSymbol(struct, self._structures[struct])) )
+
 
         # Check the coupled systems as well.
         for system in self._coupled_systems:
@@ -1486,6 +1576,58 @@ class Cabana_PIR(Backend):
         rval = rval + indent_str + "Cabana::simd_parallel_for( temp_policy, ruf, \"rank_update_functor\");\n"
         rval = rval + indent_str + "Kokkos::fence();\n"
         rval = rval + current_indent * " " + "}\n"
+        return rval
+
+    def gen_slices_and_functors(self, current_indent=4, indent=4) -> str:
+        '''
+        Returns the code required to regenerate slices and functors for
+        this backend. Used if something resizes the particle arrays.
+
+        :returns: The code to regenerate the slices and functors
+        :rtype: str
+        '''
+        indent_str = current_indent * " "
+        rval = ""
+        rval = rval + indent_str + "core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);\n"
+        rval = rval + indent_str + "core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);\n"
+        rval = rval + indent_str + "neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);\n"
+        rval = rval + indent_str + "neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);\n"
+        if HartreeParticleDSL.get_mpi():
+            rval = rval + indent_str + "neighbour_part_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa);\n"
+            rval = rval + indent_str + "neighbour_part_old_position_slice = Cabana::slice<neighbour_part_old_position>(particle_aosoa);\n"
+        if self._particle is not None:
+            for key in self._particle.particle_type:
+                if key != "core_part" and key != "neighbour_part":
+                    rval = rval + indent_str + f"{key}_slice = Cabana::slice<{key}>" + "(particle_aosoa);\n"
+
+        rval = rval + indent_str + f"simd_policy = Cabana::SimdPolicy<VectorLength, ExecutionSpace>(0, particle_aosoa.size());\n"
+
+        # Generate the functors
+        for key in self._kernel_slices.keys():
+            rval = rval + indent_str + f"{key} = {key}_functor"
+            slice_names = []
+            for slices in self._kernel_slices[key]:
+                slice_names.append(f"decltype({slices}_slice)")
+            if len(slice_names) > 0:
+                rval = rval + "<"
+                rval = rval + ", ".join(slice_names) + ">"
+
+            rval = rval + f"("
+            slice_names = []
+            for slices in self._kernel_slices[key]:
+                slice_names.append(f"{slices}_slice")
+            rval = rval + ", ".join(slice_names) + ", config.config"
+            slice_names = []
+            for struct in self._structures.keys():
+                slice_names.append(struct)
+            if self.get_require_random():
+                slice_names.append("random_pool")
+            for array in self._extra_writable_arrays.keys():
+                slice_names.append(array)
+
+            if len(slice_names) > 0:
+                rval = rval + ","
+            rval = rval + ", ".join(slice_names) + ");\n" 
         return rval
 
     def gen_mpi_comm_after_bcs(self, current_indent=4, indent=4) -> str:
@@ -1515,6 +1657,7 @@ class Cabana_PIR(Backend):
         rval = rval + indent_str + "core_part_position_slice = Cabana::slice<core_part_position>(particle_aosoa);\n"
         rval = rval + indent_str + "core_part_velocity_slice = Cabana::slice<core_part_velocity>(particle_aosoa);\n"
         rval = rval + indent_str + "neighbour_part_cutoff_slice = Cabana::slice<neighbour_part_cutoff>(particle_aosoa);\n"
+        rval = rval + indent_str + "neighbour_part_deletion_flag_slice = Cabana::slice<neighbour_part_deletion_flag>(particle_aosoa);\n"
         if HartreeParticleDSL.get_mpi():
             rval = rval + indent_str + "neighbour_part_rank_slice = Cabana::slice<neighbour_part_rank>(particle_aosoa);\n"
             rval = rval + indent_str + "neighbour_part_old_position_slice = Cabana::slice<neighbour_part_old_position>(particle_aosoa);\n"
@@ -1540,6 +1683,10 @@ class Cabana_PIR(Backend):
             slice_names = []
             for slices in self._kernel_slices[key]:
                 slice_names.append(f"{slices}_slice")
+            if self.get_require_random():
+                slice_names.append("random_pool")
+            for name in self._extra_writable_arrays.keys():
+                slice_names.append(name)
             rval = rval + ", ".join(slice_names) + ", config.config"
             slice_names = []
             for struct in self._structures.keys():
@@ -1565,6 +1712,8 @@ class Cabana_PIR(Backend):
 #            if get_mpi():
 #                required_packages.append("MPI")
 #            # TODO IF we have GPU we need CUDAToolkit
+#            if get_cuda():
+#                required_packages.append("CUDAToolkit")
 #            # Check with IO and coupled systems for their needs
 #            for sys in self._coupled_systems:
 #                sys_req_pack = sys.get_required_packages()
@@ -1590,9 +1739,19 @@ class Cabana_PIR(Backend):
 #
 ##target_link_libraries(Cabana_PIC.exe ${HDF5_C_LIBRARIES})
 #            link_libraries = ["Cabana::cabanacore", "Kokkos::kokkos"]
+#            input_module_libs = self._input_module.get_linked_libraries()
+#            for mod in input_module_libs:
+#                if mod not in link_libraries:
+#                    link_libraries.append(mod)
+#            output_module_libs = self._output_module.get_linked_libraries()
+#            for mod in output_module_libs:
+#                if mod not in link_libraries:
+#                    link_libraries.append(mod)
 #            if get_mpi():
 #                link_libraries.append("${MPI_C_LIBRARIES}")
 #            # TODO If we have GPU we need CUDArt or something
+#            if get_cuda():
+#                link_libraries.append("CUDArt")
 #            # TODO Implement coupled system and IO requirements
 #            for lib in link_libraries:
 #                output = output + "target_link_libraries(" + project_name + ".exe" + lib + ")\n"
