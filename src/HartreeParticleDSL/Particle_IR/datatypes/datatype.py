@@ -226,7 +226,7 @@ class ArrayType(DataType):
         '''
         Enumeration of array shape extents that are unspecified at compile time.
         '''
-        DYNAMIC = 1
+        DYNAMIC = -1
 
     def __init__(self, datatype: DataType, shape: List[Union[int, Extent]]) -> None:
         if not isinstance(datatype, DataType):

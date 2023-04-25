@@ -1297,13 +1297,21 @@ class Cabana_PIR(Backend):
 
     def random_number(self, *args, **kwargs):
         '''
-        TODO
+        Function to output code to compute a random number
+        between 0 and 1 for the Cabana PIR module. Called via the visitors
+        when reaching a random_number statement in user code.
+
+        Using this call inside a kernel will make the backend create the
+        other appropriate code to generate random numbers.
         '''
         return "_generator.drand(0., 1.)"
 
     def pi(self, *args, **kwargs):
         '''
-        TODO
+        Function to access the C standard value for PI.
+
+        In the future this may be replaced with an inbuilt pi variable that
+        is recognized during AST generation.
         '''
         return "M_PI"
 
