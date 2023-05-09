@@ -39,9 +39,10 @@ created and stored in the Particle IR. Custom datatype objects are fairly easy t
 the user, however this not yet documented.
 
 Datatypes are divided into a few base types:
+
 1. NoType (e.g. `void` type in C)
 2. ScalarType - This is used for most common scalar datatypes, e.g. `int` or `double`. These datatypes
-   have a `Intrinsic` type, e.g. `INTEGER` or `FLOAT` etc. and a `Precision`. Backends then convert
+   have an `Intrinsic` type, e.g. `INTEGER` or `FLOAT` etc. and a `Precision`. Backends then convert
    this representation into the appropriate output for the chosen language.
 3. StructureType - Structures are made of a structure type containing a set of components. The
    components are contained in a dict of `(Name: str, DataType)` pairs. StructureTypes can contain
