@@ -12,7 +12,7 @@ from HartreeParticleDSL.Particle_IR.nodes.member import Member
 
 class ArrayMember(ArrayMixin, Member):
     '''
-    Node representing an access to the elemnts of an array inside a structure.
+    Node representing an access to the elements of an array inside a structure.
     Must have one or more children which give the array-index expressions
     for the array access.
 

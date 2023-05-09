@@ -332,7 +332,6 @@ class ast_to_pir_visitor(ast.NodeVisitor):
             elsebody.append(self.visit(child))
 
         ifblock = IfElseBlock.create(cond, ifbody, elsebody)
-        # Temp check for now
         return ifblock
 
     def visit_Call(self, node: ast.Call) -> Union[Call, EmptyStatement, Invoke, Assignment]:
@@ -398,7 +397,7 @@ class ast_to_pir_visitor(ast.NodeVisitor):
             module_nodes.append(self.visit(a))
         return module_nodes[0]
 
-    # 3.8 only
+    # 3.8+ only
     def visit_Index(self, node: ast.Index) -> DataNode:
         return self.visit(node.value)
 
@@ -414,8 +413,7 @@ class ast_to_pir_visitor(ast.NodeVisitor):
             while hasattr(x, "member"):
                 x = x.member
                 temp_ref = temp_ref.member
-            # x is always the innermost member, use assert to double check but
-            # couldn't create cases otherwise
+            # x is always the innermost member
             indices = self.visit(node.slice)
             if not isinstance(indices, list):
                 indices = [indices]
