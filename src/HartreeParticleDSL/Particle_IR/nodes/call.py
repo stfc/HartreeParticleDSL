@@ -8,7 +8,10 @@ from typing import List
 from HartreeParticleDSL.Particle_IR.nodes.node import DataNode
 from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
 
-class Call(Statement, DataNode):
+import psyclone.psyir.nodes.call as psycall
+from psyclone.psyir.symbols.routinesymbol import RoutineSymbol
+
+class Call(Statement, DataNode, psycall.Call):
     '''
     Contains a generic call in the tree.
 
@@ -17,7 +20,8 @@ class Call(Statement, DataNode):
     # pylint: disable=undefined-variable
 
     def __init__(self, func_name: str) -> None:
-        super().__init__()
+        rsym = RoutineSymbol(func_name)
+        super().__init__(routine=rsym)
         self._func_name = func_name
 
     @property

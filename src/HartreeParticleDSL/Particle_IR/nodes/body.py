@@ -8,7 +8,9 @@ from typing import Union, List
 from HartreeParticleDSL.Particle_IR.nodes.node import Node
 from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
 
-class Body(Node):
+import psyclone.psyir.nodes.schedule as psysched
+
+class Body(Node, psysched.Schedule):
     '''
     Class to represent a Body of a code region. Can contain any
     number of Statement nodes.
@@ -37,7 +39,6 @@ class Body(Node):
         :return: whether the given child and position are valid for this node.
         :rtype: bool
         '''
-
         if isinstance(child, Statement):
             return True
         return False

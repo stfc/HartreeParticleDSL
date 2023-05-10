@@ -123,7 +123,7 @@ def test_node_init():
 def test_node_validate_child():
     assert Node._validate_child(0, "a") is False
 
-def test_node_init_children():
+def test_node_init_children1():
     class fakeNode(Node):
         @staticmethod
         def _validate_child(position, child):
@@ -132,7 +132,7 @@ def test_node_init_children():
     n1 = fakeNode()
     n2 = fakeNode()
 
-    mynode = fakeNode([n1, n2])
+    mynode = fakeNode(children=[n1, n2])
     assert len(mynode._children) == 2
     assert mynode._children[0] is n1
     assert mynode._children[1] is n2
@@ -144,7 +144,7 @@ def test_node_nodestr():
     assert node.node_str() == "Node[]"
     assert str(node) == "Node[]"
 
-def test_node_init_children():
+def test_node_init_children2():
     class fakeNode(Node):
         @staticmethod
         def _validate_child(position, child):
@@ -158,19 +158,19 @@ def test_node_init_children():
     n1 = fakeNode()
     n2 = fakeNode()
 
-    mynode = fakeNode([n1, n2])
+    mynode = fakeNode(children=[n1, n2])
     assert mynode.depth is 1
     assert n1.depth is 2
 
     correct = '''fakeNode[]
-    0: fakeNode[]
-    1: fakeNode[]
+    fakeNode[]
+    fakeNode[]
 '''
     assert mynode.view() == correct
 
     with pytest.raises(TypeError) as excinfo:
         mynode.view(depth="x")
-    assert ("depth argument should be an int but found <class 'str'>." in
+    assert ("depth argument should be an int but found str." in
             str(excinfo.value))
     with pytest.raises(ValueError) as excinfo:
         mynode.view(depth=-1)
@@ -178,7 +178,7 @@ def test_node_init_children():
             str(excinfo.value))
     with pytest.raises(TypeError) as excinfo:
         mynode.view(indent=3)
-    assert ("indent argument should be a string but found <class 'int'>." in
+    assert ("indent argument should be a str but found int." in
             str(excinfo.value))
 
     mynode.children.pop(1)
@@ -225,20 +225,18 @@ def test_node_init_children():
     assert n5.ancestor(Node,include_self=True) is n5
     assert n5.ancestor(Node,excluding=fakeNode) is None
     assert n5.ancestor(Node,excluding=(fakeNode, Node)) is None
-    assert n5.ancestor(Node,limit=n1) is None
+    assert n5.ancestor(Node,limit=n1) is n1
     assert n5.ancestor(int) is None
     assert z.ancestor(Node,limit=n2) is x
     assert z.ancestor(fakeNode, limit=mynode) is n2
 
     with pytest.raises(TypeError) as excinfo:
         n5.ancestor(Node,excluding=123)
-    assert ("The 'excluding' argument to ancestor() must be a type or tuple of types. "
-            "Was supplied <class 'int'>.") in str(excinfo.value)
+    assert ("The 'excluding' argument to ancestor() must be a type or a tuple of types but got: 'int'" in str(excinfo.value))
 
     with pytest.raises(TypeError) as excinfo:
         n5.ancestor(Node,limit=123)
-    assert ("The 'limit' argument to ancestor() must be an instance of Node, but got "
-            "<class 'int'>.") in str(excinfo.value)
+    assert("The 'limit' argument to ancestor() must be an instance of Node but got 'int'" in str(excinfo.value))
 
     li = n1.pop_all_children()
     assert n4 is li[0]

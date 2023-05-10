@@ -36,10 +36,10 @@ def test_base_pir_errors():
 
     with pytest.raises(VisitorError) as excinfo:
         a(Break())
-    print(str(excinfo.value))
     assert ("Unsupported node 'Break' found: method names attempted were "
-            "['visit_break_node', 'visit_statement_node', 'visit_node_node']"
-            in str(excinfo.value))
+            "['visit_break_node', 'visit_statement_node', 'visit_node_node', "
+            "'visit_statement_node', 'visit_node_node', "
+            "'visit_commentablemixin_node']." in str(excinfo.value))
 
     class temp_PIR_visitor(PIR_Visitor):
         def visit_break_node(self, node):

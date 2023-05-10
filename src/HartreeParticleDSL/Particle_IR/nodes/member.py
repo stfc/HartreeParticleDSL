@@ -4,7 +4,9 @@ This module contains the Member class.
 
 from HartreeParticleDSL.Particle_IR.nodes.node import Node
 
-class Member(Node):
+import psyclone.psyir.nodes.member as psyMem
+
+class Member(Node, psyMem.Member):
     '''
     Node representing a member of a structure. This is the leaf member node.
 
@@ -13,7 +15,7 @@ class Member(Node):
     '''
 
     def __init__(self, name: str) -> None:
-        super().__init__()
+        super().__init__(name)
         self._name = name
 
     @property

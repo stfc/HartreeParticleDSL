@@ -7,14 +7,17 @@ from HartreeParticleDSL.Particle_IR.nodes.scalar_reference import ScalarReferenc
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import INT_TYPE
 from HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol import ScalarTypeSymbol
 
+from psyclone.errors import GenerationError
+
 def test_call_children():
     mycall = Call("mycall")
 
-    with pytest.raises(IRGenerationError) as excinfo:
+    with pytest.raises(GenerationError) as excinfo:
         mycall.addchild("123")
-    assert ("Item '<class 'str'>' can't be child 0 of '<class "
-            "'HartreeParticleDSL.Particle_IR.nodes.call.Call'>'." 
-            in str(excinfo.value))
+    assert ("Item 'str' can't be child 0 of 'Call'. The valid format is: '[DataNode]*'" in str(excinfo.value))
+#    assert ("Item '<class 'str'>' can't be child 0 of '<class "
+#            "'HartreeParticleDSL.Particle_IR.nodes.call.Call'>'." 
+#            in str(excinfo.value))
 
     sym = ScalarTypeSymbol("x", INT_TYPE)
     ref1 = ScalarReference(sym)

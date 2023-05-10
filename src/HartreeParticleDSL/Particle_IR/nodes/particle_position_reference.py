@@ -17,7 +17,7 @@ class ParticlePositionReference(Reference):
     '''
     # pylint: disable=undefined-variable
     def __init__(self, symbol: StructureSymbol, dimension: int) -> None:
-        super().__init__()
+        super().__init__(symbol=symbol)
         self.symbol = symbol
         self.dimension = dimension
 

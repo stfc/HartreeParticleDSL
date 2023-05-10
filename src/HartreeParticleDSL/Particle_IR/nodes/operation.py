@@ -12,7 +12,9 @@ from typing import List
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 from HartreeParticleDSL.Particle_IR.nodes.node import DataNode, Node
 
-class Operation(DataNode, metaclass=ABCMeta):
+import psyclone.psyir.nodes.operation as psyop
+
+class Operation(DataNode, psyop.Operation, metaclass=ABCMeta):
     '''
     Base class for Operations in Particle IR.
 
@@ -25,13 +27,14 @@ class Operation(DataNode, metaclass=ABCMeta):
     Operator = object
 
     def __init__(self, operator: object):
-        super().__init__()
+        super().__init__(operator=operator)
 
         if not isinstance(operator, self.Operator):
             raise TypeError(f"{type(self).__name__} expects an operator of type "
                             f"{self.Operator} but received type "
                             f"{type(operator)}.")
         self._operator = operator
+        self._argument_names = []
 
     @property
     def operator(self) -> object:

@@ -22,7 +22,7 @@ class ArrayReference(ArrayMixin, Reference):
     '''
 
     def __init__(self, symbol: ArraySymbol, indices: Union[None,List[DataNode]]=None) -> None:
-        super().__init__()
+        super().__init__(symbol=symbol)
         self.symbol = symbol
         if indices is None:
             indices = []

@@ -145,6 +145,14 @@ class Loop(Statement):
         return self.children[2]
 
     @property
+    def loop_body(self) -> List[Node]:
+        '''
+        :returns: The Nodes contained in the Body of this Loop.
+        :rtype: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.Node`
+        '''
+        return self.children[3].children
+
+    @property
     def body(self) -> Body:
         '''
         :returns: the Body representing the body of this Loop.

@@ -9,8 +9,7 @@ from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, Unar
 def test_binaryop_create_badargs():
     with pytest.raises(TypeError) as excinfo:
         a = BinaryOperation.create(123, [])
-    assert ("BinaryOperation expects an operator of type <enum 'BinaryOp'> "
-            "but received type <class 'int'>." in str(excinfo.value))
+    assert ("BinaryOperation operator argument must be of type BinaryOperation.Operator but found int." in str(excinfo.value))
 
     with pytest.raises(IRGenerationError) as excinfo:
         a = BinaryOperation.create(BinaryOperation.BinaryOp.ADDITION, [])
@@ -65,8 +64,7 @@ def test_binaryop_nodestr():
 def test_unaryop_create_badargs():
     with pytest.raises(TypeError) as excinfo:
         a = UnaryOperation.create(123, [])
-    assert ("UnaryOperation expects an operator of type <enum 'UnaryOp'> "
-            "but received type <class 'int'>." in str(excinfo.value))
+    assert("UnaryOperation operator argument must be of type UnaryOperation.Operator but found int." in str(excinfo.value))
 
     with pytest.raises(IRGenerationError) as excinfo:
         a = UnaryOperation.create(UnaryOperation.UnaryOp.UNARYSUB, 212)

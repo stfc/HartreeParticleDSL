@@ -18,7 +18,7 @@ class PointerReference(Reference):
     # pylint: disable=undefined-variable
 
     def __init__(self, symbol: PointerSymbol) -> None:
-        super().__init__()
+        super().__init__(symbol=symbol)
         self.symbol = symbol
 
     @property

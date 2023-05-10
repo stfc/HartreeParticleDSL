@@ -6,12 +6,14 @@ from abc import ABCMeta
 from HartreeParticleDSL.Particle_IR.nodes.node import DataNode
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
 
-class Reference(DataNode, metaclass=ABCMeta):
+import psyclone.psyir.nodes.reference as psyRef
+
+class Reference(DataNode, psyRef.Reference, metaclass=ABCMeta):
     '''
     Contains a Reference to a variable in the ParticleIR tree.
     '''
-    def __init__(self):
-        super().__init__()
+    def __init__(self, symbol=None):
+        super().__init__(symbol=symbol)
 
         self._symbol = None
 

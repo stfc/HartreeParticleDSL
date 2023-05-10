@@ -7,7 +7,9 @@ from abc import ABCMeta
 
 from HartreeParticleDSL.Particle_IR.nodes.node import Node, DataNode
 
-class Statement(Node, metaclass=ABCMeta):
+import psyclone.psyir.nodes.statement as psyStatement
+
+class Statement(Node, psyStatement.Statement, metaclass=ABCMeta):
     '''
     Abstract node representing a Statement.
     '''

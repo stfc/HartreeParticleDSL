@@ -16,7 +16,7 @@ class AutoReference(Reference):
     '''
 
     def __init__(self, symbol: AutoSymbol) -> None:
-        super().__init__()
+        super().__init__(symbol=symbol)
         self.symbol = symbol
 
     @property
