@@ -20,6 +20,7 @@ class ArrayReference(ArrayMixin, Reference):
     :param indices: The indices used to access this array
     :type indices: list of :py:class:`HartreeParticleDSL.Particle_IR.nodes.DataNode` or None.
     '''
+    _text_name = "ArrayReference"
 
     def __init__(self, symbol: ArraySymbol, indices: Union[None,List[DataNode]]=None) -> None:
         super().__init__(symbol=symbol)

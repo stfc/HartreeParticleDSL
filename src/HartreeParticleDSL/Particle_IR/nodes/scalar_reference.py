@@ -14,6 +14,7 @@ class ScalarReference(Reference):
             :py:class:`HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol.ScalarTypeSymbol`
 
     '''
+    _text_name = "ScalarReference"
 
     def __init__(self, symbol: ScalarTypeSymbol) -> None:
         super().__init__(symbol=symbol)

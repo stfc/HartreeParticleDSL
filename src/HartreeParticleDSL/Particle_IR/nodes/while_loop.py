@@ -14,6 +14,8 @@ class While(Statement):
     '''
     Class to represent a While loop in the Particle IR tree.
     '''
+    _text_name = "While"
+
     def __init__(self) -> None:
         super().__init__()
 

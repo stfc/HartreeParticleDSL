@@ -20,6 +20,8 @@ class Loop(Statement):
 
     :raises IRGenerationError: if the variable input is invalid.
     '''
+    _text_name = "Loop"
+
     def __init__(self, variable: Symbol) -> None:
         super().__init__()
         if not isinstance(variable, Symbol):

@@ -21,16 +21,20 @@ class EmptyStatement(Statement):
     a create variable call without value which can be done
     through the symbol table output.
     '''
+    _text_name = "EmptyStatement"
 
 class Break(Statement):
     '''
     Node used to represent a break statement.
     '''
+    _text_name = "Break"
 
 class Return(Statement):
     '''
     Node used to represent a Return statement.
     '''
+    _text_name = "Return"
+
     @staticmethod
     def _validate_child(position: int, child: Node) -> bool:
         '''

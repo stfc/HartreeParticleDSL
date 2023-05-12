@@ -28,6 +28,8 @@ class Literal(DataNode):
     '''
     _real_value = r'^[+-]?[0-9]+(\.[0-9]*)?([eE][+-]?[0-9]+)?$'
     _int_value = r'([+-]?[1-9][0-9]*|0)'
+    _text_name = "Literal"
+    _colour = "Yellow"
 
     def __init__(self, value: str, datatype: ScalarType) -> None:
         super().__init__()
@@ -77,9 +79,9 @@ class Literal(DataNode):
         '''
         return self._value
 
-    def node_str(self) -> str:
+    def node_str(self, colour=True) -> str:
         '''
         :returns: The string representation of this node in the tree.
         :rtype: str
         '''
-        return f"Literal['{self.value}', {self.datatype}]"
+        return self.coloured_name(colour) + f"['{self.value}', {self.datatype}]"

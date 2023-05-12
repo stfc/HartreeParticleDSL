@@ -15,6 +15,8 @@ class ParticlePositionReference(Reference):
     :type symbol: :py:class:`HartreeParticleDSL.Particle_IR.symbols.structuresymbol.StructureSymbol`
     :param int dimension: The dimension of the particle position accessed in this node.
     '''
+    _text_name = "ParticlePositionReference"
+
     # pylint: disable=undefined-variable
     def __init__(self, symbol: StructureSymbol, dimension: int) -> None:
         super().__init__(symbol=symbol)

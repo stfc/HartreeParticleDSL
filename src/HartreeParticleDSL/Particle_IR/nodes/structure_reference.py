@@ -20,6 +20,8 @@ class StructureReference(Reference):
     :type member: :py:class:`HartreeParticleDSL.Particle_IR.nodes.member.Member`
     '''
     # pylint: disable=undefined-variable
+    _text_name = "StructureReference"
+
     def __init__(self, symbol: StructureSymbol, member: Union[None,Member]=None) -> None:
         super().__init__(symbol=symbol)
         self.symbol = symbol

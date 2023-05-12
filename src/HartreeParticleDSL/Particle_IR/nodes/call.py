@@ -18,6 +18,7 @@ class Call(Statement, DataNode, psycall.Call):
     :param str name: the function name called by this Call.
     '''
     # pylint: disable=undefined-variable
+    _text_name = "Call"
 
     def __init__(self, func_name: str) -> None:
         rsym = RoutineSymbol(func_name)
@@ -74,12 +75,12 @@ class Call(Statement, DataNode, psycall.Call):
             rval.addchild(arg)
         return rval
 
-    def node_str(self) -> str:
+    def node_str(self, colour=True) -> str:
         '''
         :returns: a text description of this node.
         :rtype: str
         '''
-        rstring = f"Call[{self.func_name}: ("
+        rstring = self.coloured_name(colour) + f"[{self.func_name}: ("
         arg_strs = []
         for arg in self.children:
             arg_strs.append(str(arg))

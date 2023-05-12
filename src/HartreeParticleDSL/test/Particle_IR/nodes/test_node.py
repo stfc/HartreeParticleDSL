@@ -3,6 +3,8 @@ import pytest
 from HartreeParticleDSL.Particle_IR.nodes.node import Node, ChildrenList
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 
+from psyclone.errors import GenerationError
+
 '''
 Module for testing the children list and Node implementations.
 Unit testing quality is quite bad here as Node doesn't support a lot
@@ -17,29 +19,28 @@ def test_children_list():
     # Create a failing validation function
     def validation2(item, node):
         return False
-    node1 = Node()
-    node2 = Node()
-    node3 = Node()
-    a = ChildrenList(node1, validation_function)
-    b = ChildrenList(node2, validation2)
+    class aNode(Node):
+        _colour = "yellow"
+    node1 = aNode()
+    node2 = aNode()
+    node3 = aNode()
+    a = ChildrenList(node1, validation_function, "None")
+    b = ChildrenList(node2, validation2, "aNode")
 
     a._validate_item(2, node2)
 
-    with pytest.raises(IRGenerationError) as excinfo:
+    with pytest.raises(GenerationError) as excinfo:
         b._validate_item(1, node3)
-    assert ("Item '<class 'HartreeParticleDSL.Particle_IR.nodes.node.Node'>' can't "
-            "be child 1 of '<class 'HartreeParticleDSL.Particle_IR.nodes.node.Node'>'."
-            in str(excinfo.value))
+    assert ("Item 'aNode' can't be child 1 of 'aNode'. The valid format is: 'aNode'" in str(excinfo.value))
 
     a.insert(0,node3)
 
     a._check_is_orphan(node1)
 
-    with pytest.raises(IRGenerationError) as excinfo:
+    with pytest.raises(GenerationError) as excinfo:
         a._check_is_orphan(node3)
-    assert ("Item 'Node[]' can't be added as child of 'Node[]' "
-            "because it is not an orphan. It already has a 'Node[]'"
-            " as a parent." in str(excinfo.value))
+    assert ("Item 'aNode' can't be added as child of 'aNode' because it "
+            "is not an orphan. It already has a 'aNode' as a parent." in str(excinfo.value))
 
     a.pop(0)
     assert node3.parent is None
@@ -125,6 +126,7 @@ def test_node_validate_child():
 
 def test_node_init_children1():
     class fakeNode(Node):
+        _colour = "yellow"
         @staticmethod
         def _validate_child(position, child):
             return True
@@ -140,17 +142,21 @@ def test_node_init_children1():
     assert mynode.children is mynode._children
 
 def test_node_nodestr():
-    node = Node()
-    assert node.node_str() == "Node[]"
-    assert str(node) == "Node[]"
+    class aNode(Node):
+        _colour = "yellow"
+    node = aNode()
+    assert node.node_str() == "aNode[]"
+    assert str(node) == "aNode[]"
 
 def test_node_init_children2():
     class fakeNode(Node):
+        _colour = "yellow"
         @staticmethod
         def _validate_child(position, child):
             return True
 
     class fakeNode2(Node):
+        _colour = "yellow"
         @staticmethod
         def _validate_child(position, child):
             return True

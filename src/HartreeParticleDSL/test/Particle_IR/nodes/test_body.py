@@ -22,7 +22,7 @@ def test_body():
 
     with pytest.raises(GenerationError) as excinfo:
         body.addchild("123")
-    assert ("Item 'str' can't be child 0 of 'Schedule'. The valid format is: '[Statement]*'" in str(excinfo.value))
+    assert ("Item 'str' can't be child 0 of 'Body'. The valid format is: '[Statement]*'" in str(excinfo.value))
 
     body.addchild(assign)
 

@@ -11,16 +11,19 @@ from enum import Enum
 from typing import Union, Dict, List, Tuple
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 
-class DataType(metaclass=ABCMeta):
+import psyclone.psyir.symbols.datatypes as psyDT
+
+class DataType(psyDT.DataType, metaclass=ABCMeta):
     '''Abstract base class from which all types are derived.'''
     # pylint: disable=too-few-public-methods
 
-    @abc.abstractmethod
-    def __str__(self):
-        '''
-        :returns: a description of this type.
-        :rtype: str
-        '''
+#    @abc.abstractmethod
+#    def __str__(self):
+#        '''
+#        :returns: a description of this type.
+#        :rtype: str
+#        '''
+
 
 
 class NoType(DataType):
@@ -74,6 +77,16 @@ class ScalarType(DataType):
         self._intrinsic = intrinsic
         self._precision = precision
 
+    def __eq__(self, other):
+        eq = type(self) == type(other)
+        if eq:
+            eq = self.intrinsic == other.intrinsic
+            eq = eq and (self.precision == other.precision)
+        return eq
+
+    def __hash__(self):
+        return hash((self.intrinsic, self.precision))
+
     @property
     def intrinsic(self) -> Intrinsic:
         '''
@@ -109,6 +122,12 @@ class StructureType(DataType):
 
     def __init__(self) -> None:
         self._components = OrderedDict()
+
+    def __eq__(self, other):
+        return self is other
+
+    def __hash__(self):
+        return hash((tuple(self.components.keys()), tuple(self.components.values())))
 
     def __str__(self) -> str:
         '''
@@ -208,6 +227,12 @@ class PointerType(DataType):
         '''
         return f"PointerType<{self._datatype}>"
 
+    def __eq__(self, other):
+        return self is other
+
+    def __hash__(self):
+        return hash(id(self))
+
 class ArrayType(DataType):
     '''
     Describes an array type.
@@ -227,6 +252,19 @@ class ArrayType(DataType):
         Enumeration of array shape extents that are unspecified at compile time.
         '''
         DYNAMIC = 1
+
+    def __eq__(self, other):
+        eq = type(self) == type(other)
+        if eq:
+            eq = eq and self._datatype == other._datatype
+            eq = eq and len(self.shape) == len(other.shape)
+            if eq:
+                for i, el in enumerate(self.shape):
+                    eq = eq and el == other.shape[i]
+        return eq
+
+    def __hash__(self):
+        return hash((self._datatype, tuple(self.shape)))
 
     def __init__(self, datatype: DataType, shape: List[Union[int, Extent]]) -> None:
         if not isinstance(datatype, DataType):

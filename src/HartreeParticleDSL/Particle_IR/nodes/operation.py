@@ -25,6 +25,7 @@ class Operation(DataNode, psyop.Operation, metaclass=ABCMeta):
     :raises TypeError: if the supplied operator is not a valid type for this operation.
     '''
     Operator = object
+    _text_name = "Operation"
 
     def __init__(self, operator: object):
         super().__init__(operator=operator)
@@ -35,6 +36,9 @@ class Operation(DataNode, psyop.Operation, metaclass=ABCMeta):
                             f"{type(operator)}.")
         self._operator = operator
         self._argument_names = []
+
+    def __str__(self):
+        return self.node_str(False)
 
     @property
     def operator(self) -> object:
@@ -49,6 +53,7 @@ class BinaryOperation(Operation):
     Class representing a BinaryOperation. Has exactly two children to represent
     the two sides of the operation.
     '''
+    _text_name = "BinaryOperation"
     class BinaryOp(Enum):
         '''Enumeration of Binary Operations supported in Particle DSL.'''
         # Arithmetic operations
@@ -118,17 +123,18 @@ class BinaryOperation(Operation):
             return True
         return False
 
-    def node_str(self) -> str:
+    def node_str(self, colour=True) -> str:
         '''
         :returns: a string representation of this node.
         :rtype: str
         '''
-        return f"BinaryOperation[{self.operator}: ({self.children[0]}, {self.children[1]})]"
+        return self.coloured_name(colour) + f"[{self.operator}: ({self.children[0]}, {self.children[1]})]"
 
 class UnaryOperation(Operation):
     '''
     Class representing a UnaryOperation. Has exactly one child.
     '''
+    _text_name = "UnaryOperation"
     class UnaryOp(Enum):
         '''Enumeration of Unary Operations supported in Particle DSL.'''
         UNARYSUB=1
@@ -176,12 +182,12 @@ class UnaryOperation(Operation):
         oper.addchild(child)
         return oper
 
-    def node_str(self) -> str:
+    def node_str(self, colour=True) -> str:
         '''
         :returns: a string representation of this node.
         :rtype: str
         '''
-        return f"UnaryOperation[{self.operator}: {self.children[0]}]"
+        return self.coloured_name(colour) + f"[{self.operator}: {self.children[0]}]"
 
 # pylint: disable=fixme
 #TODO Do we need an N-ary class for general operations?

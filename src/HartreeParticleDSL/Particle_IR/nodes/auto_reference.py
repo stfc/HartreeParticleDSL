@@ -14,6 +14,7 @@ class AutoReference(Reference):
             :py:class:`HartreeParticleDSL.Particle_IR.symbols.autosymbol.AutoSymbol`
 
     '''
+    _text_name = "AutoReference"
 
     def __init__(self, symbol: AutoSymbol) -> None:
         super().__init__(symbol=symbol)

@@ -96,4 +96,5 @@ Body[
     Call[hello2: ()]
 ] End Body
 ]'''
+    print(ifelse.node_str())
     assert correct == ifelse.node_str()

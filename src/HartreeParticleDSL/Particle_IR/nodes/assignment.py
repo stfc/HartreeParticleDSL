@@ -12,6 +12,8 @@ from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
 import psyclone.psyir.nodes.assignment as psyassign
 
 class Assignment(psyassign.Assignment, Statement):
+    _text_name = "Assignment"
+
     def node_str(self) -> str:
         '''
         :returns: a text description of this assignment

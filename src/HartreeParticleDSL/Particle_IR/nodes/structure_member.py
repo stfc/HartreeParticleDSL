@@ -15,6 +15,8 @@ class StructureMember(Member):
     :type sub_member: :py:class:`HartreeParticleDSL.Particle_IR.nodes.member.Member`
     '''
     # pylint: disable=undefined-variable
+    _text_name = "StructureMember"
+
     def __init__(self, name: str, sub_member: Member) -> None:
         super().__init__(name)
         self.addchild(sub_member)

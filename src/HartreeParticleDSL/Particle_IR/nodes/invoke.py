@@ -14,6 +14,7 @@ class Invoke(Statement):
 
     An Invoke is used for any Kern objects that are not Main.
     '''
+    _text_name = "Invoke"
     # pylint: disable=undefined-variable
 
     @staticmethod

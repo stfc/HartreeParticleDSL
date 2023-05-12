@@ -13,26 +13,11 @@ class Member(Node, psyMem.Member):
     :param str name: the name of the member of the structure that is \
                             being referenced.
     '''
+    _text_name = "Member"
 
     def __init__(self, name: str) -> None:
         super().__init__(name)
         self._name = name
-
-    @property
-    def name(self) -> str:
-        '''
-        :returns: the name of this member.
-        :rtype: str
-        '''
-        return self._name
-
-    @property
-    def is_array(self) -> bool:
-        '''
-        :returns: if this member is an array.
-        :rtype: bool
-        '''
-        return False
 
     def node_str(self) -> str:
         '''

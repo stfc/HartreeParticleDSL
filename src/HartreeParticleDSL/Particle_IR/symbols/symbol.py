@@ -9,7 +9,9 @@ from abc import ABCMeta
 from enum import Enum
 from HartreeParticleDSL.Particle_IR.nodes.node import Node
 
-class Symbol(metaclass=ABCMeta):
+import psyclone.psyir.symbols.symbol as psySym
+
+class Symbol(psySym.Symbol, metaclass=ABCMeta):
     '''
     Generic Symbol item for the Symbol Table and PIR References.
 
@@ -29,17 +31,16 @@ class Symbol(metaclass=ABCMeta):
         LOCAL: the symbol is local to the current kernel or function.
         GLOBAL: The variable is visibile globally.
         '''
-        LOCAL=1
-        GLOBAL=2
+        PUBLIC=psySym.Symbol.Visibility.PUBLIC
+        PRIVATE=psySym.Symbol.Visibility.PRIVATE
+        LOCAL=3
+        GLOBAL=4
 
     def __init__(self, name: str, visibility: Visibility=Visibility.LOCAL) -> None:
         if not isinstance(name, str):
             raise TypeError(f"{type(self)} 'name' attribute should be of type str"
                             f" but {type(name)} found.")
-
-        self._name = name
-        self._visibility = None
-        self.visibility = visibility
+        super().__init__(name=name, visibility=visibility)
 
     @property
     def visibility(self) -> Visibility:

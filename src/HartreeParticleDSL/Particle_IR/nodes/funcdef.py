@@ -17,6 +17,7 @@ class FuncDef(Node):
     :type children: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.Node. \
             or None.
     '''
+    _text_name = "FuncDef"
     # pylint: disable=undefined-variable
 
     def __init__(self, name: str,  children: Union[None,List[Node]]=None) -> None:

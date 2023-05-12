@@ -16,6 +16,8 @@ class ConfigReference(StructureReference):
     :param member: The structure access member used in this reference.
     :type member: :py:class:`HartreeParticleDSL.Particle_IR.nodes.member.Member`
     '''
+    _text_name = "ConfigReference"
+
     # pylint: disable=undefined-variable
     def __init__(self, symbol: StructureSymbol, member: Member) -> None:
         super().__init__(symbol, member)
