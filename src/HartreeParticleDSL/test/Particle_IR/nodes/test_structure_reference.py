@@ -27,6 +27,7 @@ def test_pr():
     correct = "StructureReference[structure1: Member[x]]"
     assert correct == a.node_str()
 
+    print(structure)
     b = StructureReference(structure)
     assert b.symbol is structure
     assert b.member is None

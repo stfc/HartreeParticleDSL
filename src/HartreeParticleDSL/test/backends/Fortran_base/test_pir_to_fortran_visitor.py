@@ -37,7 +37,6 @@ def test_pir_fortran_visit_break():
         EXIT
     enddo
 End Subroutine a'''
-    print(out)
     assert correct == out
 
 @pytest.mark.xfail

@@ -66,7 +66,10 @@ class StructureReference(Reference):
         :returns: the member of the structure accessed in this reference.
         :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.member.Member` or None
         '''
-        return self.children[0]
+        if len(self.children) > 0:
+            return self.children[0]
+        else:
+            return None
 
     @member.setter
     def member(self, member: Member) -> None:
@@ -84,7 +87,8 @@ class StructureReference(Reference):
         if len(self.children) > 0:
             self.children[0] = member
         else:
-            self.addchild(member)
+            if member is not None:
+                self.addchild(member)
 
     def node_str(self) -> str:
         '''
