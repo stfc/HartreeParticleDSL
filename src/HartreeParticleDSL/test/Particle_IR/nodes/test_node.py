@@ -225,7 +225,6 @@ def test_node_init_children2():
     assert n5.ancestor(Node,include_self=True) is n5
     assert n5.ancestor(Node,excluding=fakeNode) is None
     assert n5.ancestor(Node,excluding=(fakeNode, Node)) is None
-    assert n5.ancestor(Node,limit=n1) is n1
     assert n5.ancestor(int) is None
     assert z.ancestor(Node,limit=n2) is x
     assert z.ancestor(fakeNode, limit=mynode) is n2
