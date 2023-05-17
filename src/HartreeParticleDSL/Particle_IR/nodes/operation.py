@@ -10,11 +10,11 @@ from enum import Enum
 from typing import List
 
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
-from HartreeParticleDSL.Particle_IR.nodes.node import DataNode, Node
+from psyclone.psyir.nodes import DataNode, Node
 
 import psyclone.psyir.nodes.operation as psyop
 
-class Operation(DataNode, psyop.Operation, metaclass=ABCMeta):
+class Operation(psyop.Operation, metaclass=ABCMeta):
     '''
     Base class for Operations in Particle IR.
 

@@ -2,7 +2,7 @@ import pytest
 
 from HartreeParticleDSL.Particle_IR.symbols.autosymbol import AutoSymbol
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
-from HartreeParticleDSL.Particle_IR.nodes import Node
+from psyclone.psyir.nodes import Node
 
 def test_autosymbol():
     with pytest.raises(TypeError) as excinfo:

@@ -5,12 +5,12 @@ This module contains the Body class.
 from __future__ import annotations
 from typing import Union, List
 
-from HartreeParticleDSL.Particle_IR.nodes.node import Node
+from psyclone.psyir.nodes import Node
 from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
 
 import psyclone.psyir.nodes.schedule as psysched
 
-class Body(Node, psysched.Schedule):
+class Body(psysched.Schedule):
     '''
     Class to represent a Body of a code region. Can contain any
     number of Statement nodes.

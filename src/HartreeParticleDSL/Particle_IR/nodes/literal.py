@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import re
 
-from HartreeParticleDSL.Particle_IR.nodes.node import DataNode
+from psyclone.psyir.nodes import DataNode
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import ScalarType
 
 class Literal(DataNode):

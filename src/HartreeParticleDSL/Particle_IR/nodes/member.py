@@ -2,11 +2,9 @@
 This module contains the Member class.
 '''
 
-from HartreeParticleDSL.Particle_IR.nodes.node import Node
-
 import psyclone.psyir.nodes.member as psyMem
 
-class Member(Node, psyMem.Member):
+class Member(psyMem.Member):
     '''
     Node representing a member of a structure. This is the leaf member node.
 

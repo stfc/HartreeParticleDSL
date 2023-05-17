@@ -5,13 +5,13 @@ This module contains the Call class.
 from __future__ import annotations
 from typing import List
 
-from HartreeParticleDSL.Particle_IR.nodes.node import DataNode
 from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
 
 import psyclone.psyir.nodes.call as psycall
 from psyclone.psyir.symbols.routinesymbol import RoutineSymbol
+from psyclone.psyir.nodes import DataNode
 
-class Call(Statement, DataNode, psycall.Call):
+class Call(Statement, psycall.Call):
     '''
     Contains a generic call in the tree.
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 from abc import ABCMeta
 from typing import List
 from HartreeParticleDSL.Particle_IR.nodes.assignment import Assignment
-from HartreeParticleDSL.Particle_IR.nodes.node import Node
+from psyclone.psyir.nodes import Node
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
 from HartreeParticleDSL.Particle_IR.nodes.particle_position_reference import \
         ParticlePositionReference

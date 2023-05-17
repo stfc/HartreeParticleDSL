@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from abc import ABCMeta
 from enum import Enum
-from HartreeParticleDSL.Particle_IR.nodes.node import Node
+from psyclone.psyir.nodes import Node
 
 import psyclone.psyir.symbols.symbol as psySym
 

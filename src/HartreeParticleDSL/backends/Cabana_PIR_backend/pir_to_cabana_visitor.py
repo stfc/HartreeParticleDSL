@@ -15,7 +15,7 @@ from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
 from HartreeParticleDSL.Particle_IR.nodes.kernels import PerPartKernel, \
     PairwiseKernel, SourceBoundaryKernel, SinkBoundaryKernel
 from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
-from HartreeParticleDSL.Particle_IR.nodes.node import Node
+from psyclone.psyir.nodes import Node
 from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
 from HartreeParticleDSL.Particle_IR.nodes.statement import Return, EmptyStatement
 from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, UnaryOperation

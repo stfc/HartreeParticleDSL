@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from typing import List
 
-from HartreeParticleDSL.Particle_IR.nodes.node import DataNode
 from HartreeParticleDSL.Particle_IR.nodes.array_mixin import ArrayMixin
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
 

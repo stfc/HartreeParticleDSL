@@ -6,8 +6,6 @@ from __future__ import annotations
 from abc import ABCMeta
 from typing import List
 
-from HartreeParticleDSL.Particle_IR.nodes.node import DataNode
-
 import psyclone.psyir.nodes.array_mixin as psyArrmix
 
 class ArrayMixin(psyArrmix.ArrayMixin):
