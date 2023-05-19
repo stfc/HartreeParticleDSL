@@ -59,7 +59,7 @@ def test_loop_node_str():
     call = Call("mycall")
 
     x = While.create(a, [call])
-    correct = '''While[BinaryOperation[BinaryOp.LESS_THAN: (ScalarReference[x], ScalarReference[x2])]: Body[
+    correct = '''While[BinaryOperation[BinaryOp.LESS_THAN: (ScalarReference[name:'x'], ScalarReference[name:'x2'])]: Body[
     Call[mycall: ()]
 ] End Body
 ]'''

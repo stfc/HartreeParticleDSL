@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import List
 
 from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
-from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
+from psyclone.psyir.nodes import Reference
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 
 class PairwiseKernel(Kern):

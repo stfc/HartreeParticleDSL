@@ -51,5 +51,5 @@ def test_call_nodestr():
     ref2 = ScalarReference(sym2)
     mycall = Call.create("mycall", [ref1, ref2])
 
-    correct = "Call[mycall: (ScalarReference[x], ScalarReference[y])]"
+    correct = "Call[mycall: (ScalarReference[name:'x'], ScalarReference[name:'y'])]"
     assert correct == mycall.node_str()

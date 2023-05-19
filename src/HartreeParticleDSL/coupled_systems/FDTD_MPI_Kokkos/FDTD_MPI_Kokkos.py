@@ -14,6 +14,8 @@ from HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol import ScalarTypeSy
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import StructureType, DOUBLE_TYPE, INT_TYPE,\
         INT32_TYPE
 
+from psyclone.psyir.symbols import Symbol
+
 from HartreeParticleDSL.Particle_IR.nodes.particle_position_reference import ParticlePositionReference
 
 PERIODIC = 1
@@ -57,29 +59,29 @@ class FDTD_MPI_Kokkos(force_solver):
         self.interpolator = TOPHAT
 
         # TODO Need to construct the appropriate StructureType here.
-        sub_field_struc = StructureType.create([("hdt", DOUBLE_TYPE),
-                                                ("hdtx", DOUBLE_TYPE),
-                                                ("cnx", DOUBLE_TYPE),
-                                                ("fac", DOUBLE_TYPE),
-                                                ("field_order", INT_TYPE),
-                                                ("fng", DOUBLE_TYPE),
-                                                ("cfl", DOUBLE_TYPE),
-                                                ("x_grid_min_local", DOUBLE_TYPE),
-                                                ("x_grid_max_local", DOUBLE_TYPE),
-                                                ("x_min_local", DOUBLE_TYPE),
-                                                ("x_max_local", DOUBLE_TYPE)])
+        sub_field_struc = StructureType.create([("hdt", DOUBLE_TYPE, Symbol.Visibility.PUBLIC),
+                                                ("hdtx", DOUBLE_TYPE, Symbol.Visibility.PUBLIC),
+                                                ("cnx", DOUBLE_TYPE, Symbol.Visibility.PUBLIC),
+                                                ("fac", DOUBLE_TYPE, Symbol.Visibility.PUBLIC),
+                                                ("field_order", INT_TYPE, Symbol.Visibility.PUBLIC),
+                                                ("fng", DOUBLE_TYPE, Symbol.Visibility.PUBLIC),
+                                                ("cfl", DOUBLE_TYPE, Symbol.Visibility.PUBLIC),
+                                                ("x_grid_min_local", DOUBLE_TYPE, Symbol.Visibility.PUBLIC),
+                                                ("x_grid_max_local", DOUBLE_TYPE, Symbol.Visibility.PUBLIC),
+                                                ("x_min_local", DOUBLE_TYPE, Symbol.Visibility.PUBLIC),
+                                                ("x_max_local", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)])
        
         # For now, the Kokkos fields are not included in the structure, and are
         # thus inaccessible for the general code, which I think is fine?
         # I might be wrong though.
-        fdtd_field = StructureType.create([("field", sub_field_struc),
-                                           ("nxglobal", INT_TYPE),
-                                           ("nx", INT_TYPE),
-                                           ("min_local_cell", INT_TYPE),
-                                           ("max_local_cell", INT_TYPE),
-                                           ("ng", INT_TYPE),
-                                           ("jng", INT_TYPE),
-                                           ("dx", DOUBLE_TYPE)])
+        fdtd_field = StructureType.create([("field", sub_field_struc, Symbol.Visibility.PUBLIC),
+                                           ("nxglobal", INT_TYPE, Symbol.Visibility.PUBLIC),
+                                           ("nx", INT_TYPE, Symbol.Visibility.PUBLIC),
+                                           ("min_local_cell", INT_TYPE, Symbol.Visibility.PUBLIC),
+                                           ("max_local_cell", INT_TYPE, Symbol.Visibility.PUBLIC),
+                                           ("ng", INT_TYPE, Symbol.Visibility.PUBLIC),
+                                           ("jng", INT_TYPE, Symbol.Visibility.PUBLIC),
+                                           ("dx", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)])
 
         get_backend().add_type("FDTD_field", fdtd_field)
         get_backend().add_structure(fdtd_field, "field")

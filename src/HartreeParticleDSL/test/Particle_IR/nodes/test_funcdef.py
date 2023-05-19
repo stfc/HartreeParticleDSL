@@ -73,7 +73,7 @@ def test_funcdef_nodestr():
     arg3 = ScalarReference(ScalarTypeSymbol("a", INT_TYPE))
 
     pk1 = FuncDef.create("Kernel", [arg1, arg2, arg3], [assign])
-    correct = '''FuncDef[ScalarReference[y], ScalarReference[z], ScalarReference[a]: Body[
-    Assignment[ScalarReference[x], Literal['25', Scalar<INTEGER, SINGLE>]]
+    correct = '''FuncDef[ScalarReference[name:'y'], ScalarReference[name:'z'], ScalarReference[name:'a']: Body[
+    Assignment[ScalarReference[name:'x'], Literal['25', Scalar<INTEGER, SINGLE>]]
 ] End Body]'''
     assert correct == pk1.node_str()

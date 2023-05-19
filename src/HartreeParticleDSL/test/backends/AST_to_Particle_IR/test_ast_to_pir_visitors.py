@@ -38,6 +38,8 @@ from HartreeParticleDSL.Particle_IR.nodes.while_loop import While
 from HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol import ScalarTypeSymbol
 from HartreeParticleDSL.c_types import c_double, c_int
 
+from psyclone.psyir.symbols import Symbol
+
 
 def test_find_calls_visitor():
     def a():
@@ -337,7 +339,7 @@ def test_visit_Attribute():
     v = ast_to_pir_visitor()
     # Create a structure type
     mystruc1 = StructureType()
-    mystruc1.add("d", INT_TYPE)
+    mystruc1.add("d", INT_TYPE, Symbol.Visibility.PUBLIC)
     type_mapping_str["mystruc1"]=mystruc1
     def a():
         create_variable(mystruc1, b)
@@ -361,15 +363,15 @@ def test_visit_Attribute():
 
     with pytest.raises(IRGenerationError) as excinfo:
         out = v.visit(c)
-    assert ("Attempted to access member e of structure type StructureType<(d: "
-            "Scalar<INTEGER, SINGLE>)>." in str(excinfo.value))
+    assert ("Attempted to access member e of structure type StructureType<>."
+            in str(excinfo.value))
     del(type_mapping_str["mystruc1"])
     assert type_mapping_str.get("mystruc1") is None
 
     mystruc2 = StructureType()
     substruc = StructureType()
-    substruc.add("e", INT_TYPE)
-    mystruc2.add("d", substruc)
+    substruc.add("e", INT_TYPE, Symbol.Visibility.PUBLIC)
+    mystruc2.add("d", substruc, Symbol.Visibility.PUBLIC)
     type_mapping_str["mystruc2"]=mystruc2
 
     def ab():
@@ -390,14 +392,14 @@ def test_visit_Attribute():
     assert assign.lhs.member.member.name == "e"
 
     del(type_mapping_str["mystruc2"])
-    assert type_mapping_str.get(mystruc2) is None
+    assert type_mapping_str.get("mystruc2") is None
 
     mystruc2 = StructureType()
     substruc1 = StructureType()
     substruc2 = StructureType()
-    substruc2.add("e", INT_TYPE)
-    substruc1.add("d", substruc2)
-    mystruc2.add("c", substruc1)
+    substruc2.add("e", INT_TYPE, Symbol.Visibility.PUBLIC)
+    substruc1.add("d", substruc2, Symbol.Visibility.PUBLIC)
+    mystruc2.add("c", substruc1, Symbol.Visibility.PUBLIC)
     type_mapping_str["mystruc2"]=mystruc2
 
     def ac():
@@ -407,15 +409,15 @@ def test_visit_Attribute():
     c = ast.parse(textwrap.dedent(inspect.getsource(ac)))
     with pytest.raises(IRGenerationError) as excinfo:
         out = v.visit(c)
-    assert ("Attempted to access member f of structure type StructureType<(e:"
-            " Scalar<INTEGER, SINGLE>)>." in str(excinfo.value))
+    assert ("Attempted to access member f of structure type StructureType<"
+            ">." in str(excinfo.value))
 
     del(type_mapping_str["mystruc2"])
-    assert type_mapping_str.get(mystruc2) is None
+    assert type_mapping_str.get("mystruc2") is None
 
     mystruc2 = StructureType()
     substruc1 = ArrayType(INT_TYPE, [ArrayType.Extent.DYNAMIC])
-    mystruc2.add("c", substruc1)
+    mystruc2.add("c", substruc1, Symbol.Visibility.PUBLIC)
     type_mapping_str["mystruc2"]=mystruc2
 
     def ad():
@@ -436,11 +438,11 @@ def test_visit_Attribute():
     assert assign.lhs.member.indices[0].value == "2"
 
     del(type_mapping_str["mystruc2"])
-    assert type_mapping_str.get(mystruc2) is None
+    assert type_mapping_str.get("mystruc2") is None
 
     mystruc2 = StructureType()
     substruc1 = ArrayType(INT_TYPE, [ArrayType.Extent.DYNAMIC, ArrayType.Extent.DYNAMIC])
-    mystruc2.add("c", substruc1)
+    mystruc2.add("c", substruc1, Symbol.Visibility.PUBLIC)
     type_mapping_str["mystruc2"]=mystruc2
 
     def ae():
@@ -544,9 +546,9 @@ def test_visit_arg_and_arguments_and_FunctionDef(capsys):
     mystruc2 = StructureType()
     substruc1 = StructureType()
     substruc2 = StructureType()
-    substruc2.add("e", INT_TYPE)
-    substruc1.add("d", substruc2)
-    mystruc2.add("c", substruc1)
+    substruc2.add("e", INT_TYPE, Symbol.Visibility.PUBLIC)
+    substruc1.add("d", substruc2, Symbol.Visibility.PUBLIC)
+    mystruc2.add("c", substruc1, Symbol.Visibility.PUBLIC)
     type_mapping_str["mystruc2"]=mystruc2
 
     def b(arg: mystruc2):
@@ -561,7 +563,7 @@ def test_visit_arg_and_arguments_and_FunctionDef(capsys):
     assert out.arguments[0].symbol.datatype == mystruc2
 
     del(type_mapping_str["mystruc2"])
-    assert type_mapping_str.get(mystruc2) is None
+    assert type_mapping_str.get("mystruc2") is None
 
     at = ArrayType(INT_TYPE, [1])
     type_mapping_str["at"] = at
@@ -814,8 +816,8 @@ def test_visit_Index_and_Subscript():
 
     struct = StructureType()
     substruct = StructureType()
-    substruct.components["array"] = ArrayType(INT_TYPE, [3])
-    struct.components["sub"] = substruct
+    substruct.add("array", ArrayType(INT_TYPE, [3]), Symbol.Visibility.PUBLIC)
+    struct.add("sub", substruct, Symbol.Visibility.PUBLIC)
     type_mapping_str["struc"] = struct
 
     def b():

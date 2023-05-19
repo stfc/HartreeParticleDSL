@@ -7,9 +7,11 @@ from __future__ import annotations
 import re
 
 from psyclone.psyir.nodes import DataNode
-from HartreeParticleDSL.Particle_IR.datatypes.datatype import ScalarType
+import psyclone.psyir.nodes.literal as psyLit
+from psyclone.psyir.symbols.datatypes import ScalarType
 
 class Literal(DataNode):
+#class Literal(psyLit.Literal):
     '''
     Node representing a Literal in the Particle IR tree.
 
@@ -47,7 +49,7 @@ class Literal(DataNode):
             raise ValueError("Constructing integer Literal but got a value of "
                              f"'{value}' instead of an integer value.")
 
-        if (datatype.intrinsic == ScalarType.Intrinsic.FLOAT and
+        if (datatype.intrinsic == ScalarType.Intrinsic.REAL and
             not re.fullmatch(Literal._real_value, value)):
             raise ValueError("Constructing float Literal but got a value of "
                              f"'{value}' instead of a float value.")
@@ -57,7 +59,7 @@ class Literal(DataNode):
             value not in ("True", "False")):
             raise ValueError("Constructing boolean Literal but got a value of "
                              f"'{value}' instead of True or False.")
-        if datatype.intrinsic == ScalarType.Intrinsic.FLOAT:
+        if datatype.intrinsic == ScalarType.Intrinsic.REAL:
             self._value = value.replace("E", "e")
         else:
             self._value = value

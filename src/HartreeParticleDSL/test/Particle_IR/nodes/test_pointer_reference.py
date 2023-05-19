@@ -16,5 +16,5 @@ def test_pr():
     a = PointerReference(structure)
     assert a.symbol is structure
 
-    correct = "PointerReference[structure1]"
+    correct = "PointerReference[name:'structure1']"
     assert correct == a.node_str()

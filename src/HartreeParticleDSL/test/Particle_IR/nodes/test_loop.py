@@ -80,7 +80,7 @@ def test_loop_node_str():
     call = Call("mycall")
 
     x = Loop.create(sym, ref1, ref2, ref3, [call])
-    correct = '''Loop[ (ScalarReference[start], ScalarReference[stop] ScalarReference[step]): Body[
+    correct = '''Loop[ (ScalarReference[name:'start'], ScalarReference[name:'stop'] ScalarReference[name:'step']): Body[
     Call[mycall: ()]
 ] End Body
 ]'''

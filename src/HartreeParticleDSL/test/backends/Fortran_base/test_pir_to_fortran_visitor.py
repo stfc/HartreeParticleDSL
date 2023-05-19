@@ -16,6 +16,8 @@ from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, 
         INT_TYPE, FLOAT_TYPE, DOUBLE_TYPE, INT64_TYPE, INT32_TYPE, BOOL_TYPE, STRING_TYPE, \
         BASE_PARTICLE_TYPE, reset_part_and_config
 
+from psyclone.psyir.symbols import Symbol
+
 import ast
 import inspect
 import textwrap
@@ -33,7 +35,7 @@ def test_pir_fortran_visit_break():
     b = Fortran_PIR_Writer()
     out = b(pir)
     correct = '''Subroutine a()
-    while(True) do
+    while(.True.) do
         EXIT
     enddo
 End Subroutine a'''
@@ -57,7 +59,7 @@ def test_pir_fortran_visit_ifdef():
 
     correct = '''Subroutine a()
     Integer :: b
-    if(True) then
+    if(.True.) then
         b = 1
     else
         b = 2
@@ -180,7 +182,7 @@ def test_pir_fortran_visit_members():
     astpir = ast_to_pir_visitor()
     cpir = Fortran_PIR_Writer()
     mystruc1 = StructureType()
-    mystruc1.add("d", INT_TYPE)
+    mystruc1.add("d", INT_TYPE, Symbol.Visibility.PUBLIC)
     type_mapping_str["mystruc1"]=mystruc1
     def a():
         create_variable(mystruc1, d)
@@ -198,8 +200,8 @@ End Subroutine a'''
 
     mystruc2 = StructureType()
     substruc = StructureType()
-    substruc.add("e", INT_TYPE)
-    mystruc2.add("d", substruc)
+    substruc.add("e", INT_TYPE, Symbol.Visibility.PUBLIC)
+    mystruc2.add("d", substruc, Symbol.Visibility.PUBLIC)
     type_mapping_str["mystruc2"]=mystruc2
     def b():
         create_variable(mystruc2, b)
@@ -218,7 +220,7 @@ End Subroutine b'''
 
     mystruc2 = StructureType()
     substruc1 = ArrayType(INT_TYPE, [ArrayType.Extent.DYNAMIC])
-    mystruc2.add("c", substruc1)
+    mystruc2.add("c", substruc1, Symbol.Visibility.PUBLIC)
     type_mapping_str["mystruc2"]=mystruc2
     def d():
         create_variable(mystruc2, b)

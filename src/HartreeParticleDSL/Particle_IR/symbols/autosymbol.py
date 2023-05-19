@@ -4,7 +4,7 @@ that would be expressed by the C++ auto keyword in the Particle IR
 tree.
 '''
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
-from HartreeParticleDSL.Particle_IR.datatypes.datatype import ScalarType
+from psyclone.psyir.symbols.datatypes import ScalarType
 
 class AutoSymbol(Symbol):
     '''

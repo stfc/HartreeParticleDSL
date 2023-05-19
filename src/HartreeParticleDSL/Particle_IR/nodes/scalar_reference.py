@@ -2,7 +2,7 @@
 This module contains the ScalarReference class.
 '''
 
-from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
+from psyclone.psyir.nodes import Reference
 from HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol import ScalarTypeSymbol
 
 class ScalarReference(Reference):

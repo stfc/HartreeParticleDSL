@@ -8,9 +8,10 @@ from HartreeParticleDSL.Particle_IR.nodes.statement import Return, EmptyStatemen
 from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, UnaryOperation
 from HartreeParticleDSL.Particle_IR.nodes.pointer_reference import PointerReference
 
-from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, ScalarType, \
+from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str,\
         INT_TYPE, FLOAT_TYPE, DOUBLE_TYPE, INT64_TYPE, INT32_TYPE, BOOL_TYPE, STRING_TYPE, \
-        BASE_PARTICLE_TYPE, StructureType, ArrayType
+        BASE_PARTICLE_TYPE, ArrayType
+from psyclone.psyir.symbols.datatypes import ScalarType, StructureType
 
 class Fortran_PIR_Writer(PIR_Visitor, FortranWriter):
 
@@ -95,25 +96,34 @@ class Fortran_PIR_Writer(PIR_Visitor, FortranWriter):
 
     @classmethod
     def get_fortran_datatype(cls, datatype: DataType):
-        type_map = {INT_TYPE: "Integer",
-                    FLOAT_TYPE: "Real*4",
-                    DOUBLE_TYPE: "Real*8",
-                    INT64_TYPE: "Integer*8",
-                    INT32_TYPE: "Integer*4",
-                    BOOL_TYPE: "Logical",
-                    STRING_TYPE: "Character(len = *)"}
-        t = type_map.get(datatype)
-        if isinstance(datatype, ArrayType):
-            childtype = datatype._datatype
-            t = type_map.get(childtype)
-        if t is not None:
-            return t
+        type_map = {ScalarType.Intrinsic.INTEGER: {ScalarType.Precision.SINGLE: "Integer",
+                                                   32: "Integer*4", 64: "Integer*8"},
+                    ScalarType.Intrinsic.REAL: {ScalarType.Precision.SINGLE: "Real*4", ScalarType.Precision.DOUBLE: "Real*8"},
+                    ScalarType.Intrinsic.CHARACTER: {ScalarType.Precision.UNDEFINED: "Character(len = *)"},
+                    ScalarType.Intrinsic.BOOLEAN: {ScalarType.Precision.UNDEFINED: "Logical"}
+                   }
+
+        intrinsic = None
+        precision = None
+        if isinstance(datatype, ScalarType):
+            intrinsic = datatype.intrinsic
+            precision = datatype.precision
+        elif isinstance(datatype, ArrayType):
+            intrinsic = datatype._datatype.intrinsic
+            precision = datatype._datatype.precision
+        type_dict = type_map.get(intrinsic)
+        type_str = None
+        if type_dict is not None:
+            type_str = type_dict.get(precision)
+        if type_str is not None:
+            return type_str
+
         for key in type_mapping_str.keys():
-            if isinstance(datatype, StructureType):
-                if type_mapping_str[key] == datatype:
-                    return "Type(" + key + ")"
             if type_mapping_str[key] == datatype:
-                return key
+                if isinstance(datatype, StructureType):
+                    return "Type(" + key + ")"
+                else:
+                    return key
 
     def visit_symbol_node(self, symbol: Symbol) -> str:
         # Find the name in the type_mapping_str
@@ -136,7 +146,7 @@ class Fortran_PIR_Writer(PIR_Visitor, FortranWriter):
                     datatype = returns[0].children[0].datatype
                     if datatype.intrinsic == ScalarType.Intrinsic.INTEGER:
                         return_type = "int"
-                    elif datatype.intrinsic == ScalarType.Intrinsic.FLOAT:
+                    elif datatype.intrinsic == ScalarType.Intrinsic.REAL:
                         return_type = "double"
                     elif datatype.intrinsic == ScalarType.Intrinsic.BOOLEAN:
                         return_type = "bool"

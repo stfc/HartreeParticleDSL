@@ -2,7 +2,7 @@
 This module contains the AutoReference class.
 '''
 
-from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
+from psyclone.psyir.nodes import Reference
 from HartreeParticleDSL.Particle_IR.symbols.autosymbol import AutoSymbol
 
 class AutoReference(Reference):

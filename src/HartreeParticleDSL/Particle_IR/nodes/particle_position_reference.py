@@ -4,7 +4,7 @@ This module contains the ParticlePositionReference class.
 
 from __future__ import annotations
 
-from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
+from psyclone.psyir.nodes import Reference
 from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
 
 class ParticlePositionReference(Reference):

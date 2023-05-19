@@ -58,8 +58,8 @@ def test_binaryop_nodestr():
     ref2 = ScalarReference(sym2)
     a = BinaryOperation.create(BinaryOperation.BinaryOp.ADDITION,[ref1, ref2])
 
-    assert ("BinaryOperation[BinaryOp.ADDITION: (ScalarReference[x], "
-            "ScalarReference[x2])]" in a.node_str())
+    assert ("BinaryOperation[BinaryOp.ADDITION: (ScalarReference[name:'x'], "
+            "ScalarReference[name:'x2'])]" in a.node_str())
 
 def test_unaryop_create_badargs():
     with pytest.raises(TypeError) as excinfo:
@@ -92,4 +92,4 @@ def test_unaryop_nodestr():
 
     a = UnaryOperation.create(UnaryOperation.UnaryOp.UNARYSUB, ref1)
 
-    assert "UnaryOperation[UnaryOp.UNARYSUB: ScalarReference[x]]" in a.node_str()
+    assert "UnaryOperation[UnaryOp.UNARYSUB: ScalarReference[name:'x']]" in a.node_str()

@@ -12,6 +12,7 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import SingletonInstanceErr
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import StructureType, type_mapping_str, \
                                                             PARTICLE_POSITION_TYPE, ArrayType, \
                                                             DOUBLE_TYPE, INT64_TYPE
+from psyclone.psyir.symbols import Symbol
 
 class _HartreeParticleDSL():
     '''
@@ -449,9 +450,9 @@ class Particle():
         # Handle PIR things
         self._pir_type = StructureType()
         _CORE_PART_TYPE = StructureType()
-        _CORE_PART_TYPE.components["position"] = PARTICLE_POSITION_TYPE
-        _CORE_PART_TYPE.components["velocity"] = ArrayType( DOUBLE_TYPE, [3])
-        self._pir_type.components["core_part"] = _CORE_PART_TYPE
+        _CORE_PART_TYPE.add("position", PARTICLE_POSITION_TYPE, Symbol.Visibility.PUBLIC)
+        _CORE_PART_TYPE.add("velocity", ArrayType( DOUBLE_TYPE, [3]), Symbol.Visibility.PUBLIC)
+        self._pir_type.add("core_part", _CORE_PART_TYPE, Symbol.Visibility.PUBLIC)
         type_mapping_str["part"] = self._pir_type
 
         #TODO Neighbour part type? Also need to add the struct core_part_type so
@@ -468,9 +469,9 @@ class Particle():
         # Handle PIR things
         self._pir_type = StructureType()
         _CORE_PART_TYPE = StructureType()
-        _CORE_PART_TYPE.components["position"] = PARTICLE_POSITION_TYPE
-        _CORE_PART_TYPE.components["velocity"] = ArrayType( DOUBLE_TYPE, [3])
-        self._pir_type.components["core_part"] = _CORE_PART_TYPE
+        _CORE_PART_TYPE.add("position", PARTICLE_POSITION_TYPE, Symbol.Visibility.PUBLIC)
+        _CORE_PART_TYPE.add("velocity", ArrayType( DOUBLE_TYPE, [3]), Symbol.Visibility.PUBLIC)
+        self._pir_type.add("core_part", _CORE_PART_TYPE, Symbol.Visibility.PUBLIC)
         type_mapping_str["part"] = self._pir_type
         #TODO Neighbour part type? Also need to add the struct core_part_type so
         #the DSL knows how to define them both
@@ -523,22 +524,22 @@ class Config():
         # Handle PIR things
         self._pir_type = StructureType()
         space = StructureType()
-        self._pir_type.components["space"] = space
+        self._pir_type.add("space", space, Symbol.Visibility.PUBLIC)
         BOUNDARY_TYPE = StructureType()
-        BOUNDARY_TYPE.components["x_min"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["x_max"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["y_min"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["y_max"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["z_min"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["z_max"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["local_x_min"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["local_x_max"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["local_y_min"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["local_y_max"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["local_z_min"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["local_z_max"] = DOUBLE_TYPE
-        self._pir_type.components["nparts"] = INT64_TYPE
-        space.components["box_dims"] = BOUNDARY_TYPE
+        BOUNDARY_TYPE.add("x_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("x_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("y_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("y_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("z_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("z_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("local_x_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("local_x_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("local_y_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("local_y_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("local_z_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("local_z_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        self._pir_type.add("nparts", INT64_TYPE, Symbol.Visibility.PUBLIC)
+        space.add("box_dims", BOUNDARY_TYPE, Symbol.Visibility.PUBLIC)
         type_mapping_str["config"] = self._pir_type
         #TODO Neighbour config type? Also need to add the struct space_type so
         #the DSL knows how to define them both
@@ -553,22 +554,22 @@ class Config():
         # Handle PIR things
         self._pir_type = StructureType()
         space = StructureType()
-        self._pir_type.components["space"] = space
+        self._pir_type.add("space", space, Symbol.Visibility.PUBLIC)
         BOUNDARY_TYPE = StructureType()
-        BOUNDARY_TYPE.components["x_min"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["x_max"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["y_min"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["y_max"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["z_min"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["z_max"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["local_x_min"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["local_x_max"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["local_y_min"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["local_y_max"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["local_z_min"] = DOUBLE_TYPE
-        BOUNDARY_TYPE.components["local_z_max"] = DOUBLE_TYPE
-        space.components["box_dims"] = BOUNDARY_TYPE
-        self._pir_type.components["nparts"] = INT64_TYPE
+        BOUNDARY_TYPE.add("x_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("x_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("y_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("y_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("z_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("z_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("local_x_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("local_x_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("local_y_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("local_y_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("local_z_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        BOUNDARY_TYPE.add("local_z_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+        self._pir_type.add("nparts", INT64_TYPE, Symbol.Visibility.PUBLIC)
+        space.add("box_dims", BOUNDARY_TYPE, Symbol.Visibility.PUBLIC)
         type_mapping_str["config"] = self._pir_type
         #TODO Neighbour config type? Also need to add the struct space_type so
         #the DSL knows how to define them both

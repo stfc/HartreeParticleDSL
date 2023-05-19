@@ -102,8 +102,8 @@ def test_pairwise_nodestr():
     arg3 = ScalarReference(ScalarTypeSymbol("a", INT_TYPE))
 
     pk1 = PairwiseKernel.create("Kernel", [arg1, arg2, arg3], [assign])
-    correct = '''PairwiseKernel[ScalarReference[y], ScalarReference[z], ScalarReference[a]: Body[
-    Assignment[ScalarReference[x], Literal['25', Scalar<INTEGER, SINGLE>]]
+    correct = '''PairwiseKernel[ScalarReference[name:'y'], ScalarReference[name:'z'], ScalarReference[name:'a']: Body[
+    Assignment[ScalarReference[name:'x'], Literal['25', Scalar<INTEGER, SINGLE>]]
 ] End Body]'''
     assert correct == pk1.node_str()
 
@@ -166,8 +166,8 @@ def test_perpart_nodestr():
     arg2 = ScalarReference(ScalarTypeSymbol("z", INT_TYPE))
 
     pk1 = PerPartKernel.create("Kernel", [arg1, arg2], [assign])
-    correct = '''PerPartKernel[ScalarReference[y], ScalarReference[z]: Body[
-    Assignment[ScalarReference[x], Literal['25', Scalar<INTEGER, SINGLE>]]
+    correct = '''PerPartKernel[ScalarReference[name:'y'], ScalarReference[name:'z']: Body[
+    Assignment[ScalarReference[name:'x'], Literal['25', Scalar<INTEGER, SINGLE>]]
 ] End Body]'''
     assert correct == pk1.node_str()
 

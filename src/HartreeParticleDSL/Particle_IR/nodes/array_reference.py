@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Union
 
 from HartreeParticleDSL.Particle_IR.nodes.array_mixin import ArrayMixin
-from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
+from psyclone.psyir.nodes import Reference
 from HartreeParticleDSL.Particle_IR.symbols.arraysymbol import ArraySymbol
 
 class ArrayReference(ArrayMixin, Reference):

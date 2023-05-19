@@ -27,6 +27,6 @@ def test_body():
     body.addchild(assign)
 
     correct = '''Body[
-    Assignment[ScalarReference[x], Literal['25', Scalar<INTEGER, SINGLE>]]
+    Assignment[ScalarReference[name:'x'], Literal['25', Scalar<INTEGER, SINGLE>]]
 ] End Body'''
     assert correct == body.node_str()

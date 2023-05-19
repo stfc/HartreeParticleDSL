@@ -13,6 +13,8 @@ from HartreeParticleDSL.backends.Cabana_PIR_backend.cabana_pir import Cabana_PIR
 from HartreeParticleDSL.backends.Cabana_PIR_backend.pir_to_cabana_visitor import Cabana_PIR_Visitor
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import reset_part_and_config, reset_type_mapping_str
 
+from psyclone.psyir.symbols import Symbol
+
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, ScalarType, \
         StructureType, ArrayType, PointerType, \
         INT_TYPE, FLOAT_TYPE, DOUBLE_TYPE, INT64_TYPE, INT32_TYPE, BOOL_TYPE, STRING_TYPE, \
@@ -32,7 +34,7 @@ def test_FDTD_MPI_Kokkos():
     assert a.y_bc_max == PERIODIC
     assert a.z_bc_min == PERIODIC
     
-    correct = '''StructureType<(field: StructureType<(hdt: Scalar<FLOAT, DOUBLE>), (hdtx: Scalar<FLOAT, DOUBLE>), (cnx: Scalar<FLOAT, DOUBLE>), (fac: Scalar<FLOAT, DOUBLE>), (field_order: Scalar<INTEGER, SINGLE>), (fng: Scalar<FLOAT, DOUBLE>), (cfl: Scalar<FLOAT, DOUBLE>), (x_grid_min_local: Scalar<FLOAT, DOUBLE>), (x_grid_max_local: Scalar<FLOAT, DOUBLE>), (x_min_local: Scalar<FLOAT, DOUBLE>), (x_max_local: Scalar<FLOAT, DOUBLE>)>), (nxglobal: Scalar<INTEGER, SINGLE>), (nx: Scalar<INTEGER, SINGLE>), (min_local_cell: Scalar<INTEGER, SINGLE>), (max_local_cell: Scalar<INTEGER, SINGLE>), (ng: Scalar<INTEGER, SINGLE>), (jng: Scalar<INTEGER, SINGLE>), (dx: Scalar<FLOAT, DOUBLE>)>'''
+    correct = '''StructureType<>'''
     assert str(backend.structures["field"]) == correct
 
     assert "\"FDTD_MPI_field.hpp\"" in a._includes
@@ -253,9 +255,9 @@ def test_FDTD_MPI_Kokkos_call_interpolate_to_particles():
     HartreeParticleDSL.set_backend(backend)
     # Create a perpart_kernel
     v = pir_perpart_visitor()
-    type_mapping_str["part"].add("subpart", INT_TYPE)
+    type_mapping_str["part"].add("subpart", INT_TYPE, Symbol.Visibility.PUBLIC)
     new_type = ArrayType(INT_TYPE, [3])
-    type_mapping_str["part"].add("subarray", new_type)
+    type_mapping_str["part"].add("subarray", new_type, Symbol.Visibility.PUBLIC)
     def x(arg: part, c: config):
         arg.subpart = 1
         arg.subarray[0] = 1
@@ -331,9 +333,9 @@ def test_FDTD_MPI_Kokkos_gather_forces_to_grid():
     a = FDTD_MPI_Kokkos()
     # Create a perpart_kernel
     v = pir_perpart_visitor()
-    type_mapping_str["part"].add("subpart", INT_TYPE)
+    type_mapping_str["part"].add("subpart", INT_TYPE, Symbol.Visibility.PUBLIC)
     new_type = ArrayType(INT_TYPE, [3])
-    type_mapping_str["part"].add("subarray", new_type)
+    type_mapping_str["part"].add("subarray", new_type, Symbol.Visibility.PUBLIC)
     def x(arg: part, c: config):
         arg.subpart = 1
         arg.subarray[0] = 1

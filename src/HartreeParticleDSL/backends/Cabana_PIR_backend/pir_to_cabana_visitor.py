@@ -16,7 +16,7 @@ from HartreeParticleDSL.Particle_IR.nodes.kernels import PerPartKernel, \
     PairwiseKernel, SourceBoundaryKernel, SinkBoundaryKernel
 from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
 from psyclone.psyir.nodes import Node
-from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
+from psyclone.psyir.nodes import Reference
 from HartreeParticleDSL.Particle_IR.nodes.statement import Return, EmptyStatement
 from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, UnaryOperation
 from HartreeParticleDSL.Particle_IR.nodes.particle_position_reference import \
@@ -26,9 +26,10 @@ from HartreeParticleDSL.Particle_IR.nodes.pointer_reference import PointerRefere
 from HartreeParticleDSL.Particle_IR.symbols.autosymbol import AutoSymbol
 from HartreeParticleDSL.backends.base_backend.pir_visitor import PIR_Visitor
 
-from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, ScalarType, \
+from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, \
         INT_TYPE, FLOAT_TYPE, DOUBLE_TYPE, INT64_TYPE, INT32_TYPE, BOOL_TYPE, STRING_TYPE, \
-        BASE_PARTICLE_TYPE, StructureType, ArrayType
+        BASE_PARTICLE_TYPE, ArrayType
+from psyclone.psyir.symbols.datatypes import ScalarType, StructureType
 
 class Cabana_PIR_Visitor(PIR_Visitor):
     '''
@@ -49,26 +50,37 @@ class Cabana_PIR_Visitor(PIR_Visitor):
 
     @classmethod
     def get_cpp_datatype(cls, datatype: DataType):
-        type_map = {INT_TYPE: "int",
-                FLOAT_TYPE: "float",
-                DOUBLE_TYPE: "double",
-                INT64_TYPE: "int64_t",
-                INT32_TYPE: "int32_t",
-                BOOL_TYPE: "bool",
-                STRING_TYPE: "char*",
-                BASE_PARTICLE_TYPE: "part"}
-        t = type_map.get(datatype)
-        if isinstance(datatype, ArrayType):
-            childtype = datatype._datatype
-            t = type_map.get(childtype)
-        if t is not None:
-            return t
+        type_map = {ScalarType.Intrinsic.INTEGER: {ScalarType.Precision.SINGLE: "int", ScalarType.Precision.DOUBLE: "long long int",
+                                                   32: "int32_t", 64: "int64_t", 8: "int8_t"},
+                    ScalarType.Intrinsic.REAL: {ScalarType.Precision.SINGLE: "float", ScalarType.Precision.DOUBLE: "double"},
+                    ScalarType.Intrinsic.CHARACTER: {ScalarType.Precision.UNDEFINED: "char*"},
+                    ScalarType.Intrinsic.BOOLEAN: {ScalarType.Precision.UNDEFINED: "bool"}
+                   }
+
+        intrinsic = None
+        precision = None
+        if isinstance(datatype, ScalarType):
+            intrinsic = datatype.intrinsic
+            precision = datatype.precision
+        elif isinstance(datatype, ArrayType):
+            intrinsic = datatype._datatype.intrinsic
+            precision = datatype._datatype.precision
+        type_dict = type_map.get(intrinsic)
+        type_str = None
+        if type_dict is not None:
+            type_str = type_dict.get(precision)
+        if type_str is not None:
+            return type_str
+
+        if datatype == BASE_PARTICLE_TYPE:
+            return "part"
+
         for key in type_mapping_str.keys():
-            if isinstance(datatype, StructureType):
-                if type_mapping_str[key] == datatype:
-                    return "struct " + key
             if type_mapping_str[key] == datatype:
-                return key
+                if isinstance(datatype, StructureType):
+                    return "struct " + key
+                else:
+                    return key
 
     def addSlice(self, slice_name: str):
         if slice_name not in self._slices:
@@ -815,7 +827,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
                     datatype = returns[0].children[0].datatype
                     if datatype.intrinsic == ScalarType.Intrinsic.INTEGER:
                         return_type = "int"
-                    elif datatype.intrinsic == ScalarType.Intrinsic.FLOAT:
+                    elif datatype.intrinsic == ScalarType.Intrinsic.REAL:
                         return_type = "double"
                     elif datatype.intrinsic == ScalarType.Intrinsic.BOOLEAN:
                         return_type = "bool"

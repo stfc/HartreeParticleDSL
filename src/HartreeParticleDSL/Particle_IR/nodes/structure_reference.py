@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Union
 
-from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
+from psyclone.psyir.nodes import Reference
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
 from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
 

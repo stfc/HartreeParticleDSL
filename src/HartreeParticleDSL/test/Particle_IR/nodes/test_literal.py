@@ -56,5 +56,5 @@ def test_valid_literals():
 
 def test_literal_nodestr():
     x = Literal("1e10", FLOAT_TYPE)
-    correct = "Literal['1e10', Scalar<FLOAT, SINGLE>]"
+    correct = "Literal['1e10', Scalar<REAL, SINGLE>]"
     assert correct == x.node_str()

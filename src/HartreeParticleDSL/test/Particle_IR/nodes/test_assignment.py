@@ -52,6 +52,5 @@ def test_assignment_nodestr():
 
     assign = Assignment.create(ref_lhs, lit_rhs)
 
-    correct = "Assignment[ScalarReference[x], Literal['25', Scalar<INTEGER, SINGLE>]]"
-    print(assign.node_str())
+    correct = "Assignment[ScalarReference[name:'x'], Literal['25', Scalar<INTEGER, SINGLE>]]"
     assert correct == assign.node_str()

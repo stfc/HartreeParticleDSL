@@ -7,9 +7,10 @@ import re
 
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 
-from HartreeParticleDSL.Particle_IR.datatypes.datatype import ScalarType, BOOL_TYPE,\
+from HartreeParticleDSL.Particle_IR.datatypes.datatype import BOOL_TYPE,\
                                                      type_mapping_str, INT_TYPE, STRING_TYPE, \
                                                      StructureType, ArrayType
+from psyclone.psyir.symbols.datatypes import ScalarType
 
 from HartreeParticleDSL.Particle_IR.nodes.symbol_to_reference import symbol_to_reference
 
@@ -230,11 +231,14 @@ class ast_to_pir_visitor(ast.NodeVisitor):
             dtype = sym.datatype
             current_mem = mem
             while isinstance(current_mem, Member):
+                print(current_mem.name)
+                print(dtype.components)
                 if current_mem.name not in dtype.components:
                     raise IRGenerationError("Attempted to access member "
                                             f"{current_mem.name} of structure "
                                             f"type {dtype}.")
-                dtype = dtype.components[current_mem.name]
+                dtype = dtype.components[current_mem.name].datatype
+                print(type(dtype))
                 if hasattr(current_mem, "member") and isinstance(dtype, StructureType):
                     current_mem = current_mem.member
                 else:
@@ -264,7 +268,7 @@ class ast_to_pir_visitor(ast.NodeVisitor):
                                ScalarType.Precision.UNDEFINED)
             return Literal(f"{node.value}", dtype)
         elif isinstance(node.value, float):
-            dtype = ScalarType(ScalarType.Intrinsic.FLOAT,
+            dtype = ScalarType(ScalarType.Intrinsic.REAL,
                                ScalarType.Precision.UNDEFINED)
             return Literal(f"{node.value}", dtype)
         else:
