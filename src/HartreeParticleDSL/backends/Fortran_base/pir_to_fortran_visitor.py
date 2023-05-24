@@ -5,7 +5,7 @@ import inspect
 from HartreeParticleDSL.backends.base_backend.pir_visitor import PIR_Visitor, VisitorError
 from psyclone.psyir.backend.fortran import FortranWriter
 from HartreeParticleDSL.Particle_IR.nodes.statement import Return, EmptyStatement
-from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, UnaryOperation
+from psyclone.psyir.nodes import BinaryOperation, UnaryOperation
 from HartreeParticleDSL.Particle_IR.nodes.pointer_reference import PointerReference
 
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str,\
@@ -19,20 +19,20 @@ class Fortran_PIR_Writer(PIR_Visitor, FortranWriter):
         super(PIR_Visitor, self).__init__(indent_string=indent_string, initial_indent_depth=initial_indent_depth)
 
         self._operator_2_str = {}
-        self._operator_2_str[BinaryOperation.BinaryOp.ADDITION] = "+"
-        self._operator_2_str[BinaryOperation.BinaryOp.SUBTRACTION] = "-"
-        self._operator_2_str[BinaryOperation.BinaryOp.MULTIPLY] = "*"
-        self._operator_2_str[BinaryOperation.BinaryOp.DIVISION] = "/"
-        self._operator_2_str[BinaryOperation.BinaryOp.LESS_THAN] = "<"
-        self._operator_2_str[BinaryOperation.BinaryOp.LESS_THAN_EQUAL] = "<="
-        self._operator_2_str[BinaryOperation.BinaryOp.GREATER_THAN] = ">"
-        self._operator_2_str[BinaryOperation.BinaryOp.GREATER_THAN_EQUAL] = ">="
-        self._operator_2_str[BinaryOperation.BinaryOp.EQUALITY] = "=="
-        self._operator_2_str[BinaryOperation.BinaryOp.LOG_AND] = ".and."
-        self._operator_2_str[BinaryOperation.BinaryOp.LOG_OR] = ".or."
+        self._operator_2_str[BinaryOperation.Operator.ADD] = "+"
+        self._operator_2_str[BinaryOperation.Operator.SUB] = "-"
+        self._operator_2_str[BinaryOperation.Operator.MUL] = "*"
+        self._operator_2_str[BinaryOperation.Operator.DIV] = "/"
+        self._operator_2_str[BinaryOperation.Operator.LT] = "<"
+        self._operator_2_str[BinaryOperation.Operator.LE] = "<="
+        self._operator_2_str[BinaryOperation.Operator.GT] = ">"
+        self._operator_2_str[BinaryOperation.Operator.GE] = ">="
+        self._operator_2_str[BinaryOperation.Operator.EQ] = "=="
+        self._operator_2_str[BinaryOperation.Operator.AND] = ".and."
+        self._operator_2_str[BinaryOperation.Operator.OR] = ".or."
 
-        self._operator_2_str[UnaryOperation.UnaryOp.UNARYSUB] = "-"
-        self._operator_2_str[UnaryOperation.UnaryOp.LOG_NOT] = ".not."
+        self._operator_2_str[UnaryOperation.Operator.MINUS] = "-"
+        self._operator_2_str[UnaryOperation.Operator.NOT] = ".not."
 
     @property
     def _nindent(self) -> str:

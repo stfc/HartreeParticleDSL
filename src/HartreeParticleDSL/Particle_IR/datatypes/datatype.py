@@ -71,7 +71,7 @@ class ArrayType(DataType):
         '''
         Enumeration of array shape extents that are unspecified at compile time.
         '''
-        DYNAMIC = 1
+        DYNAMIC = psyDT.ArrayType.Extent.DEFERRED
 
     def __eq__(self, other):
         eq = type(self) == type(other)

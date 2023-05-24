@@ -1,9 +1,8 @@
 import pytest
 
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
-from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
+from psyclone.psyir.nodes import Literal
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import INT_TYPE
-from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, UnaryOperation
 from HartreeParticleDSL.Particle_IR.nodes.loop import Loop
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
 from HartreeParticleDSL.Particle_IR.nodes.call import Call

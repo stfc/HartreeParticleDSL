@@ -23,15 +23,14 @@ from HartreeParticleDSL.Particle_IR.nodes.config_reference import ConfigReferenc
 from HartreeParticleDSL.Particle_IR.nodes.funcdef import FuncDef
 from HartreeParticleDSL.Particle_IR.nodes.ifelse import IfElseBlock
 from HartreeParticleDSL.Particle_IR.nodes.invoke import Invoke
-from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
+from psyclone.psyir.nodes import Literal
 from HartreeParticleDSL.Particle_IR.nodes.loop import Loop
 from HartreeParticleDSL.Particle_IR.nodes.kernels import MainKernel, PairwiseKernel, \
                                                          PerPartKernel,\
                                                          SourceBoundaryKernel,\
                                                          SinkBoundaryKernel
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
-from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, \
-                                                           UnaryOperation
+from psyclone.psyir.nodes import BinaryOperation, UnaryOperation
 from HartreeParticleDSL.Particle_IR.nodes.particle_reference import ParticleReference
 from HartreeParticleDSL.Particle_IR.nodes.particle_core_reference import ParticleCoreReference
 from HartreeParticleDSL.Particle_IR.nodes.particle_position_reference import ParticlePositionReference
@@ -79,44 +78,44 @@ class ast_to_pir_visitor(ast.NodeVisitor):
         self._symbol_table = None
         self._check_valid = True
 
-    def visit_Add(self, node: ast.Add) -> BinaryOperation.BinaryOp:
-        return BinaryOperation.BinaryOp.ADDITION
+    def visit_Add(self, node: ast.Add) -> BinaryOperation.Operator:
+        return BinaryOperation.Operator.ADD
 
-    def visit_Mult(self, node: ast.Mult) -> BinaryOperation.BinaryOp:
-        return BinaryOperation.BinaryOp.MULTIPLY
+    def visit_Mult(self, node: ast.Mult) -> BinaryOperation.Operator:
+        return BinaryOperation.Operator.MUL
 
-    def visit_Sub(self, node: ast.Sub) -> BinaryOperation.BinaryOp:
-        return BinaryOperation.BinaryOp.SUBTRACTION
+    def visit_Sub(self, node: ast.Sub) -> BinaryOperation.Operator:
+        return BinaryOperation.Operator.SUB
 
-    def visit_Div(self, node: ast.Div) -> BinaryOperation.BinaryOp:
-        return BinaryOperation.BinaryOp.DIVISION
+    def visit_Div(self, node: ast.Div) -> BinaryOperation.Operator:
+        return BinaryOperation.Operator.DIV
 
-    def visit_LtE(self, node: ast.LtE) -> BinaryOperation.BinaryOp:
-        return BinaryOperation.BinaryOp.LESS_THAN_EQUAL
+    def visit_LtE(self, node: ast.LtE) -> BinaryOperation.Operator:
+        return BinaryOperation.Operator.LE
 
-    def visit_Lt(self, node: ast.Lt) -> BinaryOperation.BinaryOp:
-        return BinaryOperation.BinaryOp.LESS_THAN
+    def visit_Lt(self, node: ast.Lt) -> BinaryOperation.Operator:
+        return BinaryOperation.Operator.LT
 
-    def visit_GtE(self, node: ast.GtE) -> BinaryOperation.BinaryOp:
-        return BinaryOperation.BinaryOp.GREATER_THAN_EQUAL
+    def visit_GtE(self, node: ast.GtE) -> BinaryOperation.Operator:
+        return BinaryOperation.Operator.GE
 
-    def visit_Gt(self, node: ast.Gt) -> BinaryOperation.BinaryOp:
-        return BinaryOperation.BinaryOp.GREATER_THAN
+    def visit_Gt(self, node: ast.Gt) -> BinaryOperation.Operator:
+        return BinaryOperation.Operator.GT
 
-    def visit_Eq(self, node: ast.Eq) -> BinaryOperation.BinaryOp:
-        return BinaryOperation.BinaryOp.EQUALITY
+    def visit_Eq(self, node: ast.Eq) -> BinaryOperation.Operator:
+        return BinaryOperation.Operator.EQ
 
-    def visit_USub(self, node: ast.USub) -> UnaryOperation.UnaryOp:
-        return UnaryOperation.UnaryOp.UNARYSUB
+    def visit_USub(self, node: ast.USub) -> UnaryOperation.Operator:
+        return UnaryOperation.Operator.MINUS
 
-    def visit_And(self, node: ast.And) -> BinaryOperation.BinaryOp:
-        return BinaryOperation.BinaryOp.LOG_AND
+    def visit_And(self, node: ast.And) -> BinaryOperation.Operator:
+        return BinaryOperation.Operator.AND
 
-    def visit_Or(self, node: ast.Or) -> BinaryOperation.BinaryOp:
-        return BinaryOperation.BinaryOp.LOG_OR
+    def visit_Or(self, node: ast.Or) -> BinaryOperation.Operator:
+        return BinaryOperation.Operator.OR
 
-    def visit_Not(self, node: ast.Not) -> UnaryOperation.UnaryOp:
-        return UnaryOperation.UnaryOp.LOG_NOT
+    def visit_Not(self, node: ast.Not) -> UnaryOperation.Operator:
+        return UnaryOperation.Operator.NOT
 
     def visit_BoolOp(self, node: ast.BoolOp) -> BinaryOperation:
         # Check our input is ok, else we assert at the moment.
@@ -125,18 +124,18 @@ class ast_to_pir_visitor(ast.NodeVisitor):
             operation = self.visit(node.op)
             child1 = self.visit(node.values[0])
             child2 = self.visit(node.values[1])
-            return BinaryOperation.create(operation, [child1, child2])
+            return BinaryOperation.create(operation, child1, child2)
         else:
             last = len(node.values) - 2
             operation = self.visit(node.op)
             child2 = self.visit(node.values[-1])
             child1 = self.visit(node.values[last])
-            op = BinaryOperation.create(operation, [child1, child2])
+            op = BinaryOperation.create(operation, child1, child2)
             last = last - 1
             while last >= 0:
                 child2 = op
                 child1 = self.visit(node.values[last])
-                op = BinaryOperation.create(operation, [child1, child2])
+                op = BinaryOperation.create(operation, child1, child2)
                 last = last - 1
             return op
 
@@ -152,13 +151,13 @@ class ast_to_pir_visitor(ast.NodeVisitor):
         op = self.visit(node.ops[0])
         child1 = self.visit(node.left)
         child2 = self.visit(node.comparators[0])
-        return BinaryOperation.create(op, [child1, child2])
+        return BinaryOperation.create(op, child1, child2)
 
     def visit_BinOp(self, node: ast.BinOp) -> BinaryOperation:
         operation = self.visit(node.op)
         child1 = self.visit(node.left)
         child2 = self.visit(node.right)
-        return BinaryOperation.create(operation, [child1, child2])
+        return BinaryOperation.create(operation, child1, child2)
 
     def visit_Name(self, node: ast.Name) -> Reference:
         sym = self._symbol_table.lookup(f"{node.id}")
@@ -260,9 +259,9 @@ class ast_to_pir_visitor(ast.NodeVisitor):
                                ScalarType.Precision.UNDEFINED)
             return Literal(node.value, dtype)
         elif str(node.value) == "True":
-            return Literal("True", BOOL_TYPE)
+            return Literal("true", BOOL_TYPE)
         elif str(node.value) == "False":
-            return Literal("False", BOOL_TYPE)
+            return Literal("false", BOOL_TYPE)
         elif isinstance(node.value, int):
             dtype = ScalarType(ScalarType.Intrinsic.INTEGER,
                                ScalarType.Precision.UNDEFINED)

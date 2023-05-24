@@ -3,7 +3,7 @@ import pytest
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 from HartreeParticleDSL.Particle_IR.nodes.assignment import Assignment
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
-from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
+from psyclone.psyir.nodes import Literal
 from HartreeParticleDSL.Particle_IR.nodes.funcdef import FuncDef
 from HartreeParticleDSL.Particle_IR.nodes.scalar_reference import ScalarReference
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import INT_TYPE
@@ -74,6 +74,6 @@ def test_funcdef_nodestr():
 
     pk1 = FuncDef.create("Kernel", [arg1, arg2, arg3], [assign])
     correct = '''FuncDef[ScalarReference[name:'y'], ScalarReference[name:'z'], ScalarReference[name:'a']: Body[
-    Assignment[ScalarReference[name:'x'], Literal['25', Scalar<INTEGER, SINGLE>]]
+    Assignment[ScalarReference[name:'x'], Literal[value:'25', Scalar<INTEGER, SINGLE>]]
 ] End Body]'''
     assert correct == pk1.node_str()

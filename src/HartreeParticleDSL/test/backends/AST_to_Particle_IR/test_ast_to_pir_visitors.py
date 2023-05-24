@@ -24,13 +24,12 @@ from HartreeParticleDSL.Particle_IR.nodes.call import Call
 from HartreeParticleDSL.Particle_IR.nodes.config_reference import ConfigReference
 from HartreeParticleDSL.Particle_IR.nodes.funcdef import FuncDef
 from HartreeParticleDSL.Particle_IR.nodes.ifelse import IfElseBlock
-from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
+from psyclone.psyir.nodes import Literal
 from HartreeParticleDSL.Particle_IR.nodes.loop import Loop
 from HartreeParticleDSL.Particle_IR.nodes.kernels import MainKernel, PairwiseKernel, \
                                                          PerPartKernel
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
-from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, \
-                                                           UnaryOperation
+from psyclone.psyir.nodes import BinaryOperation, UnaryOperation
 from HartreeParticleDSL.Particle_IR.nodes.statement import EmptyStatement, Break
 from HartreeParticleDSL.Particle_IR.nodes.structure_reference import StructureReference
 from HartreeParticleDSL.Particle_IR.nodes.while_loop import While
@@ -101,7 +100,7 @@ def test_visit_Add():
     assert isinstance(out.body.children[1], Assignment)
     assign = out.body.children[1]
     assert isinstance(assign.rhs, BinaryOperation)
-    assert assign.rhs.operator == BinaryOperation.BinaryOp.ADDITION
+    assert assign.rhs.operator == BinaryOperation.Operator.ADD
 
 def test_visit_Mult():
     v = ast_to_pir_visitor()
@@ -115,7 +114,7 @@ def test_visit_Mult():
     assert isinstance(out.body.children[1], Assignment)
     assign = out.body.children[1]
     assert isinstance(assign.rhs, BinaryOperation)
-    assert assign.rhs.operator == BinaryOperation.BinaryOp.MULTIPLY
+    assert assign.rhs.operator == BinaryOperation.Operator.MUL
 
 def test_visit_Sub():
     v = ast_to_pir_visitor()
@@ -129,7 +128,7 @@ def test_visit_Sub():
     assert isinstance(out.body.children[1], Assignment)
     assign = out.body.children[1]
     assert isinstance(assign.rhs, BinaryOperation)
-    assert assign.rhs.operator == BinaryOperation.BinaryOp.SUBTRACTION
+    assert assign.rhs.operator == BinaryOperation.Operator.SUB
 
 
 def test_visit_Div():
@@ -144,7 +143,7 @@ def test_visit_Div():
     assert isinstance(out.body.children[1], Assignment)
     assign = out.body.children[1]
     assert isinstance(assign.rhs, BinaryOperation)
-    assert assign.rhs.operator == BinaryOperation.BinaryOp.DIVISION
+    assert assign.rhs.operator == BinaryOperation.Operator.DIV
 
 def test_visit_LtE():
     v = ast_to_pir_visitor()
@@ -158,7 +157,7 @@ def test_visit_LtE():
     assert isinstance(out.body.children[1], Assignment)
     assign = out.body.children[1]
     assert isinstance(assign.rhs, BinaryOperation)
-    assert assign.rhs.operator == BinaryOperation.BinaryOp.LESS_THAN_EQUAL
+    assert assign.rhs.operator == BinaryOperation.Operator.LE
 
 def test_visit_Lt():
     v = ast_to_pir_visitor()
@@ -172,7 +171,7 @@ def test_visit_Lt():
     assert isinstance(out.body.children[1], Assignment)
     assign = out.body.children[1]
     assert isinstance(assign.rhs, BinaryOperation)
-    assert assign.rhs.operator == BinaryOperation.BinaryOp.LESS_THAN
+    assert assign.rhs.operator == BinaryOperation.Operator.LT
 
 def test_visit_GtE():
     v = ast_to_pir_visitor()
@@ -186,7 +185,7 @@ def test_visit_GtE():
     assert isinstance(out.body.children[1], Assignment)
     assign = out.body.children[1]
     assert isinstance(assign.rhs, BinaryOperation)
-    assert assign.rhs.operator == BinaryOperation.BinaryOp.GREATER_THAN_EQUAL
+    assert assign.rhs.operator == BinaryOperation.Operator.GE
 
 def test_visit_Eq():
     v = ast_to_pir_visitor()
@@ -200,7 +199,7 @@ def test_visit_Eq():
     assert isinstance(out.body.children[1], Assignment)
     assign = out.body.children[1]
     assert isinstance(assign.rhs, BinaryOperation)
-    assert assign.rhs.operator == BinaryOperation.BinaryOp.EQUALITY
+    assert assign.rhs.operator == BinaryOperation.Operator.EQ
 
 
 def test_visit_Gt_and_Compare():
@@ -215,7 +214,7 @@ def test_visit_Gt_and_Compare():
     assert isinstance(out.body.children[1], Assignment)
     assign = out.body.children[1]
     assert isinstance(assign.rhs, BinaryOperation)
-    assert assign.rhs.operator == BinaryOperation.BinaryOp.GREATER_THAN
+    assert assign.rhs.operator == BinaryOperation.Operator.GT
 
 def test_visit_Usub_and_UnaryOp():
     v = ast_to_pir_visitor()
@@ -229,7 +228,7 @@ def test_visit_Usub_and_UnaryOp():
     assert isinstance(out.body.children[1], Assignment)
     assign = out.body.children[1]
     assert isinstance(assign.rhs, UnaryOperation)
-    assert assign.rhs.operator == UnaryOperation.UnaryOp.UNARYSUB
+    assert assign.rhs.operator == UnaryOperation.Operator.MINUS
 
 def test_visit_And():
     v = ast_to_pir_visitor()
@@ -247,7 +246,7 @@ def test_visit_And():
     assert isinstance(out.body.children[3], Assignment)
     assign = out.body.children[3]
     assert isinstance(assign.rhs, BinaryOperation)
-    assert assign.rhs.operator == BinaryOperation.BinaryOp.LOG_AND
+    assert assign.rhs.operator == BinaryOperation.Operator.AND
 
 def test_visit_Or():
     v = ast_to_pir_visitor()
@@ -265,7 +264,7 @@ def test_visit_Or():
     assert isinstance(out.body.children[3], Assignment)
     assign = out.body.children[3]
     assert isinstance(assign.rhs, BinaryOperation)
-    assert assign.rhs.operator == BinaryOperation.BinaryOp.LOG_OR
+    assert assign.rhs.operator == BinaryOperation.Operator.OR
 
 def test_visit_Or():
     v = ast_to_pir_visitor()
@@ -281,7 +280,7 @@ def test_visit_Or():
     assert isinstance(out.body.children[2], Assignment)
     assign = out.body.children[2]
     assert isinstance(assign.rhs, UnaryOperation)
-    assert assign.rhs.operator == UnaryOperation.UnaryOp.LOG_NOT
+    assert assign.rhs.operator == UnaryOperation.Operator.NOT
 
 def test_visit_BoolOp():
     v = ast_to_pir_visitor()
@@ -299,12 +298,12 @@ def test_visit_BoolOp():
     assert isinstance(out.body.children[3], Assignment)
     assign = out.body.children[3]
     assert isinstance(assign.rhs, BinaryOperation)
-    assert assign.rhs.operator == BinaryOperation.BinaryOp.LOG_AND
+    assert assign.rhs.operator == BinaryOperation.Operator.AND
     assert isinstance(assign.rhs.children[0], ScalarReference)
     assert assign.rhs.children[0].symbol.name == "z"
     assert isinstance(assign.rhs.children[1], BinaryOperation)
     inner_op = assign.rhs.children[1]
-    assert inner_op.operator == BinaryOperation.BinaryOp.LOG_AND
+    assert inner_op.operator == BinaryOperation.Operator.AND
     assert isinstance(inner_op.children[0], ScalarReference)
     assert inner_op.children[0].symbol.name == "y"
     assert isinstance(inner_op.children[1], ScalarReference)
@@ -324,12 +323,12 @@ def test_visit_BoolOp():
     assert isinstance(out.body.children[3], Assignment)
     assign = out.body.children[3]
     assert isinstance(assign.rhs, BinaryOperation)
-    assert assign.rhs.operator == BinaryOperation.BinaryOp.LOG_OR
+    assert assign.rhs.operator == BinaryOperation.Operator.OR
     assert isinstance(assign.rhs.children[1], ScalarReference)
     assert assign.rhs.children[1].symbol.name == "y"
     assert isinstance(assign.rhs.children[0], BinaryOperation)
     inner_op = assign.rhs.children[0]
-    assert inner_op.operator == BinaryOperation.BinaryOp.LOG_AND
+    assert inner_op.operator == BinaryOperation.Operator.AND
     assert isinstance(inner_op.children[0], ScalarReference)
     assert inner_op.children[0].symbol.name == "z"
     assert isinstance(inner_op.children[1], ScalarReference)
@@ -902,7 +901,7 @@ def test_visit_For():
     assert isinstance(loop3.stop_expr, Literal)
     assert loop3.stop_expr.value == "0"
     assert isinstance(loop3.step_expr, UnaryOperation)
-    assert loop3.step_expr.operator == UnaryOperation.UnaryOp.UNARYSUB 
+    assert loop3.step_expr.operator == UnaryOperation.Operator.MINUS 
     assert loop3.step_expr.children[0].value == "1"
     assert len(loop3.body.children) == 1
 
@@ -1004,9 +1003,9 @@ def test_visit_Constant():
     assert isinstance(out, FuncDef)
     assert len(out.arguments) == 2
     assert isinstance(out.body.children[0].rhs, Literal)
-    assert out.body.children[0].rhs.value == "True"
+    assert out.body.children[0].rhs.value == "true"
     assert isinstance(out.body.children[1].rhs, Literal)
-    assert out.body.children[1].rhs.value == "False"
+    assert out.body.children[1].rhs.value == "false"
 
     class temp():
         def __init__(self):

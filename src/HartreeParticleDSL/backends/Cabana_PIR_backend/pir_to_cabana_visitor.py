@@ -14,11 +14,10 @@ from HartreeParticleDSL.Particle_IR.nodes.invoke import Invoke
 from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
 from HartreeParticleDSL.Particle_IR.nodes.kernels import PerPartKernel, \
     PairwiseKernel, SourceBoundaryKernel, SinkBoundaryKernel
-from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
-from psyclone.psyir.nodes import Node
+from psyclone.psyir.nodes import Node, Literal
 from psyclone.psyir.nodes import Reference
 from HartreeParticleDSL.Particle_IR.nodes.statement import Return, EmptyStatement
-from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, UnaryOperation
+from psyclone.psyir.nodes import BinaryOperation, UnaryOperation
 from HartreeParticleDSL.Particle_IR.nodes.particle_position_reference import \
         ParticlePositionReference
 from HartreeParticleDSL.Particle_IR.nodes.particle_reference import ParticleReference
@@ -877,7 +876,7 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         if node.datatype.intrinsic == ScalarType.Intrinsic.CHARACTER:
             return "\"" + node.value + "\""
         if node.datatype.intrinsic == ScalarType.Intrinsic.BOOLEAN:
-            if node.value == "True":
+            if node.value == "true":
                 return "true"
             else:
                 return "false"
@@ -901,35 +900,35 @@ class Cabana_PIR_Visitor(PIR_Visitor):
         rhs = self._visit(node.children[1])
         operator = ""
         # This should be a map
-        if node.operator == BinaryOperation.BinaryOp.ADDITION:
+        if node.operator == BinaryOperation.Operator.ADD:
             operator = "+"
-        elif node.operator == BinaryOperation.BinaryOp.SUBTRACTION:
+        elif node.operator == BinaryOperation.Operator.SUB:
             operator = "-"
-        elif node.operator == BinaryOperation.BinaryOp.MULTIPLY:
+        elif node.operator == BinaryOperation.Operator.MUL:
             operator = "*"
-        elif node.operator == BinaryOperation.BinaryOp.DIVISION:
+        elif node.operator == BinaryOperation.Operator.DIV:
             operator = "/"
-        elif node.operator == BinaryOperation.BinaryOp.LESS_THAN:
+        elif node.operator == BinaryOperation.Operator.LT:
             operator = "<"
-        elif node.operator == BinaryOperation.BinaryOp.LESS_THAN_EQUAL:
+        elif node.operator == BinaryOperation.Operator.LE:
             operator = "<="
-        elif node.operator == BinaryOperation.BinaryOp.GREATER_THAN:
+        elif node.operator == BinaryOperation.Operator.GT:
             operator = ">"
-        elif node.operator == BinaryOperation.BinaryOp.GREATER_THAN_EQUAL:
+        elif node.operator == BinaryOperation.Operator.GE:
             operator = ">="
-        elif node.operator == BinaryOperation.BinaryOp.EQUALITY:
+        elif node.operator == BinaryOperation.Operator.EQ:
             operator = "=="
-        elif node.operator == BinaryOperation.BinaryOp.LOG_AND:
+        elif node.operator == BinaryOperation.Operator.AND:
             operator = "&&"
-        elif node.operator == BinaryOperation.BinaryOp.LOG_OR:
+        elif node.operator == BinaryOperation.Operator.OR:
             operator = "||"
 
         return f"({lhs} {operator} {rhs})"
 
     def visit_unaryoperation_node(self, node: UnaryOperation) -> str:
-        if node.operator == UnaryOperation.UnaryOp.UNARYSUB:
+        if node.operator == UnaryOperation.Operator.MINUS:
             return f"-{self._visit(node.children[0])}"
-        elif node.operator == UnaryOperation.UnaryOp.LOG_NOT:
+        elif node.operator == UnaryOperation.Operator.NOT:
             return f"(!{self._visit(node.children[0])})"
 
     def visit_particlepositionreference_node(self, node: ParticlePositionReference) -> str:

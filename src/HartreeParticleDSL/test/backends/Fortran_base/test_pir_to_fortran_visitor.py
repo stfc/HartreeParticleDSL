@@ -35,7 +35,7 @@ def test_pir_fortran_visit_break():
     b = Fortran_PIR_Writer()
     out = b(pir)
     correct = '''Subroutine a()
-    while(.True.) do
+    while(.true.) do
         EXIT
     enddo
 End Subroutine a'''
@@ -59,7 +59,7 @@ def test_pir_fortran_visit_ifdef():
 
     correct = '''Subroutine a()
     Integer :: b
-    if(.True.) then
+    if(.true.) then
         b = 1
     else
         b = 2

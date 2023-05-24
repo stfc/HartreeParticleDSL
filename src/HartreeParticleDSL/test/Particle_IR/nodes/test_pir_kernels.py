@@ -3,7 +3,7 @@ import pytest
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 from HartreeParticleDSL.Particle_IR.nodes.assignment import Assignment
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
-from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
+from psyclone.psyir.nodes import Literal
 from HartreeParticleDSL.Particle_IR.nodes.kernels import PairwiseKernel, PerPartKernel, \
                                                          MainKernel, SourceBoundaryKernel, \
                                                          SinkBoundaryKernel
@@ -103,7 +103,7 @@ def test_pairwise_nodestr():
 
     pk1 = PairwiseKernel.create("Kernel", [arg1, arg2, arg3], [assign])
     correct = '''PairwiseKernel[ScalarReference[name:'y'], ScalarReference[name:'z'], ScalarReference[name:'a']: Body[
-    Assignment[ScalarReference[name:'x'], Literal['25', Scalar<INTEGER, SINGLE>]]
+    Assignment[ScalarReference[name:'x'], Literal[value:'25', Scalar<INTEGER, SINGLE>]]
 ] End Body]'''
     assert correct == pk1.node_str()
 
@@ -167,7 +167,7 @@ def test_perpart_nodestr():
 
     pk1 = PerPartKernel.create("Kernel", [arg1, arg2], [assign])
     correct = '''PerPartKernel[ScalarReference[name:'y'], ScalarReference[name:'z']: Body[
-    Assignment[ScalarReference[name:'x'], Literal['25', Scalar<INTEGER, SINGLE>]]
+    Assignment[ScalarReference[name:'x'], Literal[value:'25', Scalar<INTEGER, SINGLE>]]
 ] End Body]'''
     assert correct == pk1.node_str()
 
