@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import List, Union
 
 from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
-from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
+from psyclone.psyir.nodes.literal import Literal
 
 class Invoke(Statement):
     '''
