@@ -99,7 +99,8 @@ if __name__ == '__main__':
         packages=PACKAGES,
         package_dir={"": "src"},
         package_data = {"" : ["*.hpp", "*.cpp"]},
-        install_requires=['pyparsing', 'six', 'psyclone'],
+        install_requires=['pyparsing', 'six'],
+        dependency_list=["git+https://github.com/stfc/PSyclone.git"],
         extras_require={
             'dag': ["graphviz"],
             'doc': ["sphinx", "sphinxcontrib.bibtex < 2.0.0",
