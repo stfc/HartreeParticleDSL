@@ -9,14 +9,13 @@ def test_literal_init_bad_inputs():
         Literal(123, INT_TYPE)
     assert ("Literals must be supplied with a value encoded as a string "
             "but found 'int'" in str(excinfo.value))
-#    assert ("Literal value must be a string but <class 'int'> supplied." in
-#            str(excinfo.value))
 
     with pytest.raises(TypeError) as excinfo:
         Literal("123", 123)
     assert ("The datatype of a Literal must be an instance of "
             "psyir.symbols.ScalarType or psyir.symbols.ArrayType but found 'int'"
             in str(excinfo.value))
+
 
 def test_literal_init_bad_int():
     with pytest.raises(ValueError) as excinfo:
