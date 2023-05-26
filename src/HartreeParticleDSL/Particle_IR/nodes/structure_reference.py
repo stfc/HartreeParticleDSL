@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Union
 
-from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
+from psyclone.psyir.nodes import Reference
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
 from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
 
@@ -20,10 +20,27 @@ class StructureReference(Reference):
     :type member: :py:class:`HartreeParticleDSL.Particle_IR.nodes.member.Member`
     '''
     # pylint: disable=undefined-variable
+    _text_name = "StructureReference"
+
     def __init__(self, symbol: StructureSymbol, member: Union[None,Member]=None) -> None:
-        super().__init__()
+        super().__init__(symbol=symbol)
         self.symbol = symbol
         self.member = member
+
+    @staticmethod
+    def _validate_child(position, child):
+        '''
+        :param int position: the position to be validated.
+        :param child: a child to be validated.
+        :type child: :py:class:`psyclone.psyir.nodes.Node`
+
+        :return: whether the given child and position are valid for this node.
+        :rtype: bool
+
+        '''
+        if position == 0:
+            return isinstance(child, Member)
+        return False
 
     @property
     def symbol(self) -> StructureSymbol:
@@ -51,7 +68,10 @@ class StructureReference(Reference):
         :returns: the member of the structure accessed in this reference.
         :rtype: :py:class:`HartreeParticleDSL.Particle_IR.nodes.member.Member` or None
         '''
-        return self._member
+        if len(self.children) > 0:
+            return self.children[0]
+        else:
+            return None
 
     @member.setter
     def member(self, member: Member) -> None:
@@ -66,7 +86,11 @@ class StructureReference(Reference):
         if member is not None and not isinstance(member, Member):
             raise TypeError("Attempted to make a StructureReference with a non-Member access. "
                             f"Got {type(member)} as input.")
-        self._member = member
+        if len(self.children) > 0:
+            self.children[0] = member
+        else:
+            if member is not None:
+                self.addchild(member)
 
     def node_str(self) -> str:
         '''

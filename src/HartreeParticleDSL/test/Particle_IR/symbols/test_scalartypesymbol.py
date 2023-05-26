@@ -4,7 +4,7 @@ from HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol import ScalarTypeSy
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import ScalarType
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import DOUBLE_TYPE, FLOAT_TYPE
-from HartreeParticleDSL.Particle_IR.nodes import Node
+from psyclone.psyir.nodes import Node
 
 def test_scalartypesymbol():
     scalartypetype = DOUBLE_TYPE

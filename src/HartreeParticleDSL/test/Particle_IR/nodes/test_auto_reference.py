@@ -8,7 +8,7 @@ def test_auto_reference():
 
     ref = AutoReference(sym)
 
-    correct = "AutoReference[x]"
+    correct = "AutoReference[name:'x']"
     assert correct == ref.node_str()
     assert ref.symbol is sym
 

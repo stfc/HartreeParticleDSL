@@ -1,5 +1,5 @@
 from HartreeParticleDSL.Particle_IR.nodes.statement import Return
-from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
+from psyclone.psyir.nodes import Literal
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import INT_TYPE
 
 

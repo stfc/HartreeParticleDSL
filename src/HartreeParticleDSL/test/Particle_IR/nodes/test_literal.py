@@ -1,45 +1,49 @@
 import pytest
 
-from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
+from psyclone.psyir.nodes import Literal
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import FLOAT_TYPE, INT_TYPE, BOOL_TYPE
 
 def test_literal_init_bad_inputs():
 
     with pytest.raises(TypeError) as excinfo:
         Literal(123, INT_TYPE)
-    assert ("Literal value must be a string but <class 'int'> supplied." in
-            str(excinfo.value))
+    assert ("Literals must be supplied with a value encoded as a string "
+            "but found 'int'" in str(excinfo.value))
 
     with pytest.raises(TypeError) as excinfo:
         Literal("123", 123)
-    assert("Literal datatype must be a ScalarType but <class 'int'> "
-           "supplied." in str(excinfo.value))
+    assert ("The datatype of a Literal must be an instance of "
+            "psyir.symbols.ScalarType or psyir.symbols.ArrayType but found 'int'"
+            in str(excinfo.value))
+
 
 def test_literal_init_bad_int():
     with pytest.raises(ValueError) as excinfo:
         Literal("abc", INT_TYPE)
-    assert("Constructing integer Literal but got a value of 'abc' instead "
-           "of an integer value." in str(excinfo.value))
+    assert ("A scalar integer literal value must conform to the supported format "
+            "('(([+-]?[1-9][0-9]*|0)|(NOT_INITIALISED))') but found 'abc'."
+            in str(excinfo.value))
     with pytest.raises(ValueError) as excinfo:
         Literal("012", INT_TYPE)
-    assert("Constructing integer Literal but got a value of '012' instead "
-           "of an integer value." in str(excinfo.value))
+    assert ("A scalar integer literal value must conform to the supported format "
+            "('(([+-]?[1-9][0-9]*|0)|(NOT_INITIALISED))') but found '012'."
+            in str(excinfo.value))
 
 def test_literal_init_bad_float():
     with pytest.raises(ValueError) as excinfo:
         Literal("123.45F19", FLOAT_TYPE)
-    assert("Constructing float Literal but got a value of '123.45F19' "
-           "instead of a float value." in str(excinfo.value))
+    assert("A scalar real literal value must conform to the supported "
+           "format" in str(excinfo.value))
 
 def test_literal_init_bad_bool():
     with pytest.raises(ValueError) as excinfo:
         Literal("notTrue", BOOL_TYPE)
-    assert("Constructing boolean Literal but got a value of 'notTrue' "
-           "instead of True or False." in str(excinfo.value))
+    assert("A scalar boolean literal can only be: 'true' or 'false' "
+           "but found 'notTrue'." in str(excinfo.value))
 
 def test_valid_literals():
-    Literal("True", BOOL_TYPE)
-    Literal("False", BOOL_TYPE)
+    Literal("true", BOOL_TYPE)
+    Literal("false", BOOL_TYPE)
 
     Literal("1", INT_TYPE)
     Literal("-1", INT_TYPE)
@@ -56,5 +60,5 @@ def test_valid_literals():
 
 def test_literal_nodestr():
     x = Literal("1e10", FLOAT_TYPE)
-    correct = "Literal['1e10', Scalar<FLOAT, SINGLE>]"
+    correct = "Literal[value:'1e10', Scalar<REAL, SINGLE>]"
     assert correct == x.node_str()

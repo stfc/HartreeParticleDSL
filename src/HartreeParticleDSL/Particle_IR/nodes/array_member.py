@@ -6,11 +6,12 @@ from __future__ import annotations
 
 from typing import List
 
-from HartreeParticleDSL.Particle_IR.nodes.node import DataNode
 from HartreeParticleDSL.Particle_IR.nodes.array_mixin import ArrayMixin
 from HartreeParticleDSL.Particle_IR.nodes.member import Member
 
-class ArrayMember(ArrayMixin, Member):
+import psyclone.psyir.nodes.array_member as psyArmem
+
+class ArrayMember(ArrayMixin, Member, psyArmem.ArrayMember):
     '''
     Node representing an access to the elemnts of an array inside a structure.
     Must have one or more children which give the array-index expressions
@@ -20,6 +21,8 @@ class ArrayMember(ArrayMixin, Member):
     :param indices: the list of indices that make up the array acces.
     :type indices: list of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.DataNode`
     '''
+
+    _text_name = "ArrayMember"
 
     def __init__(self, name: str, indices: List[DataNode]) -> None:
         super().__init__(name=name)

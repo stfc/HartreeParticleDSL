@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import List
 
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
-from HartreeParticleDSL.Particle_IR.nodes.node import Node
+from psyclone.psyir.nodes import Node
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
 from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
 
@@ -19,6 +19,8 @@ class IfElseBlock(Statement):
     Backends can output their else if conditional if the child of
     the else body is another IfElseBlock, however they don't have to.
     '''
+    _text_name = "IfElseBlock"
+    _colour = "Yellow"
 
     @staticmethod
     def _validate_child(position: int, child: Node) -> bool:
@@ -134,12 +136,12 @@ class IfElseBlock(Statement):
             return True
         return False
 
-    def node_str(self) -> str:
+    def node_str(self, colour=True) -> str:
         '''
         :returns: a string representation of this node.
         :rtype: str
         '''
-        val = f"IfElseBlock[{self.condition}:\n"
+        val = self.coloured_name(colour) +f"[{self.condition}:\n"
         val = val + f"{self.ifbody}\n"
         val = val + f"{self.elsebody}\n"
         val = val + "]"

@@ -211,7 +211,8 @@ class Cabana_PIR(Backend):
         from HartreeParticleDSL.Particle_IR.symbols.arraysymbol import ArraySymbol
         from HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol import ScalarTypeSymbol
         from HartreeParticleDSL.Particle_IR.datatypes.datatype import StructureType, \
-                PointerType, ArrayType, ScalarType
+                PointerType, ArrayType
+        from psyclone.psyir.symbols.datatypes import ScalarType
         if isinstance(c_type, StructureType):
             HartreeParticleDSL.global_symbol_table().new_symbol(name, c_type, StructureSymbol)
             self._global_values[name] = None

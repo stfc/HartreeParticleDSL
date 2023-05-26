@@ -9,7 +9,7 @@ def test_scalar_reference():
     
     ref = ScalarReference(sym)
 
-    correct = "ScalarReference[x]"
+    correct = "ScalarReference[name:'x']"
     assert correct == ref.node_str()
     assert ref.symbol is sym
 

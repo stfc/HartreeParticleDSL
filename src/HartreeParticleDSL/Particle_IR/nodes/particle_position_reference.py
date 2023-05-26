@@ -4,7 +4,7 @@ This module contains the ParticlePositionReference class.
 
 from __future__ import annotations
 
-from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
+from psyclone.psyir.nodes import Reference
 from HartreeParticleDSL.Particle_IR.symbols.structuresymbol import StructureSymbol
 
 class ParticlePositionReference(Reference):
@@ -15,9 +15,11 @@ class ParticlePositionReference(Reference):
     :type symbol: :py:class:`HartreeParticleDSL.Particle_IR.symbols.structuresymbol.StructureSymbol`
     :param int dimension: The dimension of the particle position accessed in this node.
     '''
+    _text_name = "ParticlePositionReference"
+
     # pylint: disable=undefined-variable
     def __init__(self, symbol: StructureSymbol, dimension: int) -> None:
-        super().__init__()
+        super().__init__(symbol=symbol)
         self.symbol = symbol
         self.dimension = dimension
 

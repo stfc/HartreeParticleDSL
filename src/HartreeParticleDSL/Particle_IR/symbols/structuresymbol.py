@@ -3,7 +3,7 @@ This module contains the StructureSymbol, which represents StructureTypes
 in the Particle_IR tree.
 '''
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
-from HartreeParticleDSL.Particle_IR.datatypes.datatype import StructureType
+from psyclone.psyir.symbols import StructureType
 
 class StructureSymbol(Symbol):
     '''

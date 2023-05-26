@@ -50,5 +50,6 @@ currently undocumented, but will be added in future.
    :caption: Contents:
 
    getting_started
+   examples
    internals
    HartreeParticleDSL

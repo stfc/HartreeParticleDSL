@@ -5,10 +5,12 @@ This module contains the Body class.
 from __future__ import annotations
 from typing import Union, List
 
-from HartreeParticleDSL.Particle_IR.nodes.node import Node
+from psyclone.psyir.nodes import Node
 from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
 
-class Body(Node):
+import psyclone.psyir.nodes.schedule as psysched
+
+class Body(psysched.Schedule):
     '''
     Class to represent a Body of a code region. Can contain any
     number of Statement nodes.
@@ -18,6 +20,7 @@ class Body(Node):
             or None.
     '''
     # pylint: disable=undefined-variable
+    _text_name = "Body"
 
     def __init__(self, children: Union[None,List[Node]]=None) -> None:
         super().__init__(children=children)
@@ -37,17 +40,19 @@ class Body(Node):
         :return: whether the given child and position are valid for this node.
         :rtype: bool
         '''
-
         if isinstance(child, Statement):
             return True
         return False
 
-    def node_str(self) -> str:
+    def __str__(self):
+        return self.node_str(False)
+
+    def node_str(self, colour=True) -> str:
         '''
         :returns: a text description of this assignment
         :rtype: str
         '''
-        nodestr = "Body[\n"
+        nodestr = self.coloured_name(colour) + "[\n"
         for i in self.children:
             nodestr += f"    {i.node_str()}\n"
         nodestr +="] End Body"

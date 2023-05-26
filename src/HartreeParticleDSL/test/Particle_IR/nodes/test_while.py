@@ -1,9 +1,9 @@
 import pytest
 
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
-from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
+from psyclone.psyir.nodes import Literal
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import INT_TYPE
-from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, UnaryOperation
+from psyclone.psyir.nodes import BinaryOperation, UnaryOperation
 from HartreeParticleDSL.Particle_IR.nodes.while_loop import While
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
 from HartreeParticleDSL.Particle_IR.nodes.call import Call
@@ -22,7 +22,7 @@ def test_while_validate_child():
     ref1 = ScalarReference(sym)
     sym2 = ScalarTypeSymbol("x2", INT_TYPE)
     ref2 = ScalarReference(sym2)
-    a = BinaryOperation.create(BinaryOperation.BinaryOp.LESS_THAN,[ref1, ref2])
+    a = BinaryOperation.create(BinaryOperation.Operator.LT,ref1, ref2)
 
     assert While._validate_child(0, a) == True
     assert While._validate_child(1, a) == False
@@ -40,7 +40,7 @@ def test_while_create():
     ref1 = ScalarReference(sym)
     sym2 = ScalarTypeSymbol("x2", INT_TYPE)
     ref2 = ScalarReference(sym2)
-    a = BinaryOperation.create(BinaryOperation.BinaryOp.LESS_THAN,[ref1, ref2])
+    a = BinaryOperation.create(BinaryOperation.Operator.LT,ref1, ref2)
 
     call = Call("mycall")
 
@@ -55,11 +55,11 @@ def test_loop_node_str():
     ref1 = ScalarReference(sym)
     sym2 = ScalarTypeSymbol("x2", INT_TYPE)
     ref2 = ScalarReference(sym2)
-    a = BinaryOperation.create(BinaryOperation.BinaryOp.LESS_THAN,[ref1, ref2])
+    a = BinaryOperation.create(BinaryOperation.Operator.LT,ref1, ref2)
     call = Call("mycall")
 
     x = While.create(a, [call])
-    correct = '''While[BinaryOperation[BinaryOp.LESS_THAN: (ScalarReference[x], ScalarReference[x2])]: Body[
+    correct = '''While[BinaryOperation[operator:'LT']: Body[
     Call[mycall: ()]
 ] End Body
 ]'''

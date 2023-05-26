@@ -7,8 +7,7 @@ from __future__ import annotations
 from typing import List, Union
 
 from HartreeParticleDSL.Particle_IR.nodes.array_mixin import ArrayMixin
-from HartreeParticleDSL.Particle_IR.nodes.node import DataNode
-from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
+from psyclone.psyir.nodes import Reference
 from HartreeParticleDSL.Particle_IR.symbols.arraysymbol import ArraySymbol
 
 class ArrayReference(ArrayMixin, Reference):
@@ -20,9 +19,10 @@ class ArrayReference(ArrayMixin, Reference):
     :param indices: The indices used to access this array
     :type indices: list of :py:class:`HartreeParticleDSL.Particle_IR.nodes.DataNode` or None.
     '''
+    _text_name = "ArrayReference"
 
     def __init__(self, symbol: ArraySymbol, indices: Union[None,List[DataNode]]=None) -> None:
-        super().__init__()
+        super().__init__(symbol=symbol)
         self.symbol = symbol
         if indices is None:
             indices = []

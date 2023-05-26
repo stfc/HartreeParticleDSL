@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import List
 
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
-from HartreeParticleDSL.Particle_IR.nodes.node import DataNode, Node
+from psyclone.psyir.nodes import DataNode, Node
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
 from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
 from HartreeParticleDSL.Particle_IR.symbols.symbol import Symbol
@@ -20,6 +20,8 @@ class Loop(Statement):
 
     :raises IRGenerationError: if the variable input is invalid.
     '''
+    _text_name = "Loop"
+
     def __init__(self, variable: Symbol) -> None:
         super().__init__()
         if not isinstance(variable, Symbol):
@@ -143,6 +145,14 @@ class Loop(Statement):
         '''
         self._check_completeness()
         return self.children[2]
+
+    @property
+    def loop_body(self) -> List[Node]:
+        '''
+        :returns: The Nodes contained in the Body of this Loop.
+        :rtype: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.Node`
+        '''
+        return self.children[3].children
 
     @property
     def body(self) -> Body:

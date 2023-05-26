@@ -53,8 +53,8 @@ def test_symbol_table():
     with pytest.raises(IRGenerationError) as excinfo:
         sym_tab.find_or_create("c", DOUBLE_TYPE, ScalarTypeSymbol)
     assert ("Found a symbol with specified name c, but "
-            "it had datatype Scalar<FLOAT, SINGLE> which doesn't "
-            "match requested datatype Scalar<FLOAT, DOUBLE>.") in str(excinfo.value)
+            "it had datatype Scalar<REAL, SINGLE> which doesn't "
+            "match requested datatype Scalar<REAL, DOUBLE>.") in str(excinfo.value)
 
     assert not sym_tab.is_empty()
 

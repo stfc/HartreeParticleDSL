@@ -5,7 +5,7 @@ This module contains the FuncDef class.
 from __future__ import annotations
 
 from typing import List, Union
-from HartreeParticleDSL.Particle_IR.nodes.node import Node, DataNode
+from psyclone.psyir.nodes import Node, DataNode
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
 
 class FuncDef(Node):
@@ -17,6 +17,7 @@ class FuncDef(Node):
     :type children: List of :py:class:`HartreeParticleDSL.Particle_IR.nodes.node.Node. \
             or None.
     '''
+    _text_name = "FuncDef"
     # pylint: disable=undefined-variable
 
     def __init__(self, name: str,  children: Union[None,List[Node]]=None) -> None:

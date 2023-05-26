@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import List
 
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
-from HartreeParticleDSL.Particle_IR.nodes.node import DataNode, Node
+from psyclone.psyir.nodes import DataNode, Node
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
 from HartreeParticleDSL.Particle_IR.nodes.statement import Statement
 
@@ -14,6 +14,8 @@ class While(Statement):
     '''
     Class to represent a While loop in the Particle IR tree.
     '''
+    _text_name = "While"
+
     def __init__(self) -> None:
         super().__init__()
 

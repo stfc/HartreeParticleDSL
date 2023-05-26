@@ -1,6 +1,6 @@
 import pytest
 
-from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
+from psyclone.psyir.nodes import Literal
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import INT_TYPE
 from HartreeParticleDSL.Particle_IR.nodes.array_member import ArrayMember
 
@@ -13,7 +13,7 @@ def test_array_member():
     assert am.children[0] is one
     assert am.children[1] is two
 
-    correct = "ArrayMember[x: (Literal['1', Scalar<INTEGER, SINGLE>], Literal['2', Scalar<INTEGER, SINGLE>])]"
+    correct = "ArrayMember[x: (Literal[value:'1', Scalar<INTEGER, SINGLE>], Literal[value:'2', Scalar<INTEGER, SINGLE>])]"
     assert correct == am.node_str()
 
     assert am.is_array

@@ -4,7 +4,7 @@ This module contains the PointerReference class.
 
 from __future__ import annotations
 
-from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
+from psyclone.psyir.nodes import Reference
 from HartreeParticleDSL.Particle_IR.symbols.pointersymbol import PointerSymbol
 
 class PointerReference(Reference):
@@ -16,9 +16,10 @@ class PointerReference(Reference):
 
     '''
     # pylint: disable=undefined-variable
+    _text_name = "PointerReference"
 
     def __init__(self, symbol: PointerSymbol) -> None:
-        super().__init__()
+        super().__init__(symbol=symbol)
         self.symbol = symbol
 
     @property

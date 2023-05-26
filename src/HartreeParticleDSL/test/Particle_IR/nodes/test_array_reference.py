@@ -1,6 +1,6 @@
 import pytest
 
-from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
+from psyclone.psyir.nodes import Literal
 from HartreeParticleDSL.Particle_IR.nodes.array_reference import ArrayReference
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import INT_TYPE, ArrayType
 from HartreeParticleDSL.Particle_IR.symbols.arraysymbol import ArraySymbol
@@ -36,6 +36,6 @@ def test_array_reference_node_str():
     sym = ArraySymbol("x", ArrayType(INT_TYPE, [5, 5]))
     ar = ArrayReference(sym, [one, two])
 
-    correct = ("ArrayReference[x: (Literal['1', Scalar<INTEGER, SINGLE>], Literal['2', "
+    correct = ("ArrayReference[x: (Literal[value:'1', Scalar<INTEGER, SINGLE>], Literal[value:'2', "
                "Scalar<INTEGER, SINGLE>])]")
     assert correct == ar.node_str()

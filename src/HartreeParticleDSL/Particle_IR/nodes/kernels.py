@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import List
 
 from HartreeParticleDSL.Particle_IR.nodes.kern import Kern
-from HartreeParticleDSL.Particle_IR.nodes.reference import Reference
+from psyclone.psyir.nodes import Reference
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 
 class PairwiseKernel(Kern):
@@ -17,6 +17,7 @@ class PairwiseKernel(Kern):
 
     :param str name: the name of this Kernel.
     '''
+    _text_name = "PairwiseKernel"
 
     def __init__(self, name: str) -> None:
         super().__init__()
@@ -104,6 +105,7 @@ class PerPartKernel(Kern):
     '''
     Class to represent a Per Part Kernel.
     '''
+    _text_name = "PerPartKernel"
     def __init__(self, name: str) -> None:
         super().__init__()
         self._name = name
@@ -192,6 +194,7 @@ class MainKernel(Kern):
 
     :param str name: the name of this Kernel.
     '''
+    _text_name = "MainKernel"
 
     def __init__(self, name: str) -> None:
         super().__init__()
@@ -265,6 +268,7 @@ class MainKernel(Kern):
 
 
 class SourceBoundaryKernel(Kern):
+    _text_name = "SourceBoundaryKernel"
     def __init__(self, name: str, source_count: int) -> None:
         super().__init__()
         self._name = name
@@ -341,6 +345,8 @@ class SourceBoundaryKernel(Kern):
         return kernel
 
 class SinkBoundaryKernel(Kern):
+    _text_name = "SinkBoundaryKernel"
+
     def __init__(self, name: str) -> None:
         super().__init__()
         self._name = name

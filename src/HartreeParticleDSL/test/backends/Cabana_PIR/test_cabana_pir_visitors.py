@@ -17,6 +17,8 @@ from HartreeParticleDSL.Particle_IR.datatypes.datatype import type_mapping_str, 
         INT_TYPE, FLOAT_TYPE, DOUBLE_TYPE, INT64_TYPE, INT32_TYPE, BOOL_TYPE, STRING_TYPE, \
         BASE_PARTICLE_TYPE, reset_part_and_config
 
+from psyclone.psyir.symbols import Symbol
+
 import ast
 import inspect
 import textwrap
@@ -376,7 +378,7 @@ def test_pir_cabana_visit_members():
     backend = Cabana_PIR()
     cpir = Cabana_PIR_Visitor(backend)
     mystruc1 = StructureType()
-    mystruc1.add("d", INT_TYPE)
+    mystruc1.add("d", INT_TYPE, Symbol.Visibility.PUBLIC)
     type_mapping_str["mystruc1"]=mystruc1
     def a():
         create_variable(mystruc1, d)
@@ -395,8 +397,8 @@ def test_pir_cabana_visit_members():
 
     mystruc2 = StructureType()
     substruc = StructureType()
-    substruc.add("e", INT_TYPE)
-    mystruc2.add("d", substruc)
+    substruc.add("e", INT_TYPE, Symbol.Visibility.PUBLIC)
+    mystruc2.add("d", substruc, Symbol.Visibility.PUBLIC)
     type_mapping_str["mystruc2"]=mystruc2
     def b():
         create_variable(mystruc2, b)
@@ -416,7 +418,7 @@ def test_pir_cabana_visit_members():
 
     mystruc2 = StructureType()
     substruc1 = ArrayType(INT_TYPE, [ArrayType.Extent.DYNAMIC])
-    mystruc2.add("c", substruc1)
+    mystruc2.add("c", substruc1, Symbol.Visibility.PUBLIC)
     type_mapping_str["mystruc2"]=mystruc2
     backend.add_writable_array("ea", "double", "24")
     def d():
@@ -512,15 +514,15 @@ def test_pir_cabana_particle_references_and_perpart():
     HartreeParticleDSL.set_backend(backend)
     cpir = Cabana_PIR_Visitor(backend)
     xs = StructureType()
-    xs.add("boo", INT_TYPE)
+    xs.add("boo", INT_TYPE, Symbol.Visibility.PUBLIC)
     backend.add_structure(xs, "xs")
     type_mapping_str["abc"] = xs
     # Create a perpart_kernel
     v = pir_perpart_visitor()
-    type_mapping_str["part"].add("subpart", INT_TYPE)
+    type_mapping_str["part"].add("subpart", INT_TYPE, Symbol.Visibility.PUBLIC)
     new_type = ArrayType(INT_TYPE, [3])
-    type_mapping_str["part"].add("subarray", new_type)
-    type_mapping_str["part"].components["core_part"].add("subcore", INT_TYPE)
+    type_mapping_str["part"].add("subarray", new_type, Symbol.Visibility.PUBLIC)
+    type_mapping_str["part"].components["core_part"].datatype.add("subcore", INT_TYPE, Symbol.Visibility.PUBLIC)
     def x(arg: part, c: c_int):
         arg.subpart = 1
         arg.subarray[0] = 1
@@ -751,7 +753,7 @@ def test_pir_cabana_sink_boundary():
     v = pir_sink_boundary_visitor()
     pir = v.visit(c)
     xs = StructureType()
-    xs.add("boo", INT_TYPE)
+    xs.add("boo", INT_TYPE, Symbol.Visibility.PUBLIC)
     backend.add_structure(xs, "xs")
     out = cpir(pir)
     
@@ -894,7 +896,7 @@ def test_pir_cabana_source_boundary():
     v = pir_source_boundary_visitor(sbkw)
     pir = v.visit(c)
     xs = StructureType()
-    xs.add("boo", INT_TYPE)
+    xs.add("boo", INT_TYPE, Symbol.Visibility.PUBLIC)
     backend.add_structure(xs, "xs")
     out = cpir(pir)
     correct = '''template < class CORE_PART_POSITION >
@@ -1015,7 +1017,7 @@ def test_pir_cabana_mainkernel():
     # Create a perpart_kernel
     v2 = pir_perpart_visitor()
     reset_part_and_config()
-    type_mapping_str["part"].add("subpart", INT_TYPE)
+    type_mapping_str["part"].add("subpart", INT_TYPE, Symbol.Visibility.PUBLIC)
     # subpart still exists from previous tests.
     def x(arg: part, c: c_int):
         arg.subpart = 1
@@ -1030,7 +1032,7 @@ def test_pir_cabana_mainkernel():
     c = ast.parse(textwrap.dedent(inspect.getsource(main)))
     pir = v.visit(c)
     xs = StructureType()
-    xs.add("boo", INT_TYPE)
+    xs.add("boo", INT_TYPE, Symbol.Visibility.PUBLIC)
     backend.add_structure(xs, "xs")
     out = cpir(pir)
     correct = '''int main( int argc, char* argv[] ){
@@ -1145,7 +1147,7 @@ def test_main_more():
     v = pir_main_visitor()
     pir = v.visit(c)
     xs = StructureType()
-    xs.add("boo", INT_TYPE)
+    xs.add("boo", INT_TYPE, Symbol.Visibility.PUBLIC)
     backend.add_structure(xs, "xs")
     out = cpir(pir)
     correct = '''int main( int argc, char* argv[] ){
@@ -1215,7 +1217,7 @@ def test_main_more():
     v = pir_main_visitor()
     pir = v.visit(c)
     xs = StructureType()
-    xs.add("boo", INT_TYPE)
+    xs.add("boo", INT_TYPE, Symbol.Visibility.PUBLIC)
     backend.add_structure(xs, "xs")
     out = cpir(pir)
     correct = '''int main( int argc, char* argv[] ){

@@ -11,17 +11,9 @@ from enum import Enum
 from typing import Union, Dict, List, Tuple
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 
-class DataType(metaclass=ABCMeta):
-    '''Abstract base class from which all types are derived.'''
-    # pylint: disable=too-few-public-methods
-
-    @abc.abstractmethod
-    def __str__(self):
-        '''
-        :returns: a description of this type.
-        :rtype: str
-        '''
-
+import psyclone.psyir.symbols.datatypes as psyDT
+from psyclone.psyir.symbols.datatypes import DataType, ScalarType, StructureType
+from psyclone.psyir.symbols import Symbol
 
 class NoType(DataType):
     ''' Empty datatype (e.g. void type).'''
@@ -29,159 +21,6 @@ class NoType(DataType):
 
     def __str__(self):
         return "NoType"
-
-class ScalarType(DataType):
-    '''
-    Describes a scalar datatype and its precision.
-
-    :param intrinsic: the intrinsic of this scalar type.
-    :type intrinsic: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.ScalarType.Intrinsic`
-    :param precision: the precision of this scalar type.
-    :type precision: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.ScalarType.Precision` \
-            or int
-
-    :raises TypeError: if any of the arguments are of the wrong type.
-    '''
-
-    class Intrinsic(Enum):
-        '''
-        Enumeration of the different intrinsic scalar datatypes supported by ParticleIR.
-        '''
-        INTEGER = 1
-        FLOAT = 2
-        BOOLEAN = 3
-        CHARACTER = 4
-
-    class Precision(Enum):
-        '''
-        Enumeration of the different types of precision that may be specified.
-        '''
-        SINGLE = 1
-        DOUBLE = 2
-        UNDEFINED = 3
-
-    def __init__(self, intrinsic: Intrinsic, precision: Union[Precision, int]) -> None:
-        if not isinstance(intrinsic, ScalarType.Intrinsic):
-            raise TypeError(
-                f"Expected 'intrinsic' to be of type ScalarType.Intrinsic "
-                f"but found {type(intrinsic)}.")
-        if not isinstance(precision, (int, ScalarType.Precision)):
-            raise TypeError(
-                f"Expected 'precision' to be of type ScalarType.Precision or int "
-                f"but found {type(precision)}.")
-
-
-        self._intrinsic = intrinsic
-        self._precision = precision
-
-    @property
-    def intrinsic(self) -> Intrinsic:
-        '''
-        :returns: the intrinsic used by this scalar type.
-        :rtype: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.ScalarType.Intrinsic`
-        '''
-        return self._intrinsic
-
-    @property
-    def precision(self) -> Union[Precision, int]:
-        ''''
-        :returns: the precision used by this scalar type.
-        :rtype: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.ScalarType.Precision` or int
-        '''
-        return self._precision
-
-    def __str__(self) -> str:
-        '''
-        :returns: a description of this scalar datatype
-        :rtype: str
-        '''
-        precision = ""
-        if isinstance(self.precision, ScalarType.Precision):
-            precision = self.precision.name
-        else:
-            precision = f"{self.precision}"
-        return f"Scalar<{self.intrinsic.name}, {precision}>"
-
-class StructureType(DataType):
-    '''
-    Describes a 'structure' type that is composed of a dict of other datatypes.
-    '''
-
-    def __init__(self) -> None:
-        self._components = OrderedDict()
-
-    def __str__(self) -> str:
-        '''
-        :returns: a string representation of this structure type
-        :rtype: str
-        '''
-        stype = "StructureType<"
-        comp_strs = []
-        for comp in self._components:
-            comp_strs.append(f"({comp}: {self._components[comp]})")
-        comp_str = ", ".join(comp_strs)
-        stype = stype + comp_str + ">"
-        return stype
-
-    @property
-    def components(self) -> Dict[str, DataType]:
-        '''
-        :returns: the components that make up this structured type.
-        :rtype: :py:class:`collections.OrderedDict`
-        '''
-        return self._components
-
-    def add(self, name: str, typ: DataType) -> None:
-        '''
-        Add a child type to this StructureType
-
-        :param name: The name of the member of this structure type.
-        :type name: str
-        :param typ: The DataType of the member to be added.
-        :type typ: :py:class:`HartreeParticleDSL.Particle_IR.datatypes.DataType`
-
-        :raises TypeError: if any of the arguments are the wrong type.
-        :raises IRGenerationError: if the name of this member already exists \
-                in this StructureType.
-        '''
-        if not isinstance(name, str):
-            raise TypeError(f"Expected name argument to be a string but got "
-                            f"{type(name)}.")
-        if not isinstance(typ, DataType):
-            raise TypeError(f"Expected typ argument to be a DataType but got "
-                            f"{type(typ)}.")
-        if name in self._components.keys():
-            raise IRGenerationError("Names in a StructureType must be unique "
-                                    f"but provided duplicate {name}.")
-        self._components[name] = typ
-
-    @staticmethod
-    def create(components: List[Tuple[str, DataType]]) -> StructureType:
-        '''
-        Creates a StructureType from the supplied components.
-
-        :param components: the name and type of each component of the new structure.
-        :type components: list of 2-tuple(str, DataType)
-
-        :returns: the new StructureType
-        :rtype: :py:class:`psyclone.Particle_IR.datatypes.datatype.StructureType`
-
-        :raise TypeError: if the members of components are not length 2.
-        '''
-        stype = StructureType()
-        for component in components:
-            if len(component) != 2:
-                raise TypeError("Each component must be specified using a 2-tuple "
-                                f"of (name, type) but found: {component}")
-            stype.add(component[0], component[1])
-        return stype
-
-    def lookup(self,name: str) -> Union[DataType, None]:
-        '''
-        :returns: the DataType describing the named member of this StructureType or None.
-        :rtype: :py:class:`psyclone.Particle_IR.datatypes.datatype.DataType` or None
-        '''
-        return self._components.get(name)
 
 class PointerType(DataType):
     '''
@@ -208,6 +47,12 @@ class PointerType(DataType):
         '''
         return f"PointerType<{self._datatype}>"
 
+    def __eq__(self, other):
+        return self is other
+
+#    def __hash__(self):
+#        return hash(id(self))
+
 class ArrayType(DataType):
     '''
     Describes an array type.
@@ -226,7 +71,20 @@ class ArrayType(DataType):
         '''
         Enumeration of array shape extents that are unspecified at compile time.
         '''
-        DYNAMIC = 1
+        DYNAMIC = psyDT.ArrayType.Extent.DEFERRED
+
+    def __eq__(self, other):
+        eq = type(self) == type(other)
+        if eq:
+            eq = eq and self._datatype == other._datatype
+            eq = eq and len(self.shape) == len(other.shape)
+            if eq:
+                for i, el in enumerate(self.shape):
+                    eq = eq and el == other.shape[i]
+        return eq
+
+#    def __hash__(self):
+#        return hash((self._datatype, tuple(self.shape)))
 
     def __init__(self, datatype: DataType, shape: List[Union[int, Extent]]) -> None:
         if not isinstance(datatype, DataType):
@@ -268,8 +126,8 @@ class ArrayType(DataType):
         return f"ArrayType<{self._datatype}: [{dim_string}]>"
 
 # Create common datatype
-FLOAT_TYPE = ScalarType(ScalarType.Intrinsic.FLOAT, ScalarType.Precision.SINGLE)
-DOUBLE_TYPE = ScalarType(ScalarType.Intrinsic.FLOAT, ScalarType.Precision.DOUBLE)
+FLOAT_TYPE = ScalarType(ScalarType.Intrinsic.REAL, ScalarType.Precision.SINGLE)
+DOUBLE_TYPE = ScalarType(ScalarType.Intrinsic.REAL, ScalarType.Precision.DOUBLE)
 
 INT_TYPE = ScalarType(ScalarType.Intrinsic.INTEGER, ScalarType.Precision.SINGLE)
 LONG_LONG_TYPE = ScalarType(ScalarType.Intrinsic.INTEGER, ScalarType.Precision.DOUBLE)
@@ -287,28 +145,28 @@ PARTICLE_POSITION_TYPE = ArrayType(DOUBLE_TYPE, [3])
 
 BASE_PARTICLE_TYPE = StructureType()
 _CORE_PART_TYPE = StructureType()
-_CORE_PART_TYPE.components["position"] = PARTICLE_POSITION_TYPE
-_CORE_PART_TYPE.components["velocity"] = ArrayType( DOUBLE_TYPE, [3])
-BASE_PARTICLE_TYPE.components["core_part"] = _CORE_PART_TYPE
+_CORE_PART_TYPE.add("position", PARTICLE_POSITION_TYPE, Symbol.Visibility.PUBLIC)
+_CORE_PART_TYPE.add("velocity", ArrayType( DOUBLE_TYPE, [3]), Symbol.Visibility.PUBLIC)
+BASE_PARTICLE_TYPE.add("core_part", _CORE_PART_TYPE, Symbol.Visibility.PUBLIC)
 
 BASE_CONFIG_TYPE = StructureType()
 _SPACE_TYPE = StructureType()
 _BOUNDARY_TYPE = StructureType()
-_BOUNDARY_TYPE.components["x_min"] = DOUBLE_TYPE
-_BOUNDARY_TYPE.components["x_max"] = DOUBLE_TYPE
-_BOUNDARY_TYPE.components["y_min"] = DOUBLE_TYPE
-_BOUNDARY_TYPE.components["y_max"] = DOUBLE_TYPE
-_BOUNDARY_TYPE.components["z_min"] = DOUBLE_TYPE
-_BOUNDARY_TYPE.components["z_max"] = DOUBLE_TYPE
-_BOUNDARY_TYPE.components["local_x_min"] = DOUBLE_TYPE
-_BOUNDARY_TYPE.components["local_x_max"] = DOUBLE_TYPE
-_BOUNDARY_TYPE.components["local_y_min"] = DOUBLE_TYPE
-_BOUNDARY_TYPE.components["local_y_max"] = DOUBLE_TYPE
-_BOUNDARY_TYPE.components["local_z_min"] = DOUBLE_TYPE
-_BOUNDARY_TYPE.components["local_z_max"] = DOUBLE_TYPE
-_SPACE_TYPE.components["box_dims"] = _BOUNDARY_TYPE
-BASE_CONFIG_TYPE.components["space"] = _SPACE_TYPE
-BASE_CONFIG_TYPE.components["nparts"] = INT64_TYPE
+_BOUNDARY_TYPE.add("x_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+_BOUNDARY_TYPE.add("x_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+_BOUNDARY_TYPE.add("y_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+_BOUNDARY_TYPE.add("y_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+_BOUNDARY_TYPE.add("z_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+_BOUNDARY_TYPE.add("z_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+_BOUNDARY_TYPE.add("local_x_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+_BOUNDARY_TYPE.add("local_x_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+_BOUNDARY_TYPE.add("local_y_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+_BOUNDARY_TYPE.add("local_y_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+_BOUNDARY_TYPE.add("local_z_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+_BOUNDARY_TYPE.add("local_z_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+_SPACE_TYPE.add("box_dims", _BOUNDARY_TYPE, Symbol.Visibility.PUBLIC)
+BASE_CONFIG_TYPE.add("space", _SPACE_TYPE, Symbol.Visibility.PUBLIC)
+BASE_CONFIG_TYPE.add("nparts", INT64_TYPE, Symbol.Visibility.PUBLIC)
 
 type_mapping_str = {"c_int": INT_TYPE,
                     "int": INT_TYPE,
@@ -338,28 +196,28 @@ def reset_part_and_config():
     global BASE_PARTICLE_TYPE, BASE_CONFIG_TYPE
     BASE_PARTICLE_TYPE = StructureType()
     _CORE_PART_TYPE = StructureType()
-    _CORE_PART_TYPE.components["position"] = PARTICLE_POSITION_TYPE
-    _CORE_PART_TYPE.components["velocity"] = ArrayType( DOUBLE_TYPE, [3])
-    BASE_PARTICLE_TYPE.components["core_part"] = _CORE_PART_TYPE
-
+    _CORE_PART_TYPE.add("position", PARTICLE_POSITION_TYPE, Symbol.Visibility.PUBLIC)
+    _CORE_PART_TYPE.add("velocity", ArrayType( DOUBLE_TYPE, [3]), Symbol.Visibility.PUBLIC)
+    BASE_PARTICLE_TYPE.add("core_part", _CORE_PART_TYPE, Symbol.Visibility.PUBLIC)
+    
     BASE_CONFIG_TYPE = StructureType()
     _SPACE_TYPE = StructureType()
     _BOUNDARY_TYPE = StructureType()
-    _BOUNDARY_TYPE.components["x_min"] = DOUBLE_TYPE
-    _BOUNDARY_TYPE.components["x_max"] = DOUBLE_TYPE
-    _BOUNDARY_TYPE.components["y_min"] = DOUBLE_TYPE
-    _BOUNDARY_TYPE.components["y_max"] = DOUBLE_TYPE
-    _BOUNDARY_TYPE.components["z_min"] = DOUBLE_TYPE
-    _BOUNDARY_TYPE.components["z_max"] = DOUBLE_TYPE
-    _BOUNDARY_TYPE.components["local_x_min"] = DOUBLE_TYPE
-    _BOUNDARY_TYPE.components["local_x_max"] = DOUBLE_TYPE
-    _BOUNDARY_TYPE.components["local_y_min"] = DOUBLE_TYPE
-    _BOUNDARY_TYPE.components["local_y_max"] = DOUBLE_TYPE
-    _BOUNDARY_TYPE.components["local_z_min"] = DOUBLE_TYPE
-    _BOUNDARY_TYPE.components["local_z_max"] = DOUBLE_TYPE
-    _SPACE_TYPE.components["box_dims"] = _BOUNDARY_TYPE
-    BASE_CONFIG_TYPE.components["space"] = _SPACE_TYPE
-    BASE_CONFIG_TYPE.components["nparts"] = INT64_TYPE
+    _BOUNDARY_TYPE.add("x_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+    _BOUNDARY_TYPE.add("x_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+    _BOUNDARY_TYPE.add("y_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+    _BOUNDARY_TYPE.add("y_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+    _BOUNDARY_TYPE.add("z_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+    _BOUNDARY_TYPE.add("z_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+    _BOUNDARY_TYPE.add("local_x_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+    _BOUNDARY_TYPE.add("local_x_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+    _BOUNDARY_TYPE.add("local_y_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+    _BOUNDARY_TYPE.add("local_y_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+    _BOUNDARY_TYPE.add("local_z_min", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+    _BOUNDARY_TYPE.add("local_z_max", DOUBLE_TYPE, Symbol.Visibility.PUBLIC)
+    _SPACE_TYPE.add("box_dims", _BOUNDARY_TYPE, Symbol.Visibility.PUBLIC)
+    BASE_CONFIG_TYPE.add("space", _SPACE_TYPE, Symbol.Visibility.PUBLIC)
+    BASE_CONFIG_TYPE.add("nparts", INT64_TYPE, Symbol.Visibility.PUBLIC)
     type_mapping_str["part"] = BASE_PARTICLE_TYPE
     type_mapping_str["config"] = BASE_CONFIG_TYPE
 

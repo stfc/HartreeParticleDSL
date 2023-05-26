@@ -1,9 +1,8 @@
 import pytest
 
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
-from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
+from psyclone.psyir.nodes import Literal
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import INT_TYPE
-from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, UnaryOperation
 from HartreeParticleDSL.Particle_IR.nodes.loop import Loop
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
 from HartreeParticleDSL.Particle_IR.nodes.call import Call
@@ -80,7 +79,7 @@ def test_loop_node_str():
     call = Call("mycall")
 
     x = Loop.create(sym, ref1, ref2, ref3, [call])
-    correct = '''Loop[ (ScalarReference[start], ScalarReference[stop] ScalarReference[step]): Body[
+    correct = '''Loop[ (ScalarReference[name:'start'], ScalarReference[name:'stop'] ScalarReference[name:'step']): Body[
     Call[mycall: ()]
 ] End Body
 ]'''

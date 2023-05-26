@@ -1,9 +1,9 @@
 import pytest
 
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
-from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
+from psyclone.psyir.nodes import Literal
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import INT_TYPE
-from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, UnaryOperation
+from psyclone.psyir.nodes import BinaryOperation
 from HartreeParticleDSL.Particle_IR.nodes.ifelse import IfElseBlock
 from HartreeParticleDSL.Particle_IR.nodes.body import Body
 from HartreeParticleDSL.Particle_IR.nodes.call import Call
@@ -29,7 +29,7 @@ def test_ifelse_check_completeness():
     assert ("IfElseBlock first child must be a Node but found <class 'str'>."
             in str(excinfo.value))
 
-    x.children[0] = BinaryOperation(BinaryOperation.BinaryOp.ADDITION)
+    x.children[0] = BinaryOperation(BinaryOperation.Operator.ADD)
     with pytest.raises(IRGenerationError) as excinfo:
         x._check_completeness()
     assert ("IfElseBlock second child must be a Body but found <class 'str'>."
@@ -50,7 +50,7 @@ def test_ifelse_validate_child():
     assert IfElseBlock._validate_child(0, "123") == False
     assert IfElseBlock._validate_child(1, "123") == False
     assert IfElseBlock._validate_child(2, "123") == False
-    assert IfElseBlock._validate_child(0, BinaryOperation(BinaryOperation.BinaryOp.ADDITION)) == True
+    assert IfElseBlock._validate_child(0, BinaryOperation(BinaryOperation.Operator.ADD)) == True
     assert IfElseBlock._validate_child(1, Body()) == True
     assert IfElseBlock._validate_child(2, Body()) == True
 
@@ -62,7 +62,7 @@ def test_ifelse_create():
 
     body1 = Call("hello")
     body2 = Call("hello2")
-    bo = BinaryOperation(BinaryOperation.BinaryOp.LESS_THAN_EQUAL)
+    bo = BinaryOperation(BinaryOperation.Operator.LE)
     bo.addchild(Literal("1", INT_TYPE))
     bo.addchild(Literal("2", INT_TYPE))
     ifelse = IfElseBlock.create(bo, [body1], [body2])
@@ -72,7 +72,7 @@ def test_ifelse_create():
     assert ifelse.elsebody.children[0] is body2
     assert ifelse.is_else_if() is False
 
-    bo2 = BinaryOperation(BinaryOperation.BinaryOp.LESS_THAN_EQUAL)
+    bo2 = BinaryOperation(BinaryOperation.Operator.LE)
     ifelse2 = IfElseBlock.create(bo2, [Call("hello3")], [ifelse])
 
     assert ifelse2.elsebody.children[0] is ifelse
@@ -83,12 +83,14 @@ def test_ifelse_create():
 def test_ifelse_nodestr():
     body1 = Call("hello")
     body2 = Call("hello2")
-    bo = BinaryOperation(BinaryOperation.BinaryOp.LESS_THAN_EQUAL)
+    bo = BinaryOperation(BinaryOperation.Operator.LE)
     bo.addchild(Literal("1", INT_TYPE))
     bo.addchild(Literal("2", INT_TYPE))
     ifelse = IfElseBlock.create(bo, [body1], [body2])
 
-    correct = '''IfElseBlock[BinaryOperation[BinaryOp.LESS_THAN_EQUAL: (Literal['1', Scalar<INTEGER, SINGLE>], Literal['2', Scalar<INTEGER, SINGLE>])]:
+    correct = '''IfElseBlock[BinaryOperation[operator:'LE']
+Literal[value:'1', Scalar<INTEGER, SINGLE>]
+Literal[value:'2', Scalar<INTEGER, SINGLE>]:
 Body[
     Call[hello: ()]
 ] End Body

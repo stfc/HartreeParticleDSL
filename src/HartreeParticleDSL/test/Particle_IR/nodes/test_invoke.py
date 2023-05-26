@@ -2,7 +2,7 @@ import pytest
 
 from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 from HartreeParticleDSL.Particle_IR.nodes.assignment import Assignment
-from HartreeParticleDSL.Particle_IR.nodes.literal import Literal
+from psyclone.psyir.nodes import Literal
 from HartreeParticleDSL.Particle_IR.nodes.kernels import PerPartKernel, MainKernel
 from HartreeParticleDSL.Particle_IR.nodes.invoke import Invoke
 from HartreeParticleDSL.Particle_IR.nodes.scalar_reference import ScalarReference

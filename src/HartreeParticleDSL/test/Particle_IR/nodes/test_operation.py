@@ -4,32 +4,27 @@ from HartreeParticleDSL.HartreeParticleDSLExceptions import IRGenerationError
 from HartreeParticleDSL.Particle_IR.nodes.scalar_reference import ScalarReference
 from HartreeParticleDSL.Particle_IR.datatypes.datatype import INT_TYPE
 from HartreeParticleDSL.Particle_IR.symbols.scalartypesymbol import ScalarTypeSymbol
-from HartreeParticleDSL.Particle_IR.nodes.operation import BinaryOperation, UnaryOperation
+from psyclone.psyir.nodes import BinaryOperation, UnaryOperation
+from psyclone.errors import GenerationError
 
 def test_binaryop_create_badargs():
-    with pytest.raises(TypeError) as excinfo:
-        a = BinaryOperation.create(123, [])
-    assert ("BinaryOperation expects an operator of type <enum 'BinaryOp'> "
-            "but received type <class 'int'>." in str(excinfo.value))
+    with pytest.raises(GenerationError) as excinfo:
+        a = BinaryOperation.create(123, "", "")
+    assert ("operator argument in create method of BinaryOperation class "
+            "should be a PSyIR BinaryOperation Operator but found 'int'." in str(excinfo.value))
 
-    with pytest.raises(IRGenerationError) as excinfo:
-        a = BinaryOperation.create(BinaryOperation.BinaryOp.ADDITION, [])
-    assert ("Attempting to create a BinaryOperation with wrong number of "
-            "children. Was provided 0 but can only accept 2." 
-            in str(excinfo.value))
-
-    with pytest.raises(IRGenerationError) as excinfo:
-        a = BinaryOperation.create(BinaryOperation.BinaryOp.ADDITION,["123", "123"])
-    assert ("Attempting to create a BinaryOperation but first provided child "
-            "is <class 'str'> instead of a DataNode." in str(excinfo.value))
+    with pytest.raises(GenerationError) as excinfo:
+        a = BinaryOperation.create(BinaryOperation.Operator.ADD,"123", "123")
+    assert ("Item 'str' can't be child 0 of 'BinaryOperation'. "
+            "The valid format is: 'DataNode, DataNode'." in str(excinfo.value))
 
     sym = ScalarTypeSymbol("x", INT_TYPE)
     ref1 = ScalarReference(sym)
 
-    with pytest.raises(IRGenerationError) as excinfo:
-        a = BinaryOperation.create(BinaryOperation.BinaryOp.ADDITION,[ref1, "123"])
-    assert ("Attempting to create a BinaryOperation but second provided child "
-            "is <class 'str'> instead of a DataNode." in str(excinfo.value))
+    with pytest.raises(GenerationError) as excinfo:
+        a = BinaryOperation.create(BinaryOperation.Operator.ADD,ref1, "123")
+    assert ("Item 'str' can't be child 1 of 'BinaryOperation'. "
+            "The valid format is: 'DataNode, DataNode'." in str(excinfo.value))
 
 
 def test_binaryop_validate_child():
@@ -46,9 +41,9 @@ def test_binaryop_create():
     ref1 = ScalarReference(sym)
     sym2 = ScalarTypeSymbol("x2", INT_TYPE)
     ref2 = ScalarReference(sym2)
-    a = BinaryOperation.create(BinaryOperation.BinaryOp.ADDITION,[ref1, ref2])
+    a = BinaryOperation.create(BinaryOperation.Operator.ADD,ref1, ref2)
 
-    assert a.operator is BinaryOperation.BinaryOp.ADDITION
+    assert a.operator is BinaryOperation.Operator.ADD
     assert a.children[0] is ref1
     assert a.children[1] is ref2
 
@@ -57,21 +52,21 @@ def test_binaryop_nodestr():
     ref1 = ScalarReference(sym)
     sym2 = ScalarTypeSymbol("x2", INT_TYPE)
     ref2 = ScalarReference(sym2)
-    a = BinaryOperation.create(BinaryOperation.BinaryOp.ADDITION,[ref1, ref2])
+    a = BinaryOperation.create(BinaryOperation.Operator.ADD,ref1, ref2)
 
-    assert ("BinaryOperation[BinaryOp.ADDITION: (ScalarReference[x], "
-            "ScalarReference[x2])]" in a.node_str())
+    assert ("BinaryOperation[operator:'ADD']"
+            in a.node_str())
 
 def test_unaryop_create_badargs():
-    with pytest.raises(TypeError) as excinfo:
+    with pytest.raises(GenerationError) as excinfo:
         a = UnaryOperation.create(123, [])
-    assert ("UnaryOperation expects an operator of type <enum 'UnaryOp'> "
-            "but received type <class 'int'>." in str(excinfo.value))
+    assert (" operator argument in create method of UnaryOperation class should "
+            "be a PSyIR UnaryOperation Operator but found 'int'." in str(excinfo.value))
 
-    with pytest.raises(IRGenerationError) as excinfo:
-        a = UnaryOperation.create(UnaryOperation.UnaryOp.UNARYSUB, 212)
-    assert ("Attempting to create a UnaryOperation but provided child is "
-            "<class 'int'> instead of a DataNode." in str(excinfo.value))
+    with pytest.raises(GenerationError) as excinfo:
+        a = UnaryOperation.create(UnaryOperation.Operator.MINUS, 212)
+    assert (" Item 'int' can't be child 0 of 'UnaryOperation'. "
+            "The valid format is: 'DataNode'." in str(excinfo.value))
 
 def test_unaryop_validate_child():
     sym = ScalarTypeSymbol("x", INT_TYPE)
@@ -84,14 +79,14 @@ def test_unaryop_create():
     sym = ScalarTypeSymbol("x", INT_TYPE)
     ref1 = ScalarReference(sym)
 
-    a = UnaryOperation.create(UnaryOperation.UnaryOp.UNARYSUB, ref1)
-    assert a.operator is UnaryOperation.UnaryOp.UNARYSUB
+    a = UnaryOperation.create(UnaryOperation.Operator.MINUS, ref1)
+    assert a.operator is UnaryOperation.Operator.MINUS
     assert a.children[0] is ref1
 
 def test_unaryop_nodestr():
     sym = ScalarTypeSymbol("x", INT_TYPE)
     ref1 = ScalarReference(sym)
 
-    a = UnaryOperation.create(UnaryOperation.UnaryOp.UNARYSUB, ref1)
+    a = UnaryOperation.create(UnaryOperation.Operator.MINUS, ref1)
 
-    assert "UnaryOperation[UnaryOp.UNARYSUB: ScalarReference[x]]" in a.node_str()
+    assert "UnaryOperation[operator:'MINUS']" in a.node_str()

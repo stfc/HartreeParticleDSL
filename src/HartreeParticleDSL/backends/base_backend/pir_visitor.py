@@ -1,7 +1,7 @@
 from __future__ import annotations
 import inspect
 
-from HartreeParticleDSL.Particle_IR.nodes.node import Node
+from psyclone.psyir.nodes import Node
 
 class VisitorError(Exception):
     pass
@@ -93,6 +93,7 @@ class PIR_Visitor():
         possible_method_names = ["visit_"+curr_class.__name__.lower()+"_node"
                                  for curr_class in inspect.getmro(type(node))]
         possible_method_names.remove("visit_object_node")
+        possible_method_names = list(dict.fromkeys(possible_method_names))
 
         # Try to call methods using the class names in the order of
         # the class hierarchy (starting from the current class name).
